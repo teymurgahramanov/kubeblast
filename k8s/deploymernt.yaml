@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: jmeter-api
-        image: jmeter-api:latest
+        image: localhost:5000/jmeter-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
