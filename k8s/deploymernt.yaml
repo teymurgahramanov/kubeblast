@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jmeter-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jmeter-api
+  template:
+    metadata:
+      labels:
+        app: jmeter-api
+    spec:
+      containers:
+      - name: jmeter-api
+        image: jmeter-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000

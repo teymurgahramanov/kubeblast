@@ -1,0 +1,5 @@
+k8s/
+.gitignore
+.dockerignore
+README.md
+skaffold.yaml
