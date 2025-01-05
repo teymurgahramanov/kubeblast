@@ -1,10 +1,10 @@
 apiVersion: skaffold/v4beta11
 kind: Config
 metadata:
-  name: jmeter-k8s-api
+  name: jrunner
 build:
   artifacts:
-  - image: jmeter-api
+  - image: jrunner
     context: .
     docker:
       dockerfile: Dockerfile
@@ -13,7 +13,7 @@ manifests:
     - k8s/*.yaml
 portForward:
 - resourceType: deployment
-  resourceName: jmeter-api
+  resourceName: jrunner
   namespace: default
   port: 8000
   localPort: 8000

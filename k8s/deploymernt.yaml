@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jmeter-api
+  name: jrunner
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jmeter-api
+      app: jrunner
   template:
     metadata:
       labels:
-        app: jmeter-api
+        app: jrunner
     spec:
+      serviceAccountName: jrunner
       containers:
-      - name: jmeter-api
-        image: jmeter-api
+      - name: jrunner
+        image: jrunner
         imagePullPolicy: Never
         ports:
         - containerPort: 8000

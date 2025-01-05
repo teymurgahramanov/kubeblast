@@ -1,7 +1,8 @@
 from fastapi import FastAPI
+from app.routers import jobs, logs, reports
 
 app = FastAPI()
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
+app.include_router(jobs.router,tags=["jobs"])
+app.include_router(logs.router,tags=["logs"])
+app.include_router(reports.router,tags=["reports"])
