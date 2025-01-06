@@ -17,3 +17,8 @@ portForward:
   namespace: default
   port: 8000
   localPort: 8000
+profiles:
+  - name: docker-desktop
+    activation:
+      - kubeContext: docker-desktop
+        command: dev
