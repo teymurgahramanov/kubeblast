@@ -18,6 +18,7 @@ async def get_job(job: str):
 
 @router.post("/jobs")
 async def create_job(config_file: UploadFile = File(...)):
+    # Generate ConfigMap
     file_content = await config_file.read()
     file_name = "plan.jmx"
     configmap_template_path = os.path.join(os.path.dirname(__file__), "../templates/configmap.yaml.j2")
@@ -33,6 +34,8 @@ async def create_job(config_file: UploadFile = File(...)):
         namespace=namespace,
         body=configmap_manifest
     )
+
+    # Generate Job
     job_template_path = os.path.join(os.path.dirname(__file__), "../templates/job.yaml.j2")
     with open(job_template_path, 'r') as file:
         job_template_content = file.read()
