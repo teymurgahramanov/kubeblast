@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ job_name }}
+        image: busybox
+        command: ["cat", "/tmp/{{ file_name }}"]
+        volumeMounts:
+        - name: config-volume
+          mountPath: /tmp
+      restartPolicy: Never
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ configmap_name }}
