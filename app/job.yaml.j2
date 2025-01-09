@@ -7,14 +7,15 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ job_name }}
+      - name: {{ name }}
         image: busybox
         command: ["cat", "/tmp/{{ file_name }}"]
         volumeMounts:
         - name: config-volume
-          mountPath: /tmp
+          mountPath: /tmp/{{ file_name }}
+          subPath: {{ file_name }}
       restartPolicy: Never
       volumes:
       - name: config-volume
         configMap:
-          name: {{ configmap_name }}
+          name: {{ name }}

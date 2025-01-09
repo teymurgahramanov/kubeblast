@@ -10,7 +10,7 @@ build:
       dockerfile: Dockerfile
 manifests:
   rawYaml:
-    - dev/*.yaml
+    - .dev/*.yaml
 portForward:
 - resourceType: deployment
   resourceName: jrunner
