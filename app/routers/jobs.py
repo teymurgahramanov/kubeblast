@@ -2,14 +2,14 @@ import os
 import yaml
 from jinja2 import Template
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
-from app.dependencies import create_job
+from app import dependencies
 
 router = APIRouter()
 namespace = "default"
 
 @router.get("/jobs")
 async def get_jobs():
-    jobs = kubernetes_client_batch.list_namespaced_job(namespace=namespace)
+    jobs = dependencies.list_workloads.list_namespaced_job(namespace=namespace)
     return {"jobs": [job.metadata.name for job in jobs.items]}
 
 @router.get("/jobs/{job}")
@@ -33,14 +33,8 @@ async def create_job(plan_file: UploadFile = File(...),project_name: str = Heade
         file_content_decoded = file_content.decode("utf-8")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {str(e)}")
-    return create_job(job_name, file_name, file_content)
+    return dependencies.create_workload(job_name, file_name, file_content)
 
 @router.delete("/jobs/{job}")
 async def get_job(job: str):
-    job = kubernetes_client_batch.delete_namespaced_job(
-        namespace=namespace,
-        name  = job,
-        orphan_dependents = True,
-        propagation_policy = 'Foreground'
-    )
-    return {"job": "deleted"}
+    return dependencies.delete_workload(job)
