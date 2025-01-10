@@ -2,7 +2,7 @@ import os
 import yaml
 from jinja2 import Template
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
-from app import dependencies
+from api import dependencies
 
 router = APIRouter()
 namespace = "default"

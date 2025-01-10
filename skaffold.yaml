@@ -4,8 +4,8 @@ metadata:
   name: jrunner
 build:
   artifacts:
-  - image: jrunner
-    context: ./app
+  - image: jrunner-api
+    context: ./api
     docker:
       dockerfile: Dockerfile
 manifests:

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import jobs, logs, reports
+from api.routers import jobs, logs, reports
 
 app = FastAPI()
 
