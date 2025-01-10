@@ -4,18 +4,21 @@ metadata:
   name: {{ name }}
   namespace: {{ namespace }}
 spec:
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  ttlSecondsAfterFinished: 300
   template:
     spec:
       containers:
       - name: {{ name }}
         image: busybox
-        command: ["cat", "/tmp/{{ file_name }}"]
+        command: ["cat", "/tmp/{{ cm_key }}"]
         volumeMounts:
-        - name: config-volume
-          mountPath: /tmp/{{ file_name }}
-          subPath: {{ file_name }}
+        - name: jmeter-plan
+          mountPath: /tmp/{{ cm_key }}
+          subPath: {{ cm_key }}
       restartPolicy: Never
       volumes:
-      - name: config-volume
+      - name: jmeter-plan
         configMap:
           name: {{ name }}

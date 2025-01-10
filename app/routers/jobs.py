@@ -9,8 +9,7 @@ namespace = "default"
 
 @router.get("/jobs")
 async def get_jobs():
-    jobs = dependencies.list_workloads.list_namespaced_job(namespace=namespace)
-    return {"jobs": [job.metadata.name for job in jobs.items]}
+    return dependencies.list_workloads()
 
 @router.get("/jobs/{job}")
 async def get_job(job: str):
@@ -26,13 +25,12 @@ async def create_job(plan_file: UploadFile = File(...),project_name: str = Heade
     if plan_file.content_type != "text/plain":
         raise HTTPException(status_code=400, detail="Invalid file type. Expected text/plain")
     
-    # Generate ConfigMap
     try:
         file_name = "plan.jmx"
         file_content = await plan_file.read()
-        file_content_decoded = file_content.decode("utf-8")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {str(e)}")
+    
     return dependencies.create_workload(job_name, file_name, file_content)
 
 @router.delete("/jobs/{job}")
