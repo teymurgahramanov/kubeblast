@@ -12,11 +12,11 @@ def list_workloads():
     jobs = client.BatchV1Api().list_namespaced_job(namespace=namespace)
     return {"jobs": [job.metadata.name for job in jobs.items]}
 
-def create_workload(job_name,cm_key,cm_data):
+def create_workload(job_name,cm_data):
 
     configmap = client.V1ConfigMap(
         metadata=client.V1ObjectMeta(name=job_name),
-        data={cm_key: cm_data.decode("utf-8")}
+        data={configmap_key: cm_data.decode("utf-8")}
     )
 
     client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
@@ -29,7 +29,7 @@ def create_workload(job_name,cm_key,cm_data):
     rendered_job = Template(job_template_content).render(
         name=job_name,
         namespace=namespace,
-        cm_key=cm_key
+        cm_key=configmap_key
     )
     job_manifest = yaml.safe_load(rendered_job)
     job = client.BatchV1Api().create_namespaced_job(
@@ -79,3 +79,4 @@ def delete_workload(job_name):
       pass
   
   return {"Workload": "deleted"}
+

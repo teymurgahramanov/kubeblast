@@ -10,10 +10,11 @@ build:
       dockerfile: Dockerfile
 manifests:
   rawYaml:
-    - .dev/*.yaml
+    - .dev/deployment.yaml
+    - .dev/serviceaccount.yaml
 portForward:
 - resourceType: deployment
-  resourceName: jrunner
+  resourceName: jrunner-api
   namespace: default
   port: 8000
   localPort: 8000

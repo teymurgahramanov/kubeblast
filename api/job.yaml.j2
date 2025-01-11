@@ -4,15 +4,17 @@ metadata:
   name: {{ name }}
   namespace: {{ namespace }}
 spec:
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  ttlSecondsAfterFinished: 300
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 172800
   template:
     spec:
       containers:
-      - name: {{ name }}
+      - name: jmeter
         image: busybox
-        command: ["cat", "/tmp/{{ cm_key }}"]
+        #command: ["cat", "/tmp/{{ cm_key }}"]
+        command: ["sh", "-c", "while true; do echo \"$(date): $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 8)\"; sleep 5; done"]
         volumeMounts:
         - name: jmeter-plan
           mountPath: /tmp/{{ cm_key }}
