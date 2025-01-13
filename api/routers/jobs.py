@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Header
+from typing import Annotated
+from fastapi import Depends, APIRouter, HTTPException, UploadFile, File, Header
 from api.dependencies.jobs import create_workload, list_workloads, delete_workload
+from api.dependencies import secuirty
 
 router = APIRouter()
 namespace = "default"
 
 @router.get("/jobs")
-async def get_jobs():
-    return list_workloads()
+async def get_jobs(token: Annotated[str, Depends(secuirty.oauth2_scheme)]):
+    #return list_workloads()
+    return {"token": token}
 
 @router.get("/jobs/{job}")
 async def get_job(job: str):
