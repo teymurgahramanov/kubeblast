@@ -8,15 +8,14 @@ namespace = "default"
 
 @router.get("/jobs")
 async def get_jobs(token: Annotated[str, Depends(secuirty.oauth2_scheme)]):
-    #return list_workloads()
-    return {"token": token}
+    return list_workloads()
 
 @router.get("/jobs/{job}")
 async def get_job(job: str):
     return {"job": job}
 
 @router.post("/jobs")
-async def create_job(plan_file: UploadFile = File(...),username: str = Header(None),project_name: str = Header(None)):
+async def create_job(token: Annotated[str, Depends(secuirty.oauth2_scheme)],plan_file: UploadFile = File(...),username: str = Header(None),project_name: str = Header(None)):
 
     if not username:
         raise HTTPException(status_code=400, detail="Username header is required")
@@ -37,5 +36,5 @@ async def create_job(plan_file: UploadFile = File(...),username: str = Header(No
     return create_workload(job_name, file_content)
 
 @router.delete("/jobs/{job}")
-async def get_job(job: str):
+async def get_job(token: Annotated[str, Depends(secuirty.oauth2_scheme)],job: str):
     return delete_workload(job)

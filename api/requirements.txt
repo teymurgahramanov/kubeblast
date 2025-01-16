@@ -1,4 +1,6 @@
 fastapi
 fastapi[standard]
+passlib[bcrypt]
+pyjwt
 kubernetes
 minio
