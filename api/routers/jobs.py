@@ -7,7 +7,7 @@ router = APIRouter()
 namespace = "default"
 
 @router.get("/jobs")
-async def get_jobs(token: Annotated[str, Depends(secuirty.oauth2_scheme)]):
+async def get_jobs():
     return list_workloads()
 
 @router.get("/jobs/{job}")
@@ -15,7 +15,7 @@ async def get_job(job: str):
     return {"job": job}
 
 @router.post("/jobs")
-async def create_job(token: Annotated[str, Depends(secuirty.oauth2_scheme)],plan_file: UploadFile = File(...),username: str = Header(None),project_name: str = Header(None)):
+async def create_job(plan_file: UploadFile = File(...),username: str = Header(None),project_name: str = Header(None)):
 
     if not username:
         raise HTTPException(status_code=400, detail="Username header is required")
