@@ -50,10 +50,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
 def get_user(db, username: str):
     if username in db:
         user_dict = db[username]
@@ -63,7 +59,7 @@ def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not pwd_context.verify(password, user.hashed_password):
         return False
     return user
 
@@ -106,6 +102,8 @@ def login(form_data) -> Token:
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
     access_token = create_access_token(
         data={"sub": user.username}, 
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
