@@ -10,41 +10,53 @@ from pydantic import BaseModel
 
 # to get a string like this run:
 # openssl rand -hex 32
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+SECRET_KEY = "d1b78a16905ea088043b3f30469ac14efafc7ff75d221461b1e0f29330337f4f"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 
 fake_users_db = {
     "johndoe": {
         "username": "johndoe",
         "full_name": "John Doe",
         "email": "johndoe@example.com",
+        "role": "admin",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
         "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com:",
+        "role": "user",
+        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "disabled": False
+    },
+    "bob": {
+        "username": "bob",
+        "full_name": "Bob Builder",
+        "email": "bob@example.com",
+        "role": "user",
+        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "disabled": True
     }
 }
-
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-
 class TokenData(BaseModel):
     username: str | None = None
-
 
 class User(BaseModel):
     username: str
     email: str | None = None
     full_name: str | None = None
-    disabled: bool | None = None
-
+    disabled: bool
+    role: str
 
 class UserInDB(User):
     hashed_password: str
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -73,7 +85,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -82,6 +94,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        role: str = payload.get("role")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
@@ -105,7 +118,7 @@ def login(form_data) -> Token:
     if user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     access_token = create_access_token(
-        data={"sub": user.username}, 
+        data={"sub": user.username, "role": user.role}, 
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return Token(access_token=access_token, token_type="bearer")
