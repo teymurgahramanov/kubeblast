@@ -45,17 +45,15 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class TokenData(BaseModel):
-    username: str | None = None
-
 class User(BaseModel):
     username: str
     email: str | None = None
     full_name: str | None = None
     disabled: bool
-    role: str
+    role: int
 
 class UserInDB(User):
+    salt: str
     hashed_password: str
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -86,10 +84,9 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(fake_users_db, username=username)
     if user is None:
         raise credentials_exception
     return user
@@ -99,8 +96,8 @@ def get_current_active_user(current_user: Annotated[User, Depends(get_current_us
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_active_user)]):
-    if current_user.role != "admin":
+def get_current_active_superuser(min_required_role: int, current_user: Annotated[User, Depends(get_current_active_user)]):
+    if current_user.role < "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
 

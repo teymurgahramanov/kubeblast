@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import Depends, APIRouter, HTTPException, UploadFile, File, Header
 from api.dependencies.jobs import create_workload, list_workloads, delete_workload
-from api.dependencies import secuirty
+from api.dependencies import auth
 
 router = APIRouter()
 namespace = "default"
