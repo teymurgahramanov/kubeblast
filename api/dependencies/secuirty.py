@@ -90,11 +90,19 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     except InvalidTokenError:
         raise credentials_exception
     user = get_user(fake_users_db, username=token_data.username)
-    if user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_active_user)]):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return current_user
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -117,7 +125,7 @@ def login(form_data) -> Token:
     if user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     access_token = create_access_token(
-        data={"sub": user.username, "role": user.role}, 
+        data={"sub": user.username}, 
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return Token(access_token=access_token, token_type="bearer")

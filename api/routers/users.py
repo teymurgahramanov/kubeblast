@@ -1,13 +1,13 @@
 from typing import Annotated
 from fastapi import Depends, APIRouter
-from api.dependencies import secuirty, users
+from api.dependencies import secuirty
 
 router = APIRouter()
 
 @router.get("/users/me")
-async def read_users_me():
-  return secuirty.current_user
+async def read_users_me(current_user: Annotated[secuirty.User, Depends(secuirty.get_current_active_user)]):
+  return "me: " + current_user.username
 
 @router.get("/users/all")
-async def read_users_all():
-  return secuirty.current_user
+async def read_users_all(current_user: Annotated[secuirty.User, Depends(secuirty.get_current_active_superuser)]):
+  return "admin: " + current_user.username
