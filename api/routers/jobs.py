@@ -36,5 +36,5 @@ async def create_job(plan_file: UploadFile = File(...),username: str = Header(No
     return create_workload(job_name, file_content)
 
 @router.delete("/jobs/{job}")
-async def get_job(token: Annotated[str, Depends(secuirty.oauth2_scheme)],job: str):
+async def get_job(job: str):
     return delete_workload(job)
