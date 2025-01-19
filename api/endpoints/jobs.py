@@ -1,7 +1,5 @@
-from typing import Annotated
-from fastapi import Depends, APIRouter, HTTPException, UploadFile, File, Header
-from api.dependencies.jobs import create_workload, list_workloads, delete_workload
-from api.dependencies import auth
+from fastapi import APIRouter, HTTPException, UploadFile, File, Header
+from api.services.jobs import create_workload, list_workloads, delete_workload
 
 router = APIRouter()
 namespace = "default"

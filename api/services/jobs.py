@@ -2,7 +2,7 @@ import os
 import yaml
 from jinja2 import Template
 from kubernetes import client, config as k8s_config
-from api.config import config
+from api.core.config import config
 
 k8s_config.load_incluster_config()
 namespace = config.K8S_NAMESPACE

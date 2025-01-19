@@ -1,11 +1,16 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
-    APP_NAME: str = "JMeter Kubernetes API"
     DEBUG: bool = False
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
     ACCESS_TOKEN_EXPIRE_MINUTES: int = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
+
+    MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jmeter")
 
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "your_access_key")

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from api.dependencies.logs import stream_pod_logs
+from api.services.logs import stream_pod_logs
 
 router = APIRouter()
 
