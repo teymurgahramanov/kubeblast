@@ -4,6 +4,9 @@ class Config:
     APP_NAME: str = "JMeter Kubernetes API"
     DEBUG: bool = False
 
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
+
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "your_access_key")
     MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "your_secret_key")

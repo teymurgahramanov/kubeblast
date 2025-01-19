@@ -1,18 +1,17 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, List
 
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from api.config import config
 
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = "d1b78a16905ea088043b3f30469ac14efafc7ff75d221461b1e0f29330337f4f"
+SECRET_KEY = config.SECRET_KEY
+ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 fake_users_db = {
     "johndoe": {
@@ -20,6 +19,7 @@ fake_users_db = {
         "full_name": "John Doe",
         "email": "johndoe@example.com",
         "role": "admin",
+        "salt": "asdsdfa",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
         "disabled": False,
     },
@@ -28,6 +28,7 @@ fake_users_db = {
         "full_name": "Alice Wonderson",
         "email": "alice@example.com:",
         "role": "user",
+        "salt": "asdsdfa",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
         "disabled": False
     },
@@ -36,6 +37,7 @@ fake_users_db = {
         "full_name": "Bob Builder",
         "email": "bob@example.com",
         "role": "user",
+        "salt": "asdsdfa",
         "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
         "disabled": True
     }
@@ -50,14 +52,13 @@ class User(BaseModel):
     email: str | None = None
     full_name: str | None = None
     disabled: bool
-    role: int
+    role: str
 
 class UserInDB(User):
     salt: str
     hashed_password: str
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_user(db, username: str):
@@ -69,7 +70,7 @@ def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)
     if not user:
         return False
-    if not pwd_context.verify(password, user.hashed_password):
+    if not pwd_context.verify(user.salt+password, user.hashed_password):
         return False
     return user
 
@@ -96,8 +97,15 @@ def get_current_active_user(current_user: Annotated[User, Depends(get_current_us
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def get_current_active_superuser(min_required_role: int, current_user: Annotated[User, Depends(get_current_active_user)]):
-    if current_user.role < "admin":
+def check_roles(allowed_roles: List[str]):
+    def role_checker(current_user: User = Depends(get_current_active_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        return current_user
+    return role_checker
+
+def get_allowed_roles(allowed_roles: list, current_user: Annotated[User, Depends(get_current_active_user)]):
+    if current_user.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
 
