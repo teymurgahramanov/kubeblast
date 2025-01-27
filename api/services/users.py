@@ -1,5 +1,7 @@
 from fastapi import HTTPException
+from typing import Annotated
 from api.core import models, password, db
+from api.core.models import UserCreate
 
 async def get_user(username: str):
     user = await db.mongo.users.find_one({"username": username})
@@ -8,7 +10,7 @@ async def get_user(username: str):
     else:
         return None
 
-async def create_user(user: dict):
+async def create_user(user: UserCreate):
     user_in_db = await get_user(user["username"])
 
     if user_in_db:

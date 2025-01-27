@@ -5,10 +5,9 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def create_admin():
-  from api.services.users import create_user, UserCreate
+  from api.services.users import create_user
   user_data = {"username": "admin", "password": "admin", "role": "admin"}
-  user = UserCreate(**user_data)
-  await create_user(user)
+  await create_user(**user_data)
 
 app.include_router(auth.router,tags=["auth"])
 app.include_router(users.router,tags=["users"])
