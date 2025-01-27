@@ -1,21 +1,23 @@
 from fastapi import HTTPException
-from api.core.security import hash_password
-from api.core import models
-from api.core.db import db
+from api.core import models, password, db
+
+async def get_user(username: str):
+    user = await db.mongo.users.find_one({"username": username})
+    if user:
+        return models.UserInDB(**user)
+    else:
+        return None
 
 async def create_user(user: dict):
+    user_in_db = await get_user(user["username"])
 
-    print ("aaa")
-    user_data = await get_user(user["username"])
-    print (user_data)
-    if user_data:
+    if user_in_db:
         return HTTPException(status_code=400, detail="Username already registered")
 
-    hashed_password = hash_password(user_data.password)
+    print(user)
+    user["hashed_password"] = password.hash_password(user.password)
 
-    user_data["hashed_password"] = hashed_password
+    user_to_db = models.UserInDB(**user)
 
-    user_data_db = models.UserInDB(**user_data)
-
-    result = await db.users.insert_one(user_data_db.dict())
+    result = await db.mongo.users.insert_one(user_to_db.dict())
     return result

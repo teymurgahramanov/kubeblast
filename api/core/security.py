@@ -6,33 +6,23 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
+from api.services.users import get_user
+from api.core import models, password
 from api.core.config import config
-from api.core import models, db
 
 SECRET_KEY = config.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 ALGORITHM = "HS256"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-async def get_user(username: str):
-    user = await db.users.find_one({"username": username})
-    if user:
-        return models.UserInDB(**user)
-    else:
-        return None
-
-def authenticate_user(username: str):
+def authenticate_user(username: str, plain_password: str):
     user = get_user(username)
     if not user:
         return False
-    if not pwd_context.verify(user.password, user.hashed_password):
+    if not password.verify_password(plain_password, user.hashed_password):
         return False
     return user
-
-def hash_password(password: str):
-    return pwd_context.hash(password)
 
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
@@ -47,7 +37,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(db.fake_users_db, username=username)
+    user = get_user(username)
     if user is None:
         raise credentials_exception
     return user
@@ -80,7 +70,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def login(form_data) -> models.Token:
-    user = authenticate_user(db.fake_users_db, form_data.username, form_data.password)
+    user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

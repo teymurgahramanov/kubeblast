@@ -5,4 +5,4 @@ MONGO_URI = config.MONGO_URI
 MONGO_DB_NAME = config.MONGO_DB_NAME
 
 client = AsyncIOMotorClient(MONGO_URI)
-db = client[MONGO_DB_NAME]
+mongo = client[MONGO_DB_NAME]
