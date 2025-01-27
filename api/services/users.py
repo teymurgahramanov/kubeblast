@@ -1,7 +1,6 @@
 from fastapi import HTTPException
 from typing import Annotated
 from api.core import models, password, db
-from api.core.models import UserCreate
 
 async def get_user(username: str):
     user = await db.mongo.users.find_one({"username": username})
@@ -10,14 +9,15 @@ async def get_user(username: str):
     else:
         return None
 
-async def create_user(user: UserCreate):
-    user_in_db = await get_user(user["username"])
+async def create_user(user: dict):
+    user_data = models.UserCreate(**user)
+    user_in_db = await get_user(user_data.username)
 
     if user_in_db:
         return HTTPException(status_code=400, detail="Username already registered")
 
     print(user)
-    user["hashed_password"] = password.hash_password(user.password)
+    user.hashed_password = password.hash_password(user.password)
 
     user_to_db = models.UserInDB(**user)
 
