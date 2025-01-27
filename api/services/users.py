@@ -1,14 +1,7 @@
 from fastapi import HTTPException
-from api.core.security import pwd_context
+from api.core.security import hash_password
 from api.core import models
 from api.core.db import db
-
-async def get_user(username: str):
-    user = await db.users.find_one({"username": username})
-    if user:
-        return models.UserInDB(**user)
-    else:
-        return None
 
 async def create_user(user: dict):
 
@@ -18,7 +11,7 @@ async def create_user(user: dict):
     if user_data:
         return HTTPException(status_code=400, detail="Username already registered")
 
-    hashed_password = pwd_context.hash(user_data.password)
+    hashed_password = hash_password(user_data.password)
 
     user_data["hashed_password"] = hashed_password
 

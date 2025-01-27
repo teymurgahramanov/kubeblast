@@ -8,7 +8,6 @@ from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from api.core.config import config
 from api.core import models, db
-from api.services.users import get_user
 
 SECRET_KEY = config.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -17,13 +16,23 @@ ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def authenticate_user(username: str, password: str):
+async def get_user(username: str):
+    user = await db.users.find_one({"username": username})
+    if user:
+        return models.UserInDB(**user)
+    else:
+        return None
+
+def authenticate_user(username: str):
     user = get_user(username)
     if not user:
         return False
-    if not pwd_context.verify(user.salt+password, user.hashed_password):
+    if not pwd_context.verify(user.password, user.hashed_password):
         return False
     return user
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
 
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
