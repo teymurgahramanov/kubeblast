@@ -10,7 +10,7 @@ class Config:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 
     MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jmeter")
+    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jrunner")
 
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "your_access_key")
