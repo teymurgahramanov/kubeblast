@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api.endpoints import jobs, logs, reports, auth, users, profile
+from api.endpoints import auth, users, profile, jobs, logs
 
 app = FastAPI()
 
@@ -10,7 +10,6 @@ async def create_admin():
 
 app.include_router(auth.router,tags=["auth"])
 app.include_router(users.router,tags=["users"])
+app.include_router(profile.router,tags=["profile"])
 app.include_router(jobs.router,tags=["jobs"])
 app.include_router(logs.router,tags=["logs"])
-app.include_router(reports.router,tags=["reports"])
-app.include_router(profile.router,tags=["profile"])

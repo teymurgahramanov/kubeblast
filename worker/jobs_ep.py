@@ -1,0 +1,39 @@
+from fastapi import APIRouter, HTTPException, UploadFile, File, Header
+from api.services.jobs import create_workload, list_workloads, delete_workload
+from api.core.config import config
+
+router = APIRouter()
+namespace = config.K8S_NAMESPACE
+
+@router.get("/jobs")
+async def get_jobs():
+    return list_workloads()
+
+@router.get("/jobs/{job}")
+async def get_job(job: str):
+    return {"job": job}
+
+@router.post("/jobs")
+async def create_job(plan_file: UploadFile = File(...),username: str = Header(None),project_name: str = Header(None)):
+
+    if not username:
+        raise HTTPException(status_code=400, detail="Username header is required")
+
+    if not project_name:
+        raise HTTPException(status_code=400, detail="PROJECT_NAME header is required")
+
+    job_name = f"{username}-{project_name}"
+
+    if plan_file.content_type != "text/plain":
+        raise HTTPException(status_code=400, detail="Invalid file type. Expected text/plain")
+    
+    try:
+        file_content = await plan_file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {str(e)}")
+    
+    return create_workload(job_name, file_content)
+
+@router.delete("/jobs/{job}")
+async def get_job(job: str):
+    return delete_workload(job)

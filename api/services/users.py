@@ -23,24 +23,36 @@ def create_user(user_data):
     user_to_db = models.UserInDB(**user_data_dict)
     
     try:
-        result = db.mongo.users.insert_one(user_to_db.dict())
+        db.mongo.users.insert_one(user_to_db.dict())
     except Exception as e:
         return False
-    finally:
+    else:
         return True
 
-def update_user(username: str, update_data: dict):
-    if "password" in update_data:
-        update_data["hashed_password"] = password.hash_password(update_data.pop("password"))
+def update_user(username: str, user_data: dict):
+    user_in_db = get_user(username)
+    if not user_in_db:
+        return None
 
-    result = db.mongo.users.update_one({"username": username}, {"$set": update_data})
+    user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
+    if "password" in user_data:
+        user_data["hashed_password"] = password.hash_password(user_data.pop("password"))
 
-    if result.matched_count == 0:
-            raise Exception(f"Failed to update user '{username}'. No matching user found.")
-
-    updated_user = get_user(username)
-    return updated_user
+    try:
+        db.mongo.users.update_one({"username": username}, {"$set": user_data})
+    except Exception as e:
+        return False
+    else:
+        updated_user = get_user(username)
+        return updated_user
 
 def delete_user(username: str):
-    result = db.mongo.users.delete_one({"username": username})
-    return result
+    user_in_db = get_user(username)
+    if not user_in_db:
+        return None
+    try:
+        db.mongo.users.delete_one({"username": username})
+    except Exception as e:
+        return False
+    else:
+        return True

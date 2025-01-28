@@ -24,8 +24,11 @@ def get_user(username: str):
 def create_admin_user():
     admin = get_user("admin")
     if not admin:
-        admin = models.UserCreate(username="admin", password="admin", role="admin")
-        admin.hashed_password = password.hash_password(admin.password)
+        admin = models.UserInDB(
+            username=config.ADMIN_USERNAME, 
+            hashed_password=password.hash_password(config.ADMIN_PASSWORD),
+            role="admin"
+        )
         db.mongo.users.insert_one(admin.dict())
 
 def authenticate_user(username: str, plain_password: str):
