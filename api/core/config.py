@@ -19,9 +19,7 @@ class Config:
     MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jrunner")
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
-    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "your_access_key")
-    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "your_secret_key")
+    UPLOAD_DIR = "uploads"
 
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
     K8S_JOB_TIMEOUT: int = int(os.getenv("K8S_JOB_TIMEOUT", 300))

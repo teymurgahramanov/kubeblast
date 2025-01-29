@@ -49,12 +49,12 @@ class Job(BaseModel):
     name: str
     user: str
     description: str | None = None
-    status: Literal["pending", "approved", "running", "completed", "failed"]
-    plan: str
+    status: Literal["pending", "approved", "declined", "running", "completed", "failed"]
+    file_name: str
 
 class JobCreate(Job):
     user: str | None = None
-    plan: str | None = None
+    file_name: str | None = None
 
     @classmethod
     def create_form(
@@ -63,3 +63,17 @@ class JobCreate(Job):
         description: Optional[str] = Form(None),
     ):
         return cls(name=name, description=description, status="pending")
+    
+class JobUpdate(Job):
+    name: Optional[str] = None
+    user: Optional[str] = None
+    description: Optional[str] = None
+    status: Literal["approved", "declined"]
+    file_name: Optional[str] = None
+
+    @classmethod
+    def update_form(
+        cls,
+        status: Literal["approved", "declined"],
+    ):
+        return cls(status=status)

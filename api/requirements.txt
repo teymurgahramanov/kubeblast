@@ -5,6 +5,4 @@ passlib[bcrypt]
 bcrypt
 pyjwt
 kubernetes
-minio
 python-dotenv
-bson
