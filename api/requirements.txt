@@ -7,3 +7,4 @@ pyjwt
 kubernetes
 minio
 python-dotenv
+bson

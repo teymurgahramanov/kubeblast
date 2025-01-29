@@ -5,8 +5,8 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def create_admin():
-  from api.core import security
-  return security.create_admin_user()
+  from api.core import auth
+  return auth.create_admin_user()
 
 app.include_router(auth.router,tags=["auth"])
 app.include_router(users.router,tags=["users"])

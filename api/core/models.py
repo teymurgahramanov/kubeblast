@@ -47,6 +47,19 @@ class Token(BaseModel):
 
 class Job(BaseModel):
     name: str
-    description: str
-    status: Literal["pending", "approved", "running", "completed", "failed"]
     user: str
+    description: str | None = None
+    status: Literal["pending", "approved", "running", "completed", "failed"]
+    plan: str
+
+class JobCreate(Job):
+    user: str | None = None
+    plan: str | None = None
+
+    @classmethod
+    def create_form(
+        cls,
+        name: str = Form(...),
+        description: Optional[str] = Form(None),
+    ):
+        return cls(name=name, description=description, status="pending")
