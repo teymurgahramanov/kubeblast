@@ -7,14 +7,8 @@ app = FastAPI()
 async def initialize():
   from api.core import auth, config
   import os
-  try:
-    os.makedirs(config.UPLOAD_DIR, exist_ok=True)
-    auth.create_admin_user()
-  except Exception as e:
-    print(f"ERROR: {str(e)}")
-    return False
-  else:
-    return True
+  os.makedirs(config.config.UPLOAD_DIR, exist_ok=True)
+  return auth.create_admin_user()
 
 app.include_router(auth.router,tags=["auth"])
 app.include_router(users.router,tags=["users"])

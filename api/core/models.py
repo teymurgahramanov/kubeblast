@@ -1,6 +1,6 @@
 from fastapi import Form
 from typing import Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class User(BaseModel):
     username: str
@@ -46,9 +46,9 @@ class Token(BaseModel):
     token_type: str
 
 class Job(BaseModel):
-    name: str
+    name: str = Field(..., max_length=24)
     user: str
-    description: str | None = None
+    description: Optional[str] = Field(None, max_length=60)
     status: Literal["pending", "approved", "declined", "running", "completed", "failed"]
     file_name: str
 

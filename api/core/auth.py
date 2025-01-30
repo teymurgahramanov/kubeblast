@@ -64,6 +64,7 @@ def get_current_active_user(current_user: Annotated[models.User, Depends(get_cur
 
 def check_roles(allowed_roles: List[str]):
     def role_checker(current_user: models.User = Depends(get_current_active_user)):
+        print(current_user.role in allowed_roles)
         if current_user.role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Not enough permissions")
         return current_user
