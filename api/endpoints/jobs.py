@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
-from typing import Annotated
+from typing import Annotated, Literal
 from api.core import models, auth, config
 from api.services import jobs
-import os, hashlib
+import os
 
 router = APIRouter()
 
@@ -16,23 +16,18 @@ async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth
     return jobs.get_job(job_id)
 
 @router.post("/jobs")
-async def create_job(job_data: Annotated[models.JobCreate, Depends(models.JobCreate.create_form)], current_user: Annotated[models.User, Depends(auth.check_roles(["user"]))], file: UploadFile = File(...)):
+async def create_job(current_user: Annotated[models.User, Depends(auth.check_roles(["user"]))], description: Annotated[str, Form()], file: UploadFile = File(...)):
 
     if file.content_type != "text/plain":
         raise HTTPException(status_code=400, detail="Invalid file type. Expected text/plain")
 
     file_content = await file.read()
-    file_name = f"{current_user.username}_{job_data.name}_{hashlib.sha256(file_content).hexdigest()}.jmx"
-    file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
 
-    with open(file_path, "wb") as f:
-        f.write(file_content)
-
-    return jobs.create_job(job_data, file_name, current_user)
+    return jobs.create_job(file_content, description, current_user)
 
 @router.put("/jobs/{job_id}")
-async def update_job(job_id: str, job_data: Annotated[models.JobUpdate, Depends(models.JobUpdate.update_form)], current_user: Annotated[models.User, Depends(auth.check_roles(["moderator", "admin"]))]):
-    return jobs.update_job(job_id, job_data=dict(job_data))
+async def update_job(current_user: Annotated[models.User, Depends(auth.check_roles(["moderator", "admin"]))],job_id: str, job_status: Literal["approved", "declined"] = Form(...)):
+    return jobs.update_job(job_id, job_status)
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_roles(["user", "admin"]))]):

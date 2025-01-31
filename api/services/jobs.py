@@ -1,6 +1,6 @@
 from api.core import db, models
 import bson
-import os
+import os, hashlib
 from api.core import config, k8s
 from kubernetes import client
 
@@ -23,38 +23,50 @@ def get_job(job_id):
     except:
         return {"error": "Invalid job ID"}
     
-def create_job(job_data, file_name, current_user):
-    job_data_dict = job_data.dict()
+def create_job(description, file_content, current_user):
+    job_name = f"{current_user.username}-{job_data.name}-{hashlib.sha256(file_content).hexdigest()[:6]}"
+    file_name = f"{job_name}.jmx"
+    file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
 
-    job_data_dict["user"] = current_user.username
-    job_data_dict["file_name"] = file_name
-    job_data_dict["k8s_job_name"] = f"jrunner_{current_user.username}_{job_data["name"]}_{hashlib.sha256(file_content).hexdigest()}"
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+
+    job_data = {}
+    job_data["name"] = job_name
+    job_data["user"] = current_user.username
+    job_data["description"] = description
+    job_data["status"] = "pending"
+    job_data["file_name"] = file_name
 
     try:
-        models.Job(**job_data_dict)
+        models.Job(**job_data)
     except Exception as e:
         return {"error": "Invalid job data"}
     
     try:
-        db.mongo.jobs.insert_one(job_data_dict)
+        db.mongo.jobs.insert_one(job_data)
     except Exception as e:
         return False
     else:
         return True
     
-def update_job(job_id, job_data: dict):
+def update_job(job_id, job_status: str):
     job = get_job(job_id)
     if not job:
         return None
+
+    if job.status in ["running", "completed", "failed", "approved"]:
+        return {"error": "Cannot update job in current state"}
     
-    job_data = {key: value for key, value in job_data.items() if value not in [None, "", [], {}, ()]}
     try:
-        db.mongo.jobs.update_one({"_id": bson.objectid.ObjectId(job_id)}, {"$set": job_data})
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": job_status}}
+        )
     except Exception as e:
-        return False
+        return {"error": str(e)}
     else:
-        updated_job = get_job(job_id)
-        return updated_job
+        return get_job(job_id)
 
 def delete_job(job_id, current_user):
     job = get_job(job_id)
@@ -72,10 +84,10 @@ def delete_job(job_id, current_user):
     try:
         client.BatchV1Api(k8s.client).delete_namespaced_job(
             namespace=config.config.K8S_NAMESPACE,
-            name = job.k8s_job_name,
+            name = job.name,
             propagation_policy = 'Foreground'
         )
-        print(f"Job {job.k8s_job_name} deleted")
+        print(f"Job {job.name} deleted")
     except Exception as e:
         print(e)
         pass
@@ -83,15 +95,15 @@ def delete_job(job_id, current_user):
     try: 
         client.CoreV1Api(k8s.client).delete_namespaced_config_map(
             namespace=config.config.K8S_NAMESPACE,
-            name = job.k8s_job_name
+            name = job.name
         )
-        print(f"ConfigMap {job.k8s_job_name} deleted")
+        print(f"ConfigMap {job.name} deleted")
     except Exception as e:
         print(e)
         pass
 
     try:
-        label_selector = f"batch.kubernetes.io/job-name={job.k8s_job_name}"
+        label_selector = f"batch.kubernetes.io/job-name={job.name}"
         print(f"Finding Pods with label: {label_selector}")
         pods = client.CoreV1Api(k8s.client).list_namespaced_pod(namespace=config.config.K8S_NAMESPACE, label_selector=label_selector)
 
