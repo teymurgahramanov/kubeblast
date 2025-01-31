@@ -23,16 +23,10 @@ def get_job(job_id):
     except:
         return {"error": "Invalid job ID"}
     
-def create_job(description, file_content, current_user):
-    job_name = f"{current_user.username}-{job_data.name}-{hashlib.sha256(file_content).hexdigest()[:6]}"
-    file_name = f"{job_name}.jmx"
-    file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
-
-    with open(file_path, "wb") as f:
-        f.write(file_content)
+def create_job(name, description, file_name, current_user):
 
     job_data = {}
-    job_data["name"] = job_name
+    job_data["name"] = name
     job_data["user"] = current_user.username
     job_data["description"] = description
     job_data["status"] = "pending"

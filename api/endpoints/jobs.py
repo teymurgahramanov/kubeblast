@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from typing import Annotated, Literal
 from api.core import models, auth, config
 from api.services import jobs
-import os
+import os, hashlib
 
 router = APIRouter()
 
@@ -21,9 +21,15 @@ async def create_job(current_user: Annotated[models.User, Depends(auth.check_rol
     if file.content_type != "text/plain":
         raise HTTPException(status_code=400, detail="Invalid file type. Expected text/plain")
 
+    job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
     file_content = await file.read()
+    file_name = f"{job_name}.jmx"
+    file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
 
-    return jobs.create_job(file_content, description, current_user)
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+
+    return jobs.create_job(job_name, description, current_user)
 
 @router.put("/jobs/{job_id}")
 async def update_job(current_user: Annotated[models.User, Depends(auth.check_roles(["moderator", "admin"]))],job_id: str, job_status: Literal["approved", "declined"] = Form(...)):
