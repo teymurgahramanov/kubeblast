@@ -50,11 +50,11 @@ class Job(BaseModel):
     user: str
     description: Optional[str] = Field(None, max_length=60)
     status: Literal["pending", "approved", "declined", "running", "completed", "failed"]
-    file_name: str
 
 class JobCreate(Job):
     user: str | None = None
     file_name: str | None = None
+    k8s_job_name: str | None = None
 
     @classmethod
     def create_form(
@@ -70,6 +70,7 @@ class JobUpdate(Job):
     description: Optional[str] = None
     status: Literal["approved", "declined"]
     file_name: Optional[str] = None
+    k8s_job_name: Optional[str] = None
 
     @classmethod
     def update_form(
