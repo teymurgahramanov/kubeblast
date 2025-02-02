@@ -46,9 +46,13 @@ async def create_job(
         "created_at": datetime.now()
     }
 
-    db.mongo.jobs.insert_one(job_data)
-
-    return jobs.create_job(job_data)
+    try:
+        db.mongo.jobs.insert_one(job_data)
+    except Exception as e:
+        print(e)
+        return HTTPException(status_code=500, detail="Error creating job")
+    else:
+        return jobs.create_job(job_data)
 
 @router.put("/jobs/{job_id}")
 async def approve_job(current_user: Annotated[models.User, Depends(auth.check_roles(["moderator", "admin"]))],job_id: str, job_status: Literal["approved", "declined"] = Form(...)):

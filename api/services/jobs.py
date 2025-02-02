@@ -80,6 +80,6 @@ def delete_job(job_id, current_user):
         db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     except Exception as e:
         print(e)
-        return False
+        return HTTPException (status_code=500, detail="Error deleting job")
     else:
         return True

@@ -26,7 +26,7 @@ def create_user(user_data):
         db.mongo.users.insert_one(user_to_db.dict())
     except Exception as e:
         print(e)
-        return False
+        return HTTPException(status_code=500, detail="Error creating user")
     else:
         return True
 
@@ -43,7 +43,7 @@ def update_user(username: str, user_data: dict):
         db.mongo.users.update_one({"username": username}, {"$set": user_data})
     except Exception as e:
         print(e)
-        return False
+        return HTTPException(status_code=500, detail="Error updating user")
     else:
         return True
 
@@ -55,6 +55,6 @@ def delete_user(username: str):
         db.mongo.users.delete_one({"username": username})
     except Exception as e:
         print(e)
-        return False
+        return HTTPException(status_code=500, detail="Error deleting user")
     else:
         return True
