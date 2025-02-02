@@ -5,10 +5,10 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def initialize():
-  from api.core import auth, config
+  from api.core import admin, config
   import os
   os.makedirs(config.config.UPLOAD_DIR, exist_ok=True)
-  return auth.create_admin_user()
+  return admin.create_admin_user()
 
 app.include_router(auth.router,tags=["auth"])
 app.include_router(users.router,tags=["users"])
