@@ -5,32 +5,32 @@ from pymongo import MongoClient
 from kubernetes import client, config, watch
 from kubernetes.client.exceptions import ApiException
 from concurrent.futures import ThreadPoolExecutor
+from config import config
+import os
+from jinja2 import Template
+import yaml
 
-# Logging Configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# MongoDB Configuration
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "mydatabase"
+MONGO_URI = config.MONGO_URI
+DB_NAME = config.MONGO_DB_NAME
 COLLECTION_NAME = "jobs"
 
-# Kubernetes Namespace
-NAMESPACE = "default"
+namespace = config.K8S_namespace
+file_dir = config.UPLOAD_DIR
+configmap_key = config.K8S_CONFIGMAP_KEY
+job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
 
-# Polling interval (in seconds)
-POLL_INTERVAL = 30  # Adjust as needed
-MAX_CONCURRENT_JOBS = 3  # Maximum Kubernetes jobs that can run at once
+POLL_INTERVAL = 30
+MAX_CONCURRENT_JOBS = 3
 
-# Load Kubernetes configuration
 try:
-    config.load_kube_config()  # For local development
-    # config.load_incluster_config()  # Uncomment for in-cluster execution
+    config.load_incluster_config()
     logging.info("Connected to Kubernetes cluster.")
 except Exception as e:
     logging.error(f"Failed to load Kubernetes configuration: {e}")
     exit(1)
 
-# Initialize MongoDB client
 try:
     mongo_client = MongoClient(MONGO_URI)
     db = mongo_client[DB_NAME]
@@ -40,47 +40,49 @@ except Exception as e:
     logging.error(f"Failed to connect to MongoDB: {e}")
     exit(1)
 
-# Function to get running Kubernetes jobs
 def get_running_k8s_jobs():
-    batch_v1 = client.BatchV1Api()
+    client.BatchV1Api() = client.BatchV1Api()
     try:
-        jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE)
+        jobs = client.BatchV1Api().list_namespaced_job(namespace=namespace)
         running_jobs = {job.metadata.name for job in jobs.items if job.status.active}
         return running_jobs
     except ApiException as e:
         logging.error(f"Error fetching Kubernetes jobs: {e}")
         return set()
 
-# Function to create a Kubernetes Job
 def create_k8s_job(job_data):
-    batch_v1 = client.BatchV1Api()
 
-    job_manifest = {
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-        "metadata": {
-            "name": job_data["name"],
-            "namespace": NAMESPACE
-        },
-        "spec": {
-            "template": {
-                "metadata": {
-                    "labels": {"job-name": job_data["name"]}
-                },
-                "spec": {
-                    "containers": [{
-                        "name": "job-container",
-                        "image": job_data.get("image", "busybox"),
-                        "command": job_data.get("command", ["echo", "Hello, Kubernetes!"])
-                    }],
-                    "restartPolicy": "Never"
-                }
-            }
-        }
-    }
+    file_path = os.path.join(file_dir, job_data["file_name"])
 
     try:
-        batch_v1.create_namespaced_job(namespace=NAMESPACE, body=job_manifest)
+        with open(file_path, "r") as f:
+            file_content = f.read()
+    except Exception as e:
+        logging.error(f"Failed to read file {file_path}: {e}")
+        exit(1)
+
+    configmap = client.V1ConfigMap(
+        metadata=client.V1ObjectMeta(name=job_data["name"]),
+        data={configmap_key: file_content.decode("utf-8")}
+    )
+
+    with open(job_template_path, 'r') as file:
+        job_template_content = file.read()
+
+    rendered_job = Template(job_template_content).render(
+        name=job_data["name"],
+        namespace=namespace,
+        configmap_key=configmap_key
+    )
+    job_manifest = yaml.safe_load(rendered_job)
+
+    try:
+        # Create ConfigMap
+        client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
+        logging.info(f"Created Kubernetes ConfigMap: {job_data['name']}")
+
+        # Create Job
+        client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
         logging.info(f"Created Kubernetes Job: {job_data['name']}")
 
         # Update MongoDB job status to "running"
@@ -91,14 +93,13 @@ def create_k8s_job(job_data):
         threading.Thread(target=watch_k8s_job_status, args=(job_data["name"], job_data["_id"])).start()
 
     except ApiException as e:
-        logging.error(f"Failed to create Kubernetes Job {job_data['name']}: {e}")
+        logging.error(f"Failed to create workload {job_data['name']}: {e}")
 
 # Function to watch Kubernetes job status and update MongoDB
 def watch_k8s_job_status(job_name, job_id):
-    batch_v1 = client.BatchV1Api()
     w = watch.Watch()
     try:
-        for event in w.stream(batch_v1.list_namespaced_job, namespace=NAMESPACE):
+        for event in w.stream(client.BatchV1Api().list_namespaced_job, namespace=namespace):
             job = event['object']
             if job.metadata.name == job_name:
                 if job.status.succeeded:
@@ -112,7 +113,6 @@ def watch_k8s_job_status(job_name, job_id):
     except ApiException as e:
         logging.error(f"Error watching job {job_name}: {e}")
 
-# Continuous polling loop
 while True:
     try:
         logging.info("Checking for new approved jobs...")

@@ -13,12 +13,12 @@ spec:
       containers:
       - name: jmeter
         image: busybox
-        #command: ["cat", "/tmp/{{ cm_key }}"]
+        #command: ["cat", "/tmp/{{ configmap_key }}"]
         command: ["sh", "-c", "while true; do echo \"$(date): $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 8)\"; sleep 5; done"]
         volumeMounts:
         - name: jmeter-plan
-          mountPath: /tmp/{{ cm_key }}
-          subPath: {{ cm_key }}
+          mountPath: /tmp/{{ configmap_key }}
+          subPath: {{ configmap_key }}
       restartPolicy: Never
       volumes:
       - name: jmeter-plan
