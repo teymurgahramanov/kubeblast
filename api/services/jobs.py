@@ -5,6 +5,9 @@ import os
 from api.core import config, k8s
 from kubernetes import client
 from datetime import datetime
+import logging
+from jinja2 import Template
+import yaml
 
 def get_jobs(current_user):
     if current_user.role in ["admin", "moderator"]:
@@ -21,6 +24,47 @@ def get_job(job_id):
         return HTTPException (status_code=404, detail="Job not found")
     job["_id"] = str(job["_id"])
     return job
+
+def create_k8s_workload(job_data):
+    namespace = config.config.K8S_NAMESPACE
+    file_dir = config.config.UPLOAD_DIR
+    file_path = os.path.join(file_dir, job_data["file_name"])
+    job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
+
+    try:
+        with open(file_path, "r") as f:
+            file_content = f.read()
+    except Exception as e:
+        logging.error(f"Failed to read file {file_path}: {e}")
+        exit(1)
+
+    configmap = client.V1ConfigMap(
+        metadata=client.V1ObjectMeta(name=job_data["name"]),
+        data={"plan.jmx": file_content.decode("utf-8")}
+    )
+
+    with open(job_template_path, 'r') as file:
+        job_template_content = file.read()
+
+    rendered_job = Template(job_template_content).render(
+        name=job_data["name"],
+        namespace=namespace,
+        configmap_key="plan.jmx"
+    )
+    job_manifest = yaml.safe_load(rendered_job)
+
+    try:
+        # Create ConfigMap
+        client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
+        logging.info(f"Created Kubernetes ConfigMap: {job_data['name']}")
+
+        # Create Job
+        client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
+        logging.info(f"Created Kubernetes Job: {job_data['name']}")
+
+    except Exception as e:
+        logging.error(f"Failed to create workload {job_data['name']}: {e}")
+        return HTTPException(status_code=500, detail="Failed to create workload")
     
 def approve_job(job_id, job_status: str):
     job = get_job(job_id)
@@ -34,6 +78,9 @@ def approve_job(job_id, job_status: str):
         {"_id": bson.objectid.ObjectId(job_id)},
         {"$set": {"status": job_status,"updated_at": datetime.now()}}
     )
+
+    if job_status == "approved":
+        create_k8s_workload(job)
     
     return get_job(job_id)
 
