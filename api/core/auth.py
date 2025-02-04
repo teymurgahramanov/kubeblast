@@ -54,7 +54,6 @@ def get_current_active_user(current_user: Annotated[models.User, Depends(get_cur
 
 def check_roles(allowed_roles: List[str]):
     def role_checker(current_user: models.User = Depends(get_current_active_user)):
-        print(current_user.role in allowed_roles)
         if current_user.role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Not enough permissions")
         return current_user
@@ -79,7 +78,7 @@ def login(form_data) -> models.Token:
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(
-        data={"sub": user.username}, 
+        data={"sub": user.username, "role": user.role}, 
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return models.Token(access_token=access_token, token_type="bearer")

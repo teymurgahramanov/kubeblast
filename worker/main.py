@@ -2,17 +2,18 @@ import logging
 from pymongo import MongoClient
 from kubernetes import client, config, watch
 from kubernetes.client.exceptions import ApiException
+from config import config as app_config
+from time import sleep
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # MongoDB Configuration
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "mydatabase"
+MONGO_URI = app_config.MONGO_URI
+DB_NAME = app_config.MONGO_DB_NAME
 COLLECTION_NAME = "jobs"
-
-# Kubernetes Namespace
-NAMESPACE = "default"
+NAMESPACE = app_config.K8S_NAMESPACE
+WATCH_INTERVAL = app_config.WATCH_INTERVAL
 
 # Load Kubernetes configuration
 try:
@@ -31,19 +32,6 @@ try:
 except Exception as e:
     logging.error(f"Failed to connect to MongoDB: {e}")
     exit(1)
-
-# Function to find the current pod associated with a Kubernetes Job
-def get_current_pod_name(job_name):
-    core_v1 = client.CoreV1Api()
-    try:
-        pods = core_v1.list_namespaced_pod(namespace=NAMESPACE, label_selector=f"job-name={job_name}")
-        for pod in pods.items:
-            if pod.status.phase == "Running":
-                return pod.metadata.name
-        return None
-    except ApiException as e:
-        logging.error(f"Error fetching pods for job {job_name}: {e}")
-        return None
 
 # Function to watch Kubernetes jobs and update MongoDB
 def watch_k8s_jobs():
@@ -74,20 +62,11 @@ def watch_k8s_jobs():
             else:
                 continue  # Ignore other status changes
 
-            # Get the name of the current running pod associated with the job
-            current_pod_name = get_current_pod_name(job_name)
-
-            # Prepare the update data
-            update_data = {
-                "status": new_status,
-                "current_pod": current_pod_name
-            }
-
-            # Update MongoDB job status and current pod
-            update_result = jobs_collection.update_one({"_id": job_id}, {"$set": update_data})
+            # Update MongoDB job status
+            update_result = jobs_collection.update_one({"_id": job_id}, {"$set": {"status": new_status}})
 
             if update_result.matched_count > 0:
-                logging.info(f"Updated MongoDB: job_id {job_id} -> status {new_status}, current_pod {current_pod_name}")
+                logging.info(f"Updated MongoDB: job_id {job_id} -> status {new_status}")
             else:
                 logging.warning(f"MongoDB update failed: job_id {job_id} not found.")
 
@@ -95,6 +74,8 @@ def watch_k8s_jobs():
         logging.error(f"Kubernetes API error: {e}")
     except Exception as e:
         logging.error(f"Unexpected error in job watcher: {e}")
+
+    sleep(WATCH_INTERVAL)
 
 # Run the watcher
 watch_k8s_jobs()
