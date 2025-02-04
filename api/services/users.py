@@ -19,6 +19,7 @@ def create_user(user_data):
 
     user_data_dict = user_data.dict()
     user_data_dict["hashed_password"] = password.hash_password(user_data.password)
+    user
 
     user_to_db = models.UserInDB(**user_data_dict)
     

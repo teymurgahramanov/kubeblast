@@ -21,9 +21,8 @@ class UserCreate(User):
         password: str = Form(...),
         role: Literal["user", "moderator", "admin"] = Form(...),
         enabled: bool = Form(True),
-        created_at: datetime = Form(default_factory=datetime.utcnow)
     ):
-        return cls(username=username, full_name=full_name, password=password, role=role, enabled=enabled, created_at=created_at)
+        return cls(username=username, full_name=full_name, password=password, role=role, enabled=enabled, created_at=datetime.now)
 
 class UserUpdate(User):
     username: Optional[str] = None
@@ -38,9 +37,8 @@ class UserUpdate(User):
         password: Optional[str] = Form(None),
         role: Optional[Literal["user", "moderator", "admin"]] = Form(None),
         enabled: Optional[bool] = Form(True),
-        updated_at: datetime = Form(default_factory=datetime.utcnow)
     ):
-        return cls(username=None, full_name=full_name, password=password, role=role, enabled=enabled, updated_at=updated_at)
+        return cls(username=None, full_name=full_name, password=password, role=role, enabled=enabled, updated_at=datetime.now)
 
 class UserInDB(User):
     hashed_password: str
