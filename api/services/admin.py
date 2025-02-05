@@ -1,4 +1,4 @@
-from api.core.auth import get_user
+from api.services.auth import get_user
 from api.core import models, password, db, config
 
 def create_admin_user():

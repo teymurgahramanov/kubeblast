@@ -1,5 +1,5 @@
 from api.core import models, password, db
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 
 def get_users():
     users = db.mongo.users.find()
@@ -10,12 +10,12 @@ def get_user(username: str):
     if user:
         return models.User(**user)
     else:
-        return HTTPException(status_code=404, detail="User not found")
+        return Response(status_code=404, detail="User not found")
 
 def create_user(user_data):
     user = get_user(user_data.username)
     if user:
-        return HTTPException(status_code=400, detail="User already exists")
+        return Response(status_code=400, detail="User already exists")
 
     user_data_dict = user_data.dict()
     user_data_dict["hashed_password"] = password.hash_password(user_data.password)
@@ -29,12 +29,12 @@ def create_user(user_data):
         print(e)
         return HTTPException(status_code=500, detail="Error creating user")
     else:
-        return True
+        return get_user(user_data.username)
 
 def update_user(username: str, user_data: dict):
     user = get_user(username)
     if not user:
-        return HTTPException(status_code=404, detail="User not found")
+        return Response(status_code=404, detail="User not found")
 
     user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
     if "password" in user_data:
@@ -46,7 +46,7 @@ def update_user(username: str, user_data: dict):
         print(e)
         return HTTPException(status_code=500, detail="Error updating user")
     else:
-        return True
+        return get_user(username)
 
 def delete_user(username: str):
     user = get_user(username)
@@ -58,4 +58,4 @@ def delete_user(username: str):
         print(e)
         return HTTPException(status_code=500, detail="Error deleting user")
     else:
-        return True
+        return Response(content=f"User {username} deleted", status_code=204)

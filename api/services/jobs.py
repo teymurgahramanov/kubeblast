@@ -1,7 +1,8 @@
 from api.core import db, models
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 import bson
 import os
+import hashlib
 from api.core import config, k8s
 from kubernetes import client
 from datetime import datetime
@@ -9,85 +10,112 @@ import logging
 from jinja2 import Template
 import yaml
 
-def get_jobs(current_user):
-    if current_user.role in ["admin", "moderator"]:
-        jobs = list(db.mongo.jobs.find({}))
+def get_jobs(status):
+    if status:
+        jobs = list(db.mongo.jobs.find({"status": status}))
     else:
-        jobs = list(db.mongo.jobs.find({"user": current_user.username}))
+        jobs = list(db.mongo.jobs.find())
     for job in jobs:
-        job["_id"] = str(job["_id"])
-    return jobs
+        job["id"] = str(job["_id"])
+    return [models.JobInDb(**job) for job in jobs]
 
 def get_job(job_id):
     job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
     if not job:
         return HTTPException (status_code=404, detail="Job not found")
-    job["_id"] = str(job["_id"])
-    return job
+    job["id"] = str(job["_id"])
+    return models.JobInDb(**job)
 
-def create_k8s_workload(job_data):
-    namespace = config.config.K8S_NAMESPACE
-    file_dir = config.config.UPLOAD_DIR
-    file_path = os.path.join(file_dir, job_data["file_name"])
-    job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
+def create_job(file_content, description, username):
+    job_name = f"{username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
 
-    try:
-        with open(file_path, "r") as f:
-            file_content = f.read()
-    except Exception as e:
-        logging.error(f"Failed to read file {file_path}: {e}")
-        exit(1)
+    job = db.mongo.jobs.find_one({"name": job_name})
+    if job:
+        return Response(status_code=400, detail=F"Job with the same plan file already exists: {job_name}")
 
-    configmap = client.V1ConfigMap(
-        metadata=client.V1ObjectMeta(name=job_data["name"]),
-        data={"plan.jmx": file_content.decode("utf-8")}
+    file_name = f"{job_name}.jmx"
+    file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+
+    job = models.Job(
+        name=job_name,
+        owner=username,
+        description=description,
+        status="pending",
+        file_name=file_name,
+        created_at=datetime.now()
     )
 
-    with open(job_template_path, 'r') as file:
-        job_template_content = file.read()
-
-    rendered_job = Template(job_template_content).render(
-        name=job_data["name"],
-        namespace=namespace,
-        configmap_key="plan.jmx"
-    )
-    job_manifest = yaml.safe_load(rendered_job)
-
     try:
-        # Create ConfigMap
-        client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
-        logging.info(f"Created Kubernetes ConfigMap: {job_data['name']}")
-
-        # Create Job
-        client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
-        logging.info(f"Created Kubernetes Job: {job_data['name']}")
-
+        result = db.mongo.jobs.insert_one(job.dict())
     except Exception as e:
-        logging.error(f"Failed to create workload {job_data['name']}: {e}")
-        return HTTPException(status_code=500, detail="Failed to create workload")
+        print(e)
+        return HTTPException(status_code=500, detail="Error creating job")
+
+    return get_job(str(result.inserted_id))
+
     
 def approve_job(job_id, job_status: str):
     job = get_job(job_id)
     if not job:
-        return HTTPException(status_code=404, detail="Job not found")
+        return Response(status_code=404, detail="Job not found")
 
-    if job["status"] in ["running", "completed", "failed", "approved"]:
-        return HTTPException(status_code=400, detail="Cannot update job in current state")
-    
+    if job["status"] != "pending":
+        return Response(status_code=400, detail="Cannot update job in current state")
+
+    if job_status == "approved":
+        namespace = config.config.K8S_NAMESPACE
+        file_dir = config.config.UPLOAD_DIR
+        file_path = os.path.join(file_dir, job["file_name"])
+        job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
+
+        try:
+            with open(file_path, "r") as f:
+                file_content = f.read()
+        except Exception as e:
+            logging.error(f"Failed to read file {file_path}: {e}")
+            exit(1)
+
+        configmap = client.V1ConfigMap(
+            metadata=client.V1ObjectMeta(name=job["name"]),
+            data={"plan.jmx": file_content.decode("utf-8")}
+        )
+
+        with open(job_template_path, 'r') as file:
+            job_template_content = file.read()
+
+        rendered_job = Template(job_template_content).render(
+            name=job["name"],
+            namespace=namespace,
+            configmap_key="plan.jmx"
+        )
+        job_manifest = yaml.safe_load(rendered_job)
+
+        try:
+            # Create ConfigMap
+            client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
+            logging.info(f"Created Kubernetes ConfigMap: {job['name']}")
+
+            # Create Job
+            client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
+            logging.info(f"Created Kubernetes Job: {job['name']}")
+
+        except Exception as e:
+            logging.error(f"Failed to create workload {job['name']}: {e}")
+            return HTTPException (status_code=500, detail="Error creating workload")
+
     db.mongo.jobs.update_one(
         {"_id": bson.objectid.ObjectId(job_id)},
         {"$set": {"status": job_status,"updated_at": datetime.now()}}
     )
 
-    if job_status == "approved":
-        create_k8s_workload(job)
-    
     return get_job(job_id)
 
 def delete_job(job_id, current_user):
     job = get_job(job_id)
     if not job:
-        return HTTPException(status_code=404, detail="Job not found")
+        return Response(status_code=404, detail="Job not found")
     
     if current_user.role not in ["admin", "moderator"] and job["user"] != current_user.username:
         return HTTPException (status_code=403, detail="You do not have permission to delete this job")
@@ -119,7 +147,6 @@ def delete_job(job_id, current_user):
                 body = client.V1DeleteOptions(k8s.api_client),
                 grace_period_seconds = 0
             )
-            
     except Exception as e:
         print(e)
     
@@ -128,5 +155,5 @@ def delete_job(job_id, current_user):
     except Exception as e:
         print(e)
         return HTTPException (status_code=500, detail="Error deleting job")
-    else:
-        return True
+    
+    return Response(content=f"Job {job.name} deleted", status_code=204)

@@ -1,3 +1,4 @@
+from api.services import admin
 from fastapi import FastAPI
 from api.endpoints import auth, users, profile, jobs, logs
 
@@ -5,7 +6,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def initialize():
-  from api.core import admin, config
+  from api.core import config
   import os
   os.makedirs(config.config.UPLOAD_DIR, exist_ok=True)
   return admin.create_admin_user()
