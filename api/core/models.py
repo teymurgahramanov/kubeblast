@@ -82,5 +82,5 @@ class Job(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-class JobInDB(Job):
+class JobFromDB(Job):
     id: str

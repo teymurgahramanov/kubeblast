@@ -17,14 +17,14 @@ def get_jobs(status):
         jobs = list(db.mongo.jobs.find())
     for job in jobs:
         job["id"] = str(job["_id"])
-    return [models.JobInDb(**job) for job in jobs]
+    return [models.JobFromDB(**job) for job in jobs]
 
 def get_job(job_id):
     job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
     if not job:
         return HTTPException (status_code=404, detail="Job not found")
     job["id"] = str(job["_id"])
-    return models.JobInDb(**job)
+    return models.JobFromDB(**job)
 
 def create_job(file_content, description, username):
     job_name = f"{username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
