@@ -10,19 +10,26 @@ import logging
 from jinja2 import Template
 import yaml
 
-def get_jobs(status):
+def get_jobs(status: str = None, owner: str = None, name: str = None):
+    query = {}
+    
     if status:
-        jobs = list(db.mongo.jobs.find({"status": status}))
-    else:
-        jobs = list(db.mongo.jobs.find())
+        query["status"] = status
+    if owner:
+        query["owner"] = owner
+    if name:
+        query["name"] = name
+    
+    jobs = list(db.mongo.jobs.find(query))
     for job in jobs:
         job["id"] = str(job["_id"])
+    
     return [models.JobFromDB(**job) for job in jobs]
 
 def get_job(job_id):
     job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
     if not job:
-        return HTTPException (status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail=f"Job not found")
     job["id"] = str(job["_id"])
     return models.JobFromDB(**job)
 
@@ -31,7 +38,7 @@ def create_job(file_content, description, username):
 
     job = db.mongo.jobs.find_one({"name": job_name})
     if job:
-        return Response(status_code=400, detail=F"Job with the same plan file already exists: {job_name}")
+        raise HTTPException(status_code=400, detail=f"Job with the same plan file already exists: {job_name}")
 
     file_name = f"{job_name}.jmx"
     file_path = os.path.join(config.config.UPLOAD_DIR, file_name)
@@ -47,35 +54,25 @@ def create_job(file_content, description, username):
         created_at=datetime.now()
     )
 
-    try:
-        result = db.mongo.jobs.insert_one(job.dict())
-    except Exception as e:
-        print(e)
-        return HTTPException(status_code=500, detail="Error creating job")
+    result = db.mongo.jobs.insert_one(job.dict())
 
     return get_job(str(result.inserted_id))
 
     
-def approve_job(job_id, job_status: str):
-    job = get_job(job_id)
-    if not job:
-        return Response(status_code=404, detail="Job not found")
+def approve_job(job_id: str, approved: bool):
+    job = get_job(job_id).dict()
 
     if job["status"] != "pending":
-        return Response(status_code=400, detail="Cannot update job in current state")
+        raise HTTPException(status_code=400, detail="Cannot update job in current state")
 
-    if job_status == "approved":
+    if approved:
         namespace = config.config.K8S_NAMESPACE
         file_dir = config.config.UPLOAD_DIR
         file_path = os.path.join(file_dir, job["file_name"])
         job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
 
-        try:
-            with open(file_path, "r") as f:
-                file_content = f.read()
-        except Exception as e:
-            logging.error(f"Failed to read file {file_path}: {e}")
-            exit(1)
+        with open(file_path, "r") as f:
+            file_content = f.read()
 
         configmap = client.V1ConfigMap(
             metadata=client.V1ObjectMeta(name=job["name"]),
@@ -103,22 +100,25 @@ def approve_job(job_id, job_status: str):
 
         except Exception as e:
             logging.error(f"Failed to create workload {job['name']}: {e}")
-            return HTTPException (status_code=500, detail="Error creating workload")
+            raise HTTPException(status_code=500, detail="Error creating workload")
+
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "approved","updated_at": datetime.now()}}
+        )
 
     db.mongo.jobs.update_one(
         {"_id": bson.objectid.ObjectId(job_id)},
-        {"$set": {"status": job_status,"updated_at": datetime.now()}}
+        {"$set": {"status": "declined","updated_at": datetime.now()}}
     )
 
     return get_job(job_id)
 
 def delete_job(job_id, current_user):
-    job = get_job(job_id)
-    if not job:
-        return Response(status_code=404, detail="Job not found")
+    job = get_job(job_id).dict()
     
-    if current_user.role not in ["admin", "moderator"] and job["user"] != current_user.username:
-        return HTTPException (status_code=403, detail="You do not have permission to delete this job")
+    if current_user.role not in ["admin", "moderator"] or job["user"] != current_user.username:
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this job")
 
     try:
         os.remove(os.path.join(config.config.UPLOAD_DIR, job["file_name"]))
@@ -150,10 +150,6 @@ def delete_job(job_id, current_user):
     except Exception as e:
         print(e)
     
-    try:
-        db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
-    except Exception as e:
-        print(e)
-        return HTTPException (status_code=500, detail="Error deleting job")
+    db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
-    return Response(content=f"Job {job.name} deleted", status_code=204)
+    return Response(status_code=204, content={f"Job {job.name} deleted"})

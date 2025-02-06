@@ -12,6 +12,7 @@ class User(BaseModel):
     full_name: Optional[str] = None
     role: Literal["user", "moderator", "admin"]
     enabled: bool = True
+    pending_jobs_limit: int = 3
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -25,11 +26,13 @@ class UserCreate(User):
         password: Annotated[str, Form(...)],
         role: Annotated[Literal["user", "moderator", "admin"], Form(...)],
         full_name: Annotated[Optional[str], Form()] = None,
+        pending_jobs_limit: Annotated[Optional[int], Form()] = None,
         enabled: Annotated[bool, Form()] = True,
     ) -> "UserCreate":
         return cls(
             username=username,
             full_name=full_name,
+            pending_jobs_limit=pending_jobs_limit,
             password=password,
             role=role,
             enabled=enabled,
@@ -61,12 +64,14 @@ class UserUpdate(User):
         password: Annotated[Optional[str], Form()] = None,
         role: Annotated[Optional[Literal["user", "moderator", "admin"]], Form()] = None,
         enabled: Annotated[Optional[bool], Form()] = None,
+        pending_jobs_limit: Annotated[Optional[int], Form()] = None
     ) -> "UserUpdate":
         return cls(
             full_name=full_name,
             password=password,
             role=role,
             enabled=enabled,
+            pending_jobs_limit=pending_jobs_limit,
             updated_at=datetime.now(),
         )
 
