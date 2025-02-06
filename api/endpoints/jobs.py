@@ -9,8 +9,13 @@ from datetime import datetime
 router = APIRouter()
 
 @router.get("/jobs", response_model=models.Job)
-async def get_job(current_user: Annotated[models.User, Depends(auth.check_role([]))]):
-    return jobs.get_jobs()
+async def get_job(
+    current_user: Annotated[models.User, Depends(auth.check_role([]))],
+    status: Optional[str] = Query(None),
+    owner: Optional[str] = Query(None),
+    name: Optional[str] = Query(None),
+    ):
+    return jobs.get_jobs(status=status, owner=owner, name=name)
 
 @router.get("/jobs/{job_id}", response_model=models.Job)
 async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
