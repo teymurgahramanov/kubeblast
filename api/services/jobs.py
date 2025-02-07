@@ -130,7 +130,7 @@ def delete_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
     try:
-        os.remove(os.path.join(config.config.PLAN_DIR, job["file_name"]))
+        os.remove(os.path.join(config.config.PLAN_DIR, f"{job['name']}.jmx"))
         print(f"File {job['file_name']} deleted")
 
         client.BatchV1Api(k8s.api_client).delete_namespaced_job(
@@ -161,4 +161,4 @@ def delete_job(current_user, job_id):
     
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
-    return Response(status_code=204, content={f"Job {job.name} deleted"})
+    return Response(status_code=204, content={f"Job {job['name']} deleted"})
