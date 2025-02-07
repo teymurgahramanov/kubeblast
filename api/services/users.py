@@ -13,7 +13,7 @@ def get_user(username: str):
         return models.User(**user)
 
 def create_user(user_data):
-    user = get_user(user_data.username)
+    user = db.mongo.users.find_one({"username": user_data.username})
     if user:
         raise HTTPException(status_code=400, detail="User already exists")
 
@@ -28,6 +28,7 @@ def create_user(user_data):
     return get_user(user_data.username)
 
 def update_user(username: str, user_data: dict):
+    print(username)
     user = get_user(username)
 
     user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
@@ -40,4 +41,4 @@ def update_user(username: str, user_data: dict):
 def delete_user(username: str):
     user = get_user(username)
     db.mongo.users.delete_one({"username": username})
-    return Response(status_code=204, content={f"Job {username} deleted"})
+    return Response(status_code=204, content=f"User {username} deleted")

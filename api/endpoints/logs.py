@@ -7,6 +7,6 @@ from api.services.logs import stream_pod_logs
 
 router = APIRouter()
 
-@router.get("/logs/{job}")
-async def get_log(job: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
-    return StreamingResponse(stream_pod_logs(job), media_type="text/event-stream")
+@router.get("/logs/{job_id}")
+async def get_logs(current_user: Annotated[models.User, Depends(auth.check_role([]))], job_id: str):
+    return StreamingResponse(stream_pod_logs(job_id), media_type="text/event-stream")

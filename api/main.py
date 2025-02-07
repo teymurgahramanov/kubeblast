@@ -8,7 +8,8 @@ app = FastAPI()
 async def initialize():
   from api.core import config
   import os
-  os.makedirs(config.config.UPLOAD_DIR, exist_ok=True)
+  os.makedirs(config.config.PLAN_DIR, exist_ok=True)
+  os.makedirs(config.config.REPORT_DIR, exist_ok=True)
   return admin.create_admin_user()
 
 app.include_router(token.router,tags=["token"])
