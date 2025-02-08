@@ -20,8 +20,8 @@ class Config:
     MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jrunner")
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
-    PLAN_DIR = "plans"
-    REPORT_DIR = "reports"
+    PLAN_DIR = "files/plans"
+    REPORT_DIR = "files/reports"
 
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
     K8S_JOB_TIMEOUT: int = int(os.getenv("K8S_JOB_TIMEOUT", 300))

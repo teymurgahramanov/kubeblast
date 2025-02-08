@@ -1,5 +1,5 @@
 from api.core import db, models
-from fastapi import HTTPException, Response
+from fastapi import HTTPException
 import bson
 import os
 import hashlib
@@ -26,7 +26,6 @@ def get_jobs(current_user, status: str = None, owner: str = None, name: str = No
     jobs = list(db.mongo.jobs.find(query))
     for job in jobs:
         job["id"] = str(job["_id"])
-    print(jobs)
     return [models.JobFromDB(**job) for job in jobs]
 
 def get_job(current_user, job_id):
@@ -36,7 +35,6 @@ def get_job(current_user, job_id):
     if current_user.role not in ["admin", "moderator"] and job["owner"] != current_user.username:
         raise HTTPException(status_code=403, detail="Insufficent permissions")
     job["id"] = str(job["_id"])
-    print(job)
     return models.JobFromDB(**job)
 
 def create_job(current_user, file_content, description):
@@ -80,15 +78,20 @@ def approve_job(current_user, job_id: str, approved: bool):
 
     if approved:
         namespace = config.config.K8S_NAMESPACE
-        file_path = os.path.join(config.config.PLAN_DIR, job["file_name"])
-        job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
+        file_name = f"{job['name']}.jmx"
+        file_path = os.path.join(config.config.PLAN_DIR, file_name)
+        job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
 
-        with open(file_path, "r") as f:
-            file_content = f.read()
+        try:
+            with open(file_path, "r") as f:
+                file_content = f.read()
+        except FileNotFoundError as e:
+            print(e)
+            raise HTTPException(status_code=404, detail="Plan file not found.")
 
         configmap = client.V1ConfigMap(
-            metadata=client.V1ObjectMeta(name=job["name"]),
-            data={"plan.jmx": file_content.decode("utf-8")}
+            metadata=client.V1ObjectMeta(name=job["name"], labels={"job-id": job["id"]}),
+            data={"plan.jmx": file_content}
         )
 
         with open(job_template_path, 'r') as file:
@@ -97,6 +100,7 @@ def approve_job(current_user, job_id: str, approved: bool):
         rendered_job = Template(job_template_content).render(
             name=job["name"],
             namespace=namespace,
+            job_id=job["id"],
             configmap_key="plan.jmx"
         )
         job_manifest = yaml.safe_load(rendered_job)
@@ -130,35 +134,61 @@ def delete_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
     try:
-        os.remove(os.path.join(config.config.PLAN_DIR, f"{job['name']}.jmx"))
-        print(f"File {job['file_name']} deleted")
+        label_selector = f"job-id={job['id']}"
 
-        client.BatchV1Api(k8s.api_client).delete_namespaced_job(
+        # Delete the Job(s) based on the label selector
+        jobs = client.BatchV1Api(k8s.api_client).list_namespaced_job(
             namespace=config.config.K8S_NAMESPACE,
-            name = job["name"],
-            propagation_policy = 'Foreground'
+            label_selector=label_selector
         )
-        print(f"Job {job['name']} deleted")
+        
+        for job_item in jobs.items:
+            job_name = job_item.metadata.name
+            client.BatchV1Api(k8s.api_client).delete_namespaced_job(
+                namespace=config.config.K8S_NAMESPACE,
+                name=job_name,
+                propagation_policy='Foreground'
+            )
+            print(f"Job {job_name} deleted")
 
-        client.CoreV1Api(k8s.api_client).delete_namespaced_config_map(
+        # Delete the ConfigMap(s) based on the label selector
+        config_maps = client.CoreV1Api(k8s.api_client).list_namespaced_config_map(
             namespace=config.config.K8S_NAMESPACE,
-            name = job["name"]
+            label_selector=label_selector
         )
-        print(f"ConfigMap {job['name']} deleted")
 
-        label_selector = f"batch.kubernetes.io/job-name={job['name']}"
-        pods = client.CoreV1Api(k8s.api_client).list_namespaced_pod(namespace=config.config.K8S_NAMESPACE, label_selector=label_selector)
+        for cm in config_maps.items:
+            cm_name = cm.metadata.name
+            client.CoreV1Api(k8s.api_client).delete_namespaced_config_map(
+                namespace=config.config.K8S_NAMESPACE,
+                name=cm_name
+            )
+            print(f"ConfigMap {cm_name} deleted")
+
+        # Delete Pods based on the label selector
+        pods = client.CoreV1Api(k8s.api_client).list_namespaced_pod(
+            namespace=config.config.K8S_NAMESPACE,
+            label_selector=label_selector
+        )
+        
         for pod in pods.items:
-            print(f"Deleting Pod: {pod.metadata.name}")
+            pod_name = pod.metadata.name
+            print(f"Deleting Pod: {pod_name}")
             client.CoreV1Api(k8s.api_client).delete_namespaced_pod(
-                name = pod.metadata.name,
-                namespace = config.config.K8S_NAMESPACE,
-                body = client.V1DeleteOptions(k8s.api_client),
-                grace_period_seconds = 0
+                name=pod_name,
+                namespace=config.config.K8S_NAMESPACE,
+                body=client.V1DeleteOptions(),
+                grace_period_seconds=0
             )
     except Exception as e:
         print(e)
     
+    try:
+        os.remove(os.path.join(config.config.PLAN_DIR, f"{job['name']}.jmx"))
+        print(f"File {job['file_name']} deleted")
+    except Exception as e:
+        print(e)
+        
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
-    return Response(status_code=204, content={f"Job {job['name']} deleted"})
+    return {f"Job {job['name']} deleted"}

@@ -1,5 +1,5 @@
 from api.core import models, password, db
-from fastapi import HTTPException, Response
+from fastapi import HTTPException
 
 def get_users():
     users = db.mongo.users.find()
@@ -41,4 +41,4 @@ def update_user(username: str, user_data: dict):
 def delete_user(username: str):
     user = get_user(username)
     db.mongo.users.delete_one({"username": username})
-    return Response(status_code=204, content=f"User {username} deleted")
+    return {f"User {username} deleted"}

@@ -13,7 +13,7 @@
     <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
       <boolProp name="LoopController.continue_forever">false</boolProp>
       <stringProp name="LoopController.loops">1</stringProp>
-    </elementProp>
+    </elementProp> 
     <Sampler guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request" enabled="true">
       <stringProp name="HTTPSampler.domain">www.example.com</stringProp> <!-- Target domain -->
       <stringProp name="HTTPSampler.port">80</stringProp> <!-- Port -->
@@ -24,4 +24,4 @@
     <Listener guiclass="ViewResultsTree" testclass="ViewResultsTree" testname="View Results Tree" enabled="true"/>
     <Listener guiclass="SummaryReport" testclass="SummaryReport" testname="Summary Report" enabled="true"/>
   </ThreadGroup>
-</TestPlan>
+</TestPlan> 
