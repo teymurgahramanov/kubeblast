@@ -8,7 +8,6 @@ async def initialize():
   try:
     from api.core import config, models, password, db
     from api.services import auth
-    import os
     admin = auth.get_user("admin")
     if not admin:
         admin = models.UserInDB(
@@ -17,8 +16,6 @@ async def initialize():
             role="admin"
         )
         db.mongo.users.insert_one(admin.dict())
-    os.makedirs(config.config.PLAN_DIR, exist_ok=True)
-    os.makedirs(config.config.REPORT_DIR, exist_ok=True)
   except Exception as e:
      print(e)
      exit(1)

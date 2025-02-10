@@ -6,3 +6,4 @@ bcrypt
 pyjwt
 kubernetes
 python-dotenv
+boto3

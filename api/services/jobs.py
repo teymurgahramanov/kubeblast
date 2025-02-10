@@ -9,6 +9,7 @@ from datetime import datetime
 import logging
 from jinja2 import Template
 import yaml
+from api.services import files
 
 def get_jobs(current_user, status: str = None, owner: str = None, name: str = None):
     query = {}
@@ -45,17 +46,20 @@ def create_job(current_user, file_content, description):
         "owner": current_user.username
     })
     if pending_jobs_count > config.config.PENDING_JOBS_LIMIT:
-        raise HTTPException(status_code=400, detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.config.PENDING_JOBS_LIMIT})")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.config.PENDING_JOBS_LIMIT})"
+        )
 
     job = db.mongo.jobs.find_one({"name": job_name})
     if job:
-        raise HTTPException(status_code=400, detail=f"Job with the same plan file already exists: {job_name}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job with the same plan file already exists: {job_name}"
+        )
 
-    file_name = f"{job_name}.jmx"
-    file_path = os.path.join(config.config.PLAN_DIR, file_name)
-    with open(file_path, "wb") as f:
-        f.write(file_content)
-
+    files.create_file(file_content,f"{job_name}.jmx")
+    
     job = models.Job(
         name=job_name,
         owner=current_user.username,
@@ -68,7 +72,6 @@ def create_job(current_user, file_content, description):
 
     return get_job(current_user, str(result.inserted_id))
 
-    
 def approve_job(current_user, job_id: str, approved: bool):
     job = get_job(current_user, job_id).dict()
 
@@ -78,15 +81,9 @@ def approve_job(current_user, job_id: str, approved: bool):
     if approved:
         namespace = config.config.K8S_NAMESPACE
         file_name = f"{job['name']}.jmx"
-        file_path = os.path.join(config.config.PLAN_DIR, file_name)
         job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
 
-        try:
-            with open(file_path, "r") as f:
-                file_content = f.read()
-        except FileNotFoundError as e:
-            print(e)
-            raise HTTPException(status_code=404, detail="Plan file not found.")
+        file_content = files.read_file(file_name)
 
         configmap = client.V1ConfigMap(
             metadata=client.V1ObjectMeta(name=job["name"], labels={"job-id": job["id"]}),
@@ -181,12 +178,8 @@ def delete_job(current_user, job_id):
             )
     except Exception as e:
         print(e)
-    
-    try:
-        os.remove(os.path.join(config.config.PLAN_DIR, f"{job['name']}.jmx"))
-        print(f"File {job['file_name']} deleted")
-    except Exception as e:
-        print(e)
+
+    files.delete_file(f"{job['name']}.jmx")
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     

@@ -20,11 +20,12 @@ class Config:
     MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jrunner")
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
-    PLAN_DIR = "files/plans"
-    REPORT_DIR = "files/reports"
-
+    S3_URL: str = os.getenv("S3_URL")
+    S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
+    S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY")
+    S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
+    S3_BUCKET: str = os.getenv("S3_BUCKET")
+    
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
-    K8S_JOB_TIMEOUT: int = int(os.getenv("K8S_JOB_TIMEOUT", 300))
-    K8S_CONFIGMAP_KEY: str = "plan.jmx"
 
 config = Config()
