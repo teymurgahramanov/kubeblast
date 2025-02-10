@@ -1,0 +1,45 @@
+---
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: jrunner
+
+build:
+  artifacts:
+  - image: jrunner-api
+    context: ./api
+    docker:
+      dockerfile: Dockerfile
+  - image: jrunner-web
+    context: ./web
+    docker:
+      dockerfile: Dockerfile
+  - image: jrunner-worker
+    context: ./worker
+    docker:
+      dockerfile: Dockerfile
+
+deploy:
+  helm:
+    releases:
+    - name: jrunner
+      chartPath: charts/jrunner
+      valuesFiles:
+        - values.yaml
+      setValues:
+        api.image: jrunner-api
+        web.image: jrunner-web
+        worker.image: jrunner-worker
+
+portForward:
+- resourceType: deployment
+  resourceName: jrunner-api
+  namespace: default
+  port: 8000
+  localPort: 8000
+
+profiles:
+  - name: docker-desktop
+    activation:
+      - kubeContext: docker-desktop
+        command: dev

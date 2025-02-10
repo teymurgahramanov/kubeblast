@@ -1,0 +1,12 @@
+replicaCount: 1
+
+image:
+  repository: jrunner-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources: {}

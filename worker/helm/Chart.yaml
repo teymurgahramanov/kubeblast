@@ -1,0 +1,4 @@
+apiVersion: v2
+name: worker
+version: 0.1.0
+description: Helm chart for worker service

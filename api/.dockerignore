@@ -1,5 +1,3 @@
-dev/
 .gitignore
 .dockerignore
 README.md
-skaffold.yaml
