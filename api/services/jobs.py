@@ -47,7 +47,6 @@ def create_job(current_user, file_content, description):
     if pending_jobs_count > config.config.PENDING_JOBS_LIMIT:
         raise HTTPException(status_code=400, detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.config.PENDING_JOBS_LIMIT})")
 
-
     job = db.mongo.jobs.find_one({"name": job_name})
     if job:
         raise HTTPException(status_code=400, detail=f"Job with the same plan file already exists: {job_name}")

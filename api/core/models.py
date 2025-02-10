@@ -77,7 +77,7 @@ class Job(BaseModel):
     name: str
     owner: str
     description: Optional[str] = None
-    status: Literal["pending", "approved", "declined", "completed", "failed"]
+    status: Literal["pending", "approved", "declined", "running", "completed", "failed"]
     created_at: Optional[datetime] = None
 
 class JobFromDB(Job):
