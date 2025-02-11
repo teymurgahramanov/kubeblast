@@ -7,15 +7,9 @@ dependencies:
   - name: api
     version: 0.1.0
     repository: "file://charts/api"
-  - name: web
-    version: 0.1.0
-    repository: "file://charts/web"
+  #- name: web
+  #  version: 0.1.0
+  #  repository: "file://charts/web"
   - name: worker
     version: 0.1.0
     repository: "file://charts/worker"
-  - name: mongodb
-    version: 13.0.1
-    repository: "https://charts.bitnami.com/bitnami"
-  - name: minio
-    version: 5.0.11
-    repository: "https://charts.bitnami.com/bitnami"

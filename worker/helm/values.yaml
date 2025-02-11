@@ -1,5 +1,5 @@
 image:
-  repository: jrunner-api
+  repository: jrunner-worker
   pullPolicy: IfNotPresent
   tag: latest
 
@@ -16,27 +16,6 @@ podLabels: {}
 podSecurityContext: {}
 
 securityContext: {}
-
-serviceAccount:
-  create: true
-  automount: true
-  annotations: {}
-  name: ""
-
-service:
-  type: ClusterIP
-  port: 8000
-
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: ""
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
 
 resources: {}
 

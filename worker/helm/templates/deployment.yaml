@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "AAA.fullname" . }}
+  name: {{ include "jrunner-worker.fullname" . }}
   labels:
-    {{- include "AAA.labels" . | nindent 4 }}
+    {{- include "jrunner-worker.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
-      {{- include "AAA.selectorLabels" . | nindent 6 }}
+      {{- include "jrunner-worker.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -16,7 +16,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "AAA.labels" . | nindent 8 }}
+        {{- include "jrunner-worker.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -25,7 +25,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "AAA.serviceAccountName" . }}
+      serviceAccountName: {{ include "jrunner-worker.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
