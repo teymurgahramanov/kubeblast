@@ -1,14 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "AAA.fullname" . }}
+  name: {{ include "test.fullname" . }}
   labels:
-    {{- include "AAA.labels" . | nindent 4 }}
+    {{- include "test.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "AAA.selectorLabels" . | nindent 6 }}
+      {{- include "test.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -16,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "AAA.labels" . | nindent 8 }}
+        {{- include "test.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -25,7 +27,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "AAA.serviceAccountName" . }}
+      serviceAccountName: {{ include "test.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -44,16 +46,6 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          env:
-            {{- toYaml .Values.env | nindent 12 }}
-         {{- if .Values.envFromSecret }}
-          envFrom:
-            - secretRef:
-                name: {{ .Values.envFromSecret }}
-          {{- end }}
-          envFrom:
-          - secretRef:
-              name: test-secret
           {{- with .Values.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}

@@ -1,4 +1,6 @@
 apiVersion: v2
-name: api
+name: AAA
+description: A Helm chart for Kubernetes
+type: application
 version: 0.1.0
-description: Helm chart for api service
+appVersion: "1.16.0"
