@@ -65,7 +65,7 @@ def read_file_from_s3(file_key):
 
 def create_k8s_job(job_data):
     """Creates a Kubernetes job with a ConfigMap for the JMX plan."""
-    job_id = str(job_data["_id"])
+    job_id = job_data["id"]
     job_name = job_data["name"]
     namespace = app_config.K8S_NAMESPACE
     s3_file_key = f"{job_name}.jmx"  # S3 object key
@@ -79,7 +79,7 @@ def create_k8s_job(job_data):
 
     # Create ConfigMap
     configmap = client.V1ConfigMap(
-        metadata=client.V1ObjectMeta(name=job_name, labels={"job-id": job_id}),
+        metadata=client.V1ObjectMeta(name=job_name, labels={"job_id": job_id}),
         data={"plan.jmx": file_content}
     )
 
@@ -91,8 +91,7 @@ def create_k8s_job(job_data):
         rendered_job = Template(job_template_content).render(
             name=job_name,
             namespace=namespace,
-            job_id=job_id,
-            configmap_key="plan.jmx"
+            job_id=job_id
         )
         job_manifest = yaml.safe_load(rendered_job)
     except Exception as e:
@@ -163,9 +162,9 @@ def process_job_update():
                     {"$set": {"status": new_status}}
                 )
                 if update_result.matched_count > 0:
-                    logging.info(f"Updated MongoDB: job_id {job_id} -> status {new_status}")
+                    logging.info(f"Updated MongoDB: {job_id} -> status {new_status}")
                 else:
-                    logging.warning(f"MongoDB update failed: job_id {job_id} not found.")
+                    logging.warning(f"MongoDB update failed: {job_id} not found.")
         except client.exceptions.ApiException as e:
             logging.error(f"Kubernetes API error: {e}")
         except Exception as e:
@@ -175,27 +174,75 @@ def process_job_update():
 
 
 def process_job_cleanup():
-    """Deletes Kubernetes jobs that are no longer in MongoDB."""
+    """Deletes Kubernetes Jobs, ConfigMaps, and Pods that are no longer in MongoDB."""
     batch_v1 = client.BatchV1Api()
+    core_v1 = client.CoreV1Api()
+
     logging.info("Starting Kubernetes Job Cleanup...")
 
     while True:
         try:
-            k8s_jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE).items
+            # Fetch all job IDs from MongoDB
             mongo_job_ids = {str(job["_id"]) for job in jobs_collection.find({}, {"_id": 1})}
 
-            for job in k8s_jobs:
-                job_id = job.metadata.labels.get("job_id")
-                if job_id and job_id not in mongo_job_ids:
-                    try:
-                        batch_v1.delete_namespaced_job(
-                            name=job.metadata.name,
-                            namespace=NAMESPACE,
-                            body=client.V1DeleteOptions(propagation_policy="Foreground"),
+            # List all Kubernetes jobs in the namespace
+            k8s_jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE).items
+
+            for job_item in k8s_jobs:
+                job_id = job_item.metadata.labels.get("job_id")
+                if not job_id or job_id in mongo_job_ids:
+                    continue  # Skip if job exists in MongoDB
+
+                job_name = job_item.metadata.name
+                label_selector = f"job_id={job_id}"
+
+                logging.info(f"Cleaning up job: {job_name}")
+
+                # Delete the Job(s)
+                try:
+                    batch_v1.delete_namespaced_job(
+                        name=job_name,
+                        namespace=NAMESPACE,
+                        propagation_policy="Foreground"
+                    )
+                    logging.info(f"Deleted Kubernetes Job: {job_name}")
+                except client.exceptions.ApiException as e:
+                    logging.error(f"Failed to delete Job {job_name}: {e}")
+
+                # Delete ConfigMaps linked to the job
+                try:
+                    config_maps = core_v1.list_namespaced_config_map(
+                        namespace=NAMESPACE,
+                        label_selector=label_selector
+                    )
+                    for cm in config_maps.items:
+                        cm_name = cm.metadata.name
+                        core_v1.delete_namespaced_config_map(
+                            name=cm_name,
+                            namespace=NAMESPACE
                         )
-                        logging.info(f"Deleted orphaned Kubernetes job: {job.metadata.name}")
-                    except client.exceptions.ApiException as e:
-                        logging.error(f"Failed to delete job {job.metadata.name}: {e}")
+                        logging.info(f"Deleted ConfigMap: {cm_name}")
+                except client.exceptions.ApiException as e:
+                    logging.error(f"Failed to delete ConfigMap for {job_name}: {e}")
+
+                # Delete Pods associated with the job
+                try:
+                    pods = core_v1.list_namespaced_pod(
+                        namespace=NAMESPACE,
+                        label_selector=label_selector
+                    )
+                    for pod in pods.items:
+                        pod_name = pod.metadata.name
+                        core_v1.delete_namespaced_pod(
+                            name=pod_name,
+                            namespace=NAMESPACE,
+                            body=client.V1DeleteOptions(),
+                            grace_period_seconds=0
+                        )
+                        logging.info(f"Deleted Pod: {pod_name}")
+                except client.exceptions.ApiException as e:
+                    logging.error(f"Failed to delete Pods for {job_name}: {e}")
+
         except Exception as e:
             logging.error(f"Error in job cleanup process: {e}")
 
