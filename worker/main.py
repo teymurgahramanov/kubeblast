@@ -36,7 +36,7 @@ s3_client = boto3.client(
 
 # Load Kubernetes Configuration
 try:
-    client.config.load_kube_config()
+    client.config.load_incluster_config()
     logging.info("Connected to Kubernetes cluster.")
 except Exception as e:
     logging.error(f"Failed to load Kubernetes configuration: {e}")
@@ -52,7 +52,6 @@ except Exception as e:
     logging.error(f"Failed to connect to MongoDB: {e}")
     exit(1)
 
-
 def read_file_from_s3(file_key):
     """Reads file content from S3."""
     try:
@@ -61,7 +60,6 @@ def read_file_from_s3(file_key):
     except Exception as e:
         logging.error(f"Failed to read file {file_key} from S3: {e}")
         return None
-
 
 def create_k8s_job(job_data):
     """Creates a Kubernetes job with a ConfigMap for the JMX plan."""
