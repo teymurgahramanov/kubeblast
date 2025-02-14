@@ -4,7 +4,7 @@ metadata:
   name: {{ name }}
   namespace: {{ namespace }}
   labels:
-    job-id: {{ job_id }}
+    job_id: {{ job_id }}
 spec:
   parallelism: 1
   completions: 1
@@ -13,7 +13,7 @@ spec:
   template:
     metadata:
       labels:
-        job-id: {{ job_id }}
+        job_id: {{ job_id }}
     spec:
       containers:
       - name: jmeter

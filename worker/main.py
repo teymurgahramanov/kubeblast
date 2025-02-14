@@ -77,7 +77,7 @@ def create_k8s_job(job_data):
 
     # Create ConfigMap
     configmap = client.V1ConfigMap(
-        metadata=client.V1ObjectMeta(name=job_name, labels={"job_id": job_id}),
+        metadata=client.V1ObjectMeta(name=job_name),
         data={"plan.jmx": file_content}
     )
 
@@ -88,8 +88,7 @@ def create_k8s_job(job_data):
 
         rendered_job = Template(job_template_content).render(
             name=job_name,
-            namespace=namespace,
-            job_id=job_id
+            namespace=namespace
         )
         job_manifest = yaml.safe_load(rendered_job)
     except Exception as e:
@@ -117,7 +116,6 @@ def create_k8s_job(job_data):
     except Exception as e:
         logging.error(f"Failed to create workload {job_name}: {e}")
 
-
 def process_job_creation():
     """Fetches approved jobs from MongoDB and creates Kubernetes jobs."""
     while True:
@@ -129,7 +127,6 @@ def process_job_creation():
             logging.error(f"Error in job creation process: {e}")
 
         sleep(WATCH_INTERVAL)
-
 
 def process_job_update():
     """Watches Kubernetes jobs and updates their status in MongoDB."""
