@@ -5,5 +5,7 @@ passlib[bcrypt]
 bcrypt
 pyjwt
 kubernetes
+kubernetes_asyncio
+motor
 python-dotenv
 boto3

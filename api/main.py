@@ -7,7 +7,8 @@ app = FastAPI()
 async def initialize():
   try:
     from api.core import config, models, password, db
-    from api.services import auth
+    from api.services import auth, worker
+    import asyncio
     admin = auth.get_user("admin")
     if not admin:
         admin = models.UserInDB(
@@ -16,6 +17,7 @@ async def initialize():
             role="admin"
         )
         db.mongo.users.insert_one(admin.dict())
+    asyncio.create_task(worker.update_jobs())
   except Exception as e:
      print(e)
      exit(1)

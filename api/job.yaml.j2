@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace }}
+  labels:
+    job-id: {{ job_id }}
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 172800
+  template:
+    metadata:
+      labels:
+        job-id: {{ job_id }}
+    spec:
+      containers:
+      - name: jmeter
+        image: busybox
+        #command: ["cat", "/tmp/plan.jmx"]
+        command: ["sh", "-c", "while true; do echo \"$(date): $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 8)\"; sleep 5; done"]
+        volumeMounts:
+        - name: jmeter-plan
+          mountPath: /tmp/plan.jmx
+          subPath: plan.jmx
+      restartPolicy: Never
+      volumes:
+      - name: jmeter-plan
+        configMap:
+          name: {{ name }}

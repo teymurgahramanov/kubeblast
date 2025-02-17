@@ -1,26 +1,26 @@
 import asyncio
 import logging
 import bson
-from kubernetes_asyncio import client
+from kubernetes_asyncio import client, watch
 from motor.motor_asyncio import AsyncIOMotorClient
 from api.core.config import config
 from api.core import db
 
-async def update_jobs():
-    """Periodically fetches Kubernetes jobs and updates their status in MongoDB."""
+async def process_job_update():
+    """Watches Kubernetes jobs and updates their status in MongoDB asynchronously."""
     batch_v1 = client.BatchV1Api()
-    logging.info("Starting Kubernetes Job Updater...")
-    
+    w = watch.Watch()
+    logging.info("Starting Kubernetes Job Watcher...")
+
     while True:
         try:
             async with batch_v1.api_client as api_client:
-                jobs = await batch_v1.list_namespaced_job(namespace=config.K8S_NAMESPACE)
-                
-                for job in jobs.items:
-                    job_id = job.metadata.labels.get("job-id")
+                async for event in w.stream(batch_v1.list_namespaced_job, namespace=config.K8S_NAMESPACE):
+                    job = event["object"]
+                    job_id = job.metadata.labels.get("job_id")
                     if not job_id:
                         continue
-                    
+
                     # Determine job status
                     if job.status.active:
                         new_status = "running"
@@ -30,12 +30,12 @@ async def update_jobs():
                         new_status = "failed"
                     else:
                         continue  # Ignore other status changes
-                    
+
                     update_result = await db.mongo.jobs.update_one(
                         {"_id": bson.ObjectId(job_id)},
                         {"$set": {"status": new_status}}
                     )
-                    
+
                     if update_result.matched_count > 0:
                         logging.info(f"Updated MongoDB: {job_id} -> status {new_status}")
                     else:
@@ -44,9 +44,5 @@ async def update_jobs():
             logging.error(f"Kubernetes API error: {e}")
         except Exception as e:
             logging.error(f"Unexpected error in job update process: {e}")
-        
-        await asyncio.sleep(config.WATCH_INTERVAL)
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(update_jobs())
+        await asyncio.sleep(config.WATCH_INTERVAL)
