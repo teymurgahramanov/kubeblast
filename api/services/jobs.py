@@ -3,7 +3,7 @@ from fastapi import HTTPException
 import bson
 import os
 import hashlib
-from api.core import config, k8s
+from api.core import config
 from kubernetes import client
 from datetime import datetime
 import logging

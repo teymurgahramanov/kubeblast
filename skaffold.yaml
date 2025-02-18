@@ -37,12 +37,12 @@ deploy:
       version: 15.0.2
       valuesFiles: 
         - .dev/values-minio.yaml
-    #- name: jrunner
-    #  namespace: jrunner
-    #  createNamespace: true
-    #  chartPath: ./helm
-    #  valuesFiles: 
-    #    - .dev/values.yaml
+    - name: jrunner
+      namespace: jrunner
+      createNamespace: true
+      chartPath: ./helm
+      valuesFiles: 
+        - .dev/values.yaml
 
 
 profiles:

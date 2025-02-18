@@ -1,14 +1,10 @@
 import os
-import yaml
 import bson
 import logging
-import boto3
-from jinja2 import Template
+from time import sleep
 from kubernetes import client, config as k8s_config
 from pymongo import MongoClient
 from config import config as app_config
-from time import sleep
-from concurrent.futures import ThreadPoolExecutor
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,50 +17,62 @@ NAMESPACE = app_config.K8S_NAMESPACE
 WORKER_WATCH_INTERVAL = app_config.WORKER_WATCH_INTERVAL
 
 # Load Kubernetes Configuration
-k8s_config.load_kube_config()
-#k8s_config.load_incluster_config()
+k8s_config.load_incluster_config()
 
 # Initialize MongoDB Client
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 jobs_collection = db[COLLECTION_NAME]
 
-def process_job_update():
-    batch_v1 = client.BatchV1Api()
+def get_k8s_job_status(job):
+    """Determine the status of a Kubernetes Job."""
+    if job.status.active:
+        return "running"
+    elif job.status.succeeded:
+        return "completed"
+    elif job.status.failed:
+        return "failed"
+    return None  # Unrecognized status
 
+def process_job_update():
+    """Continuously sync job statuses between Kubernetes and MongoDB."""
+    batch_v1 = client.BatchV1Api()
     logging.info("Starting Kubernetes Job Updater...")
+    
     while True:
         try:
             jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE).items
             if not jobs:
-                logging.info("No jobs")
-                continue
-            else:
-                for job in jobs:
-                    job_id = job.metadata.labels.get("job-id")
-                    if not job_id:
-                        continue
-
-                    # Determine job status
-                    if job.status.active:
-                        new_status = "running"
-                    elif job.status.succeeded:
-                        new_status = "completed"
-                    elif job.status.failed:
-                        new_status = "failed"
-                    else:
-                        continue  # Ignore other status changes
-                    
+                logging.info("No jobs found.")
+            
+            for job in jobs:
+                job_id = job.metadata.labels.get("job-id")
+                if not job_id:
+                    continue
+                
+                # Determine the current job status in Kubernetes
+                k8s_status = get_k8s_job_status(job)
+                if not k8s_status:
+                    continue  # Skip if status is not relevant
+                
+                # Fetch the job from MongoDB
+                mongo_job = jobs_collection.find_one({"_id": bson.ObjectId(job_id)})
+                if not mongo_job:
+                    logging.warning(f"Job {job_id} not found in MongoDB.")
+                    continue
+                
+                # Compare and update status if different
+                if mongo_job.get("status") != k8s_status:
                     update_result = jobs_collection.update_one(
                         {"_id": bson.ObjectId(job_id)},
-                        {"$set": {"status": new_status}}
+                        {"$set": {"status": k8s_status}}
                     )
                     
-                    if update_result.matched_count > 0:
-                        logging.info(f"Updated MongoDB: {job_id} -> status {new_status}")
+                    if update_result.modified_count > 0:
+                        logging.info(f"Updated MongoDB: {job_id} -> status {k8s_status}")
                     else:
-                        logging.warning(f"MongoDB update failed: {job_id} not found.")
-    
+                        logging.warning(f"No changes made for job {job_id}.")
+        
         except client.exceptions.ApiException as e:
             logging.error(f"Kubernetes API error: {e}")
         except Exception as e:
@@ -72,9 +80,5 @@ def process_job_update():
         
         sleep(WORKER_WATCH_INTERVAL)
 
-
 if __name__ == "__main__":
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        executor.submit(process_job_creation)
-        executor.submit(process_job_update)
-        executor.submit(process_job_cleanup)
+    process_job_update()

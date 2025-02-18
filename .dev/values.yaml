@@ -1,6 +1,8 @@
+fullnameOverride: jrunner
+
 env:
   - name: MONGO_HOST
-    value: "jrunner-mongodb"
+    value: "mongodb"
   - name: MONGO_PORT
     value: "27017"
   - name: MONGO_DB_NAME
@@ -21,3 +23,4 @@ env:
 ingress:
   enabled: true
   host: jrunner.local
+  className: nginx
