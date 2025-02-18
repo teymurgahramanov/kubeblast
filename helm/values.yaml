@@ -32,13 +32,7 @@ service:
 ingress:
   enabled: false
   className: ""
-  annotations: {}
-  hosts:
-    - host: ""
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
+  host: ""
 
 resources: {}
 
@@ -47,3 +41,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+worker:
+  image:
+    repository: jrunner-worker
+    pullPolicy: IfNotPresent
+    tag: latest
+
+  securityContext: {}
+
+  resources: {}

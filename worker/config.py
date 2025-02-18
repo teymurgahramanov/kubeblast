@@ -21,4 +21,6 @@ class Config:
     
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
 
+    WORKER_WATCH_INTERVAL: int = os.getenv("WORKER_WATCH_INTERVAL", 30)
+
 config = Config()

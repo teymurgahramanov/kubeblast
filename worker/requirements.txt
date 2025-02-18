@@ -3,3 +3,4 @@ pymongo
 jinja2
 pyyaml
 kubernetes
+python-dotenv

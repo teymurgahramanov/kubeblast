@@ -1,0 +1,15 @@
+auth:
+  enabled: true
+  rootPassword: "ROOT12345!"
+  usernames:
+    - "jrunner"
+  passwords:
+    - "jrunner"
+  databases:
+    - "jrunner"
+persistence:
+  enabled: true 
+service:
+  type: NodePort
+  nodePorts:
+    mongodb: 30017

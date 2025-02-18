@@ -1,2 +1,6 @@
 dev/*.jmx
 web/node_modules
+*.tgz
+*.lock
+.venv
+__pycache__

@@ -40,6 +40,7 @@ def get_job(current_user, job_id):
 
 def create_job(current_user, file_content, description):
     job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
+    file_name = f"{job_name}.jmx"
 
     pending_jobs_count = db.mongo.jobs.count_documents({
         "status": "pending",
@@ -58,7 +59,7 @@ def create_job(current_user, file_content, description):
             detail=f"Job with the same plan file already exists: {job_name}"
         )
 
-    files.create_file(file_content,f"{job_name}.jmx")
+    files.create_file(file_content,file_name)
     
     job = models.Job(
         name=job_name,
@@ -68,7 +69,11 @@ def create_job(current_user, file_content, description):
         created_at=datetime.now()
     )
 
-    result = db.mongo.jobs.insert_one(job.dict())
+    try:
+        result = db.mongo.jobs.insert_one(job.dict())
+    except Exception as e:
+        print(e)
+        files.delete_file(file_name)
 
     return get_job(current_user, str(result.inserted_id))
 
@@ -133,14 +138,14 @@ def delete_job(current_user, job_id):
         label_selector = f"job-id={job['id']}"
 
         # Delete the Job(s) based on the label selector
-        jobs = client.BatchV1Api(k8s.api_client).list_namespaced_job(
+        jobs = client.BatchV1Api().list_namespaced_job(
             namespace=config.config.K8S_NAMESPACE,
             label_selector=label_selector
         )
         
         for job_item in jobs.items:
             job_name = job_item.metadata.name
-            client.BatchV1Api(k8s.api_client).delete_namespaced_job(
+            client.BatchV1Api().delete_namespaced_job(
                 namespace=config.config.K8S_NAMESPACE,
                 name=job_name,
                 propagation_policy='Foreground'
@@ -148,21 +153,21 @@ def delete_job(current_user, job_id):
             print(f"Job {job_name} deleted")
 
         # Delete the ConfigMap(s) based on the label selector
-        config_maps = client.CoreV1Api(k8s.api_client).list_namespaced_config_map(
+        config_maps = client.CoreV1Api().list_namespaced_config_map(
             namespace=config.config.K8S_NAMESPACE,
             label_selector=label_selector
         )
 
         for cm in config_maps.items:
             cm_name = cm.metadata.name
-            client.CoreV1Api(k8s.api_client).delete_namespaced_config_map(
+            client.CoreV1Api().delete_namespaced_config_map(
                 namespace=config.config.K8S_NAMESPACE,
                 name=cm_name
             )
             print(f"ConfigMap {cm_name} deleted")
 
         # Delete Pods based on the label selector
-        pods = client.CoreV1Api(k8s.api_client).list_namespaced_pod(
+        pods = client.CoreV1Api().list_namespaced_pod(
             namespace=config.config.K8S_NAMESPACE,
             label_selector=label_selector
         )
@@ -170,7 +175,7 @@ def delete_job(current_user, job_id):
         for pod in pods.items:
             pod_name = pod.metadata.name
             print(f"Deleting Pod: {pod_name}")
-            client.CoreV1Api(k8s.api_client).delete_namespaced_pod(
+            client.CoreV1Api().delete_namespaced_pod(
                 name=pod_name,
                 namespace=config.config.K8S_NAMESPACE,
                 body=client.V1DeleteOptions(),

@@ -8,7 +8,6 @@ from api.core.config import config
 from api.core import s3
 
 def create_file(file_content, file_name):
-  # Upload file to MinIO (S3)
   try:
       s3.client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
   except Exception as e:

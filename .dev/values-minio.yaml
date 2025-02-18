@@ -1,0 +1,10 @@
+mode: standalone
+auth:
+  rootUser: admin
+  rootPassword: ROOT12345!
+persistence:
+  enabled: true
+service:
+  type: NodePort
+  nodePorts:
+    console: "30090"

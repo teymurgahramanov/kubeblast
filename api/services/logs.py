@@ -3,12 +3,12 @@ from typing import Annotated
 from fastapi.responses import StreamingResponse
 from api.core import models
 from api.services import auth, jobs
-from kubernetes import client
+from kubernetes import client, config as k8s_config
 from api.core.config import config
-import asyncio
+
+k8s_config.load_incluster_config()
 
 def stream_pod_logs(current_user, job_id):
-    """Asynchronously stream logs from a Kubernetes pod."""
     namespace = config.K8S_NAMESPACE
     job = jobs.get_job(current_user, job_id).dict()
     job_name = job['name']

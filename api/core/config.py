@@ -27,6 +27,5 @@ class Config:
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
-    WATCH_INTERVAL: int = os.getenv("WATCH_INTERVAL", 30)
 
 config = Config()
