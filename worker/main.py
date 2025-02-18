@@ -20,20 +20,6 @@ COLLECTION_NAME = "jobs"
 NAMESPACE = app_config.K8S_NAMESPACE
 WORKER_WATCH_INTERVAL = app_config.WORKER_WATCH_INTERVAL
 
-# S3 Configuration
-S3_BUCKET = app_config.S3_BUCKET
-S3_REGION = app_config.S3_REGION
-S3_ACCESS_KEY = app_config.S3_ACCESS_KEY
-S3_SECRET_KEY = app_config.S3_SECRET_KEY
-
-# Initialize S3 Client
-s3_client = boto3.client(
-    "s3",
-    region_name=S3_REGION,
-    aws_access_key_id=S3_ACCESS_KEY,
-    aws_secret_access_key=S3_SECRET_KEY
-)
-
 # Load Kubernetes Configuration
 k8s_config.load_kube_config()
 #k8s_config.load_incluster_config()
@@ -42,87 +28,6 @@ k8s_config.load_kube_config()
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 jobs_collection = db[COLLECTION_NAME]
-
-def read_file_from_s3(file_key):
-    """Reads file content from S3."""
-    try:
-        response = s3_client.get_object(Bucket=S3_BUCKET, Key=file_key)
-        return response["Body"].read().decode("utf-8")  # Convert bytes to string
-    except Exception as e:
-        logging.error(f"Failed to read file {file_key} from S3: {e}")
-        return None
-
-def create_k8s_job(job_data):
-    """Creates a Kubernetes job with a ConfigMap for the JMX plan."""
-    job_id = job_data["id"]
-    job_name = job_data["name"]
-    namespace = app_config.K8S_NAMESPACE
-    s3_file_key = f"{job_name}.jmx"  # S3 object key
-    job_template_path = os.path.join(os.path.dirname(__file__), "./job.yaml.j2")
-
-    # Read the JMX file from S3
-    file_content = read_file_from_s3(s3_file_key)
-    if not file_content:
-        logging.error(f"Skipping job {job_name}, JMX file not found in S3.")
-        return
-
-    # Create ConfigMap
-    configmap = client.V1ConfigMap(
-        metadata=client.V1ObjectMeta(name=job_name),
-        data={"plan.jmx": file_content},labels={"job-id": job_id}
-    )
-
-    # Render Job YAML from Jinja2 template
-    try:
-        with open(job_template_path, 'r') as file:
-            job_template_content = file.read()
-
-        rendered_job = Template(job_template_content).render(
-            name=job_name,
-            namespace=namespace,
-            job_id=job_id
-        )
-        job_manifest = yaml.safe_load(rendered_job)
-    except Exception as e:
-        logging.error(f"Failed to render job template for {job_name}: {e}")
-        return
-
-    # Kubernetes API Clients
-    core_v1 = client.CoreV1Api()
-    batch_v1 = client.BatchV1Api()
-
-    try:
-        # Create ConfigMap
-        core_v1.create_namespaced_config_map(namespace=namespace, body=configmap)
-        logging.info(f"Created Kubernetes ConfigMap: {job_name}")
-
-        # Create Job
-        batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)
-        logging.info(f"Created Kubernetes Job: {job_name}")
-
-        # Update MongoDB status to 'scheduled'
-        jobs_collection.update_one(
-            {"_id": bson.ObjectId(job_id)},
-            {"$set": {"status": "scheduled"}}
-        )
-    except Exception as e:
-        logging.error(f"Failed to create workload {job_name}: {e}")
-
-def process_job_creation():
-    """Fetches approved jobs from MongoDB and creates Kubernetes jobs."""
-    while True:
-        try:
-            approved_jobs = jobs_collection.find({"status": "approved"}).sort("created_at",1)
-            if not approved_jobs:
-                logging.info("No approved jobs")
-                continue
-            else:
-                for job_data in approved_jobs:
-                    create_k8s_job(job_data)
-        except Exception as e:
-            logging.error(f"Error in job creation process: {e}")
-
-        sleep(WORKER_WATCH_INTERVAL)
 
 def process_job_update():
     batch_v1 = client.BatchV1Api()
@@ -165,79 +70,6 @@ def process_job_update():
         except Exception as e:
             logging.error(f"Unexpected error in job update process: {e}")
         
-        sleep(WORKER_WATCH_INTERVAL)
-
-def process_job_cleanup():
-    batch_v1 = client.BatchV1Api()
-    core_v1 = client.CoreV1Api()
-
-    logging.info("Starting Kubernetes Job Cleanup...")
-    while True:
-        try:
-            # Fetch all job IDs from MongoDB
-            mongo_job_ids = {str(job["_id"]) for job in jobs_collection.find({}, {"_id": 1})}
-
-            # List all Kubernetes jobs in the namespace
-            k8s_jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE).items
-
-            for job_item in k8s_jobs:
-                job_id = job_item.metadata.labels.get("job_id")
-                if not job_id or job_id in mongo_job_ids:
-                    continue  # Skip if job exists in MongoDB
-
-                job_name = job_item.metadata.name
-                label_selector = f"job_id={job_id}"
-
-                logging.info(f"Cleaning up job: {job_name}")
-
-                # Delete the Job(s)
-                try:
-                    batch_v1.delete_namespaced_job(
-                        name=job_name,
-                        namespace=NAMESPACE,
-                        propagation_policy="Foreground"
-                    )
-                    logging.info(f"Deleted Kubernetes Job: {job_name}")
-                except client.exceptions.ApiException as e:
-                    logging.error(f"Failed to delete Job {job_name}: {e}")
-
-                # Delete ConfigMaps linked to the job
-                try:
-                    config_maps = core_v1.list_namespaced_config_map(
-                        namespace=NAMESPACE,
-                        label_selector=label_selector
-                    )
-                    for cm in config_maps.items:
-                        cm_name = cm.metadata.name
-                        core_v1.delete_namespaced_config_map(
-                            name=cm_name,
-                            namespace=NAMESPACE
-                        )
-                        logging.info(f"Deleted ConfigMap: {cm_name}")
-                except client.exceptions.ApiException as e:
-                    logging.error(f"Failed to delete ConfigMap for {job_name}: {e}")
-
-                # Delete Pods associated with the job
-                try:
-                    pods = core_v1.list_namespaced_pod(
-                        namespace=NAMESPACE,
-                        label_selector=label_selector
-                    )
-                    for pod in pods.items:
-                        pod_name = pod.metadata.name
-                        core_v1.delete_namespaced_pod(
-                            name=pod_name,
-                            namespace=NAMESPACE,
-                            body=client.V1DeleteOptions(),
-                            grace_period_seconds=0
-                        )
-                        logging.info(f"Deleted Pod: {pod_name}")
-                except client.exceptions.ApiException as e:
-                    logging.error(f"Failed to delete Pods for {job_name}: {e}")
-
-        except Exception as e:
-            logging.error(f"Error in job cleanup process: {e}")
-
         sleep(WORKER_WATCH_INTERVAL)
 
 
