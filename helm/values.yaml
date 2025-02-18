@@ -2,25 +2,21 @@ fullnameOverride: ""
 
 global:
   imagePullSecrets: []
-  env: []
-  envFromSecret: ""
+  imagePullPolicy: IfNotPresent
   podAnnotations: {}
   podLabels: {}
   podSecurityContext: {}
   securityContext: {}
-  serviceAccount:
-    create: true
-    automount: true
-    annotations: {}
-    name: ""
   nodeSelector: {}
   tolerations: []
   affinity: {}
 
 api:
+  env: []
+  envFromSecret: ""
+
   image:
     repository: jrunner-api
-    pullPolicy: IfNotPresent
     tag: latest
   service:
     type: ClusterIP
@@ -29,14 +25,15 @@ api:
     enabled: false
     className: ""
     host: ""
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
   resources: {}
 
-worker:
-  image:
-    repository: jrunner-worker
-    pullPolicy: IfNotPresent
-    tag: latest
-
-  securityContext: {}
-
-  resources: {}
+  worker:
+    image:
+      repository: jrunner-worker
+      tag: latest
+    resources: {}
