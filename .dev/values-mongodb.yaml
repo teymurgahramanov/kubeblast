@@ -1,6 +1,8 @@
+# helm install mongodb oci://registry-1.docker.io/bitnamicharts/mongodb -f .dev/values-mongodb.yaml --namespace jrunner --create-namespace
+
 auth:
   enabled: true
-  rootPassword: "ROOT12345!"
+  rootPassword: Root12345!
   usernames:
     - "jrunner"
   passwords:

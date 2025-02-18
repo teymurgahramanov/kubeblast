@@ -5,53 +5,53 @@ metadata:
   labels:
     {{- include "jrunner-api.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "jrunner-api.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.global.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "jrunner-api.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
+        {{- with .Values.global.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "jrunner-api.fullname" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ include "jrunner-api.fullname" . }}
+        - name: {{ include "jrunner-api.fullname" . }}-api
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- toYaml .Values.global.securityContext | nindent 12 }}
+          image: "{{ .Values.global.image.repository }}:{{ .Values.global.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.global.service.port }}
               protocol: TCP
           livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
+            {{- toYaml .Values.global.livenessProbe | nindent 12 }}
           readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
+            {{- toYaml .Values.global.readinessProbe | nindent 12 }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.global.resources | nindent 12 }}
           env:
-            {{- toYaml .Values.env | nindent 12 }}
-         {{- if .Values.envFromSecret }}
+            {{- toYaml .Values.global.env | nindent 12 }}
+         {{- if .Values.global.envFromSecret }}
           envFrom:
             - secretRef:
-                name: {{ .Values.envFromSecret }}
+                name: {{ .Values.global.envFromSecret }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- with .Values.global.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -59,7 +59,7 @@ spec:
           securityContext:
             {{- toYaml .Values.worker.securityContext | nindent 12 }}
           image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           livenessProbe:
             {{- toYaml .Values.worker.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -67,29 +67,29 @@ spec:
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           env:
-            {{- toYaml .Values.env | nindent 12 }}
-         {{- if .Values.envFromSecret }}
+            {{- toYaml .Values.global.env | nindent 12 }}
+         {{- if .Values.global.envFromSecret }}
           envFrom:
             - secretRef:
-                name: {{ .Values.envFromSecret }}
+                name: {{ .Values.global.envFromSecret }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- with .Values.global.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- with .Values.global.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.global.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

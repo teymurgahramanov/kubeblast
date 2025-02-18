@@ -1,48 +1,35 @@
 fullnameOverride: ""
 
-replicaCount: 1
+global:
+  imagePullSecrets: []
+  env: []
+  envFromSecret: ""
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-image:
-  repository: jrunner-api
-  pullPolicy: IfNotPresent
-  tag: latest
-
-imagePullSecrets: []
-
-env: []
-
-envFromSecret: ""
-
-podAnnotations: {}
-
-podLabels: {}
-
-podSecurityContext: {}
-
-securityContext: {}
-
-serviceAccount:
-  create: true
-  automount: true
-  annotations: {}
-  name: ""
-
-service:
-  type: ClusterIP
-  port: 8000
-
-ingress:
-  enabled: false
-  className: ""
-  host: ""
-
-resources: {}
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
+api:
+  image:
+    repository: jrunner-api
+    pullPolicy: IfNotPresent
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8000
+  ingress:
+    enabled: false
+    className: ""
+    host: ""
+  resources: {}
 
 worker:
   image:

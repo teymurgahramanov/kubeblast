@@ -16,7 +16,6 @@ build:
       dockerfile: Dockerfile
 
 deploy:
-  kubectl: {}
   helm:
     releases:
     - name: jrunner
@@ -24,8 +23,7 @@ deploy:
       createNamespace: true
       chartPath: ./helm
       valuesFiles: 
-        - .dev/values.yaml
-
+        - .dev/values-jrunner.yaml
 
 profiles:
   - name: docker-desktop

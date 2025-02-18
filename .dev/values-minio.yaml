@@ -1,7 +1,9 @@
+# helm install minio oci://registry-1.docker.io/bitnamicharts/minio -f .dev/values-minio.yaml --namespace jrunner --create-namespace
+
 mode: standalone
 auth:
   rootUser: admin
-  rootPassword: ROOT12345!
+  rootPassword: Root12345!
 persistence:
   enabled: true
 service:

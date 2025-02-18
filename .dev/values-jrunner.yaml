@@ -19,6 +19,8 @@ env:
     value: "cHat4VLoAebDW8wCMWAMlP5vMFXSxNOFmYtDBgLD"
   - name: S3_BUCKET
     value: "jrunner"
+  - name: K8S_NAMESPACE
+    value: "jrunner"
 
 ingress:
   enabled: true
