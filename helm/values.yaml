@@ -3,31 +3,51 @@ fullnameOverride: ""
 global:
   imagePullSecrets: []
   imagePullPolicy: IfNotPresent
-  podAnnotations: {}
-  podLabels: {}
   podSecurityContext: {}
   securityContext: {}
   nodeSelector: {}
   tolerations: []
   affinity: {}
 
-api:
+ui:
   env: []
   envFromSecret: ""
-
+  podAnnotations: {}
+  podLabels: {}
   image:
-    repository: jrunner-api
+    repository: jrunner
     tag: latest
   service:
     type: ClusterIP
     port: 8000
+    nodePort: ""
   ingress:
     enabled: false
+    annotations: {}
+    className: ""
+    host: ""
+  resources: {}
+
+api:
+  env: []
+  envFromSecret: ""
+  podAnnotations: {}
+  podLabels: {}
+
+  image:
+    repository: jrunner
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8000
+    nodePort: ""
+  ingress:
+    enabled: false
+    annotations: {}
     className: ""
     host: ""
   serviceAccount:
     create: true
-    automount: true
     annotations: {}
     name: ""
   resources: {}

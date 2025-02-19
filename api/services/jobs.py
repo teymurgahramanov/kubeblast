@@ -21,7 +21,7 @@ def get_jobs(current_user, status: str = None, owner: str = None, name: str = No
     if name:
         query["name"] = name
     
-    if current_user.role is "user":
+    if current_user.role == "user":
         query["owner"] = current_user.username
 
     jobs = list(db.mongo.jobs.find(query))
@@ -55,7 +55,7 @@ def create_job(current_user, file_content, description):
     job = db.mongo.jobs.find_one({"name": job_name})
     if job:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Job with the same plan file already exists: {job_name}"
         )
 
@@ -84,35 +84,38 @@ def approve_job(current_user, job_id: str, approved: bool):
         raise HTTPException(status_code=400, detail="Cannot update job in current state")
 
     if approved:
-        namespace = config.config.K8S_NAMESPACE
+        k8s_object_name = f"jrunner-{job_id}"
+        k8s_object_labels = {"job-id": job_id}
+        k8s_object_namespace = config.config.K8S_NAMESPACE
+        k8s_configmap_key = "plan.jmx"
         file_name = f"{job['name']}.jmx"
         job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
 
         file_content = files.read_file(file_name)
 
         configmap = client.V1ConfigMap(
-            metadata=client.V1ObjectMeta(name=job["name"], labels={"job-id": job["id"]}),
-            data={"plan.jmx": file_content}
+            metadata=client.V1ObjectMeta(name=k8s_object_name, labels=k8s_object_labels),
+            data={k8s_configmap_key: file_content}
         )
 
         with open(job_template_path, 'r') as file:
             job_template_content = file.read()
 
         rendered_job = Template(job_template_content).render(
-            name=job["name"],
-            namespace=namespace,
-            job_id=job["id"],
-            configmap_key="plan.jmx"
+            name=k8s_object_name,
+            namespace=k8s_object_namespace,
+            labels = k8s_object_labels,
+            configmap_key=k8s_configmap_key
         )
         job_manifest = yaml.safe_load(rendered_job)
 
         try:
             # Create ConfigMap
-            client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap)
+            client.CoreV1Api().create_namespaced_config_map(namespace=k8s_object_namespace, body=configmap)
             logging.info(f"Created Kubernetes ConfigMap: {job['name']}")
 
             # Create Job
-            client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
+            client.BatchV1Api().create_namespaced_job(namespace=k8s_object_namespace, body=job_manifest)
             logging.info(f"Created Kubernetes Job: {job['name']}")
 
         except Exception as e:
@@ -135,9 +138,8 @@ def delete_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
     try:
-        label_selector = f"job-id={job['id']}"
+        label_selector = f"job-id={job_id}"
 
-        # Delete the Job(s) based on the label selector
         jobs = client.BatchV1Api().list_namespaced_job(
             namespace=config.config.K8S_NAMESPACE,
             label_selector=label_selector
@@ -152,7 +154,6 @@ def delete_job(current_user, job_id):
             )
             print(f"Job {job_name} deleted")
 
-        # Delete the ConfigMap(s) based on the label selector
         config_maps = client.CoreV1Api().list_namespaced_config_map(
             namespace=config.config.K8S_NAMESPACE,
             label_selector=label_selector

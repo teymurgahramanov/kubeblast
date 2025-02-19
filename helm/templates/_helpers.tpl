@@ -1,8 +1,8 @@
-{{- define "jrunner-api.name" -}}
+{{- define "jrunner.name" -}}
 {{- default .Chart.Name .Values.global.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "jrunner-api.fullname" -}}
+{{- define "jrunner.fullname" -}}
 {{- if .Values.global.fullnameOverride }}
 {{- .Values.global.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,20 +15,20 @@
 {{- end }}
 {{- end }}
 
-{{- define "jrunner-api.chart" -}}
+{{- define "jrunner.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "jrunner-api.labels" -}}
-helm.sh/chart: {{ include "jrunner-api.chart" . }}
-{{ include "jrunner-api.selectorLabels" . }}
+{{- define "jrunner.labels" -}}
+helm.sh/chart: {{ include "jrunner.chart" . }}
+{{ include "jrunner.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "jrunner-api.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "jrunner-api.name" . }}
+{{- define "jrunner.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "jrunner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

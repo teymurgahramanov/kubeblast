@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "jrunner-api.fullname" . }}
+  name: {{ include "jrunner.fullname" . }}
   labels:
-    {{- include "jrunner-api.labels" . | nindent 4 }}
+    {{- include "jrunner.labels" . | nindent 4 }}
   {{- with .Values.api.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -21,7 +21,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: {{ include "jrunner-api.fullname" $ }}
+                name: {{ include "jrunner.fullname" $ }}
                 port:
                   number: {{ $.Values.api.service.port }}
 {{- end }}

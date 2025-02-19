@@ -1,28 +1,30 @@
 fullnameOverride: jrunner
 
-env:
-  - name: MONGO_HOST
-    value: "mongodb"
-  - name: MONGO_PORT
-    value: "27017"
-  - name: MONGO_DB_NAME
-    value: "jrunner"
-  - name: MONGO_DB_USER
-    value: "jrunner"
-  - name: MONGO_DB_PASS
-    value: "jrunner"
-  - name: S3_URL
-    value: "https://s3.cbar.az"
-  - name: S3_ACCESS_KEY
-    value: "sWN8vFdS4sXloyDXApdO"
-  - name: S3_SECRET_KEY
-    value: "cHat4VLoAebDW8wCMWAMlP5vMFXSxNOFmYtDBgLD"
-  - name: S3_BUCKET
-    value: "jrunner"
-  - name: K8S_NAMESPACE
-    value: "jrunner"
+api:
+  env:
+    - name: MONGO_HOST
+      value: "mongodb"
+    - name: MONGO_PORT
+      value: "27017"
+    - name: MONGO_DB_NAME
+      value: "jrunner"
+    - name: MONGO_DB_USER
+      value: "jrunner"
+    - name: MONGO_DB_PASS
+      value: "jrunner"
+    - name: S3_URL
+      value: "https://s3.cbar.az"
+    - name: S3_ACCESS_KEY
+      value: "sWN8vFdS4sXloyDXApdO"
+    - name: S3_SECRET_KEY
+      value: "cHat4VLoAebDW8wCMWAMlP5vMFXSxNOFmYtDBgLD"
+    - name: S3_BUCKET
+      value: "jrunner"
+    - name: K8S_NAMESPACE
+      value: "jrunner"
+    - name: WORKER_WATCH_INTERVAL
+      value: "10"
 
-ingress:
-  enabled: true
-  host: jrunner.local
-  className: nginx
+  service:
+    type: NodePort
+    nodePort: "30800"

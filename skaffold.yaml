@@ -22,6 +22,11 @@ deploy:
       namespace: jrunner
       createNamespace: true
       chartPath: ./helm
+      setValueTemplates:
+        api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
+        api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
+        api.worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
+        api.worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
       valuesFiles: 
         - .dev/values-jrunner.yaml
 
