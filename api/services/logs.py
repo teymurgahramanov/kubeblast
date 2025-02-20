@@ -10,11 +10,9 @@ k8s_config.load_incluster_config()
 
 def stream_pod_logs(current_user, job_id):
     namespace = config.K8S_NAMESPACE
-    job = jobs.get_job(current_user, job_id).dict()
-    
+
     try:
         label_selector = f"job-id={job_id}"
-        print(f"Searching for pods with label: {label_selector} in namespace: {namespace}")
 
         pod_list = client.CoreV1Api().list_namespaced_pod(
             namespace=namespace,
