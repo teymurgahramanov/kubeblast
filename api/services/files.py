@@ -13,12 +13,20 @@ def create_file(file_content, file_name):
   except Exception as e:
       raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
   
-def delete_file(file_name):
-  try:
-      s3.client.delete_object(Bucket=config.S3_BUCKET, Key=file_name)
-      print(f"File {file_name} deleted from MinIO")
-  except Exception as e:
-      print(f"Failed to delete file from MinIO: {str(e)}")
+def delete_file(job_id):
+    try:
+        response = s3.list_objects_v2(Bucket=config.S3_BUCKET, Prefix=job_id)
+
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                file_key = obj['Key']
+                s3.delete_object(Bucket=config.S3_BUCKET, Key=file_key)
+                print(f"Deleted file: {file_key}")
+        else:
+            print(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
+
+    except Exception as e:
+        print(f"Failed to delete files from MinIO: {str(e)}")
 
 def read_file(file_name):
     try:
@@ -30,13 +38,13 @@ def read_file(file_name):
     return file_content
 
 def download_file(current_user, job_id, type, download):
-    job = jobs.get_job(current_user, job_id).dict()
+    jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
-            file_name = f"{job['name']}.jmx"
+            file_name = f"{job_id}.jmx"
             media_type = "application/xml"
         case "report":
-            file_name = f"{job['name']}.pdf"
+            file_name = f"{job_id}.pdf"
             media_type = "application/pdf"
     try:
         response = s3.client.get_object(Bucket=config.S3_BUCKET, Key=file_name)

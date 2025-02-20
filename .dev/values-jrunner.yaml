@@ -24,7 +24,16 @@ api:
       value: "jrunner"
     - name: WORKER_WATCH_INTERVAL
       value: "10"
-
+    # Kubernetes Node Selector (as key-value pairs)
+    - name: K8S_NODE_SELECTOR
+      value: '{"kubernetes.io/role": "worker", "environment": "production"}'
+    # Kubernetes Tolerations (JSON format)
+    - name: K8S_TOLERATIONS
+      value: >-
+        [
+          {"key": "scope", "operator": "Equal", "value": "load-test", "effect": "NoExecute"},
+          {"key": "dedicated", "operator": "Exists", "effect": "NoSchedule"}
+        ]
   service:
     type: NodePort
     nodePort: "30800"

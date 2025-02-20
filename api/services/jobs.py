@@ -9,7 +9,7 @@ from datetime import datetime
 import logging
 from jinja2 import Template
 import yaml
-from api.services import files
+from api.services import files, k8s
 
 def get_jobs(current_user, status: str = None, owner: str = None, name: str = None):
     query = {}
@@ -40,12 +40,12 @@ def get_job(current_user, job_id):
 
 def create_job(current_user, file_content, description):
     job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
-    file_name = f"{job_name}.jmx"
 
     pending_jobs_count = db.mongo.jobs.count_documents({
         "status": "pending",
         "owner": current_user.username
     })
+    
     if pending_jobs_count > config.config.PENDING_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
@@ -58,8 +58,6 @@ def create_job(current_user, file_content, description):
             status_code=409,
             detail=f"Job with the same plan file already exists: {job_name}"
         )
-
-    files.create_file(file_content,file_name)
     
     job = models.Job(
         name=job_name,
@@ -71,9 +69,10 @@ def create_job(current_user, file_content, description):
 
     try:
         result = db.mongo.jobs.insert_one(job.dict())
+        file_name = f"{str(result.inserted_id)}.jmx"
+        files.create_file(file_content,file_name)
     except Exception as e:
         print(e)
-        files.delete_file(file_name)
 
     return get_job(current_user, str(result.inserted_id))
 
@@ -84,44 +83,7 @@ def approve_job(current_user, job_id: str, approved: bool):
         raise HTTPException(status_code=400, detail="Cannot update job in current state")
 
     if approved:
-        k8s_object_name = f"jrunner-{job_id}"
-        k8s_object_labels = {"job-id": job_id}
-        k8s_object_namespace = config.config.K8S_NAMESPACE
-        k8s_configmap_key = "plan.jmx"
-        file_name = f"{job['name']}.jmx"
-        job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
-
-        file_content = files.read_file(file_name)
-
-        configmap = client.V1ConfigMap(
-            metadata=client.V1ObjectMeta(name=k8s_object_name, labels=k8s_object_labels),
-            data={k8s_configmap_key: file_content}
-        )
-
-        with open(job_template_path, 'r') as file:
-            job_template_content = file.read()
-
-        rendered_job = Template(job_template_content).render(
-            name=k8s_object_name,
-            namespace=k8s_object_namespace,
-            labels = k8s_object_labels,
-            configmap_key=k8s_configmap_key
-        )
-        job_manifest = yaml.safe_load(rendered_job)
-
-        try:
-            # Create ConfigMap
-            client.CoreV1Api().create_namespaced_config_map(namespace=k8s_object_namespace, body=configmap)
-            logging.info(f"Created Kubernetes ConfigMap: {job['name']}")
-
-            # Create Job
-            client.BatchV1Api().create_namespaced_job(namespace=k8s_object_namespace, body=job_manifest)
-            logging.info(f"Created Kubernetes Job: {job['name']}")
-
-        except Exception as e:
-            logging.error(f"Failed to create workload {job['name']}: {e}")
-            raise HTTPException(status_code=500, detail="Error creating workload")
-
+        k8s.schedule_workload(job_id)
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "approved"}}
@@ -137,56 +99,21 @@ def approve_job(current_user, job_id: str, approved: bool):
 def delete_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
-    try:
-        label_selector = f"job-id={job_id}"
+    k8s.delete_workload(job_id)
 
-        jobs = client.BatchV1Api().list_namespaced_job(
-            namespace=config.config.K8S_NAMESPACE,
-            label_selector=label_selector
-        )
-        
-        for job_item in jobs.items:
-            job_name = job_item.metadata.name
-            client.BatchV1Api().delete_namespaced_job(
-                namespace=config.config.K8S_NAMESPACE,
-                name=job_name,
-                propagation_policy='Foreground'
-            )
-            print(f"Job {job_name} deleted")
-
-        config_maps = client.CoreV1Api().list_namespaced_config_map(
-            namespace=config.config.K8S_NAMESPACE,
-            label_selector=label_selector
-        )
-
-        for cm in config_maps.items:
-            cm_name = cm.metadata.name
-            client.CoreV1Api().delete_namespaced_config_map(
-                namespace=config.config.K8S_NAMESPACE,
-                name=cm_name
-            )
-            print(f"ConfigMap {cm_name} deleted")
-
-        # Delete Pods based on the label selector
-        pods = client.CoreV1Api().list_namespaced_pod(
-            namespace=config.config.K8S_NAMESPACE,
-            label_selector=label_selector
-        )
-        
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-            print(f"Deleting Pod: {pod_name}")
-            client.CoreV1Api().delete_namespaced_pod(
-                name=pod_name,
-                namespace=config.config.K8S_NAMESPACE,
-                body=client.V1DeleteOptions(),
-                grace_period_seconds=0
-            )
-    except Exception as e:
-        print(e)
-
-    files.delete_file(f"{job['name']}.jmx")
+    files.delete_file(job_id)
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
     return {f"Job {job['name']} deleted"}
+
+def reschedule_job(current_user, job_id):
+    job = get_job(current_user, job_id).dict()
+
+    if job["status"] in ["pending","declined"]:
+        raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
+
+    k8s.delete_workload(job_id)
+    k8s.schedule_workload(job_id)
+
+    return get_job(current_user, job_id)

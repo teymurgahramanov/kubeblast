@@ -34,12 +34,20 @@ async def create_job(
 
     return jobs.create_job(current_user, file_content, description)
 
-@router.put("/jobs/{job_id}", response_model=models.JobFromDB)
+@router.put("/jobs/approve/{job_id}", response_model=models.JobFromDB)
 async def approve_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["moderator", "admin"]))],
-    job_id: str, approved: bool = Form(...)
+    job_id: str,
+    approved: Annotated[bool, Query(...)]
     ):
     return jobs.approve_job(current_user, job_id, approved)
+
+@router.get("/jobs/reschedule/{job_id}", response_model=models.JobFromDB)
+async def reschedule_job(
+    current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))],
+    job_id: str
+    ):
+    return jobs.approve_job(current_user, job_id)
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):

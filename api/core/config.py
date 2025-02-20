@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,5 +29,23 @@ class Config:
     
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
     K8S_NAMESPACE_QUOTA_POD_LIMIT: int = int(os.getenv("K8S_NAMESPACE_QUOTA_POD_LIMIT", 5))
+
+    # Load Kubernetes NodeSelector from JSON or parse key-value pairs
+    K8S_NODE_SELECTOR: dict = {}
+    node_selector_env = os.getenv("K8S_NODE_SELECTOR")
+    if node_selector_env:
+        try:
+            K8S_NODE_SELECTOR = json.loads(node_selector_env)
+        except json.JSONDecodeError:
+            K8S_NODE_SELECTOR = None
+
+    # Load Kubernetes Tolerations from JSON format
+    K8S_TOLERATIONS: list = []
+    tolerations_env = os.getenv("K8S_TOLERATIONS")
+    if tolerations_env:
+        try:
+            K8S_TOLERATIONS = json.loads(tolerations_env)
+        except json.JSONDecodeError:
+            K8S_TOLERATIONS = None
 
 config = Config()
