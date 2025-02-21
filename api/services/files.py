@@ -1,26 +1,32 @@
-import os
 import io
 import boto3
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from api.services import jobs
 from api.core.config import config
-from api.core import s3
+
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=config.S3_URL,
+    aws_access_key_id=config.S3_ACCESS_KEY,
+    aws_secret_access_key=config.S3_SECRET_KEY,
+    region_name=config.S3_REGION,  # MinIO does not use regions, but boto3 requires this
+)
 
 def create_file(file_content, file_name):
   try:
-      s3.client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
+      s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
   except Exception as e:
       raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
   
 def delete_file(job_id):
     try:
-        response = s3.list_objects_v2(Bucket=config.S3_BUCKET, Prefix=job_id)
+        response = s3_client.list_objects_v2(Bucket=config.S3_BUCKET, Prefix=job_id)
 
         if 'Contents' in response:
             for obj in response['Contents']:
                 file_key = obj['Key']
-                s3.delete_object(Bucket=config.S3_BUCKET, Key=file_key)
+                s3_client.delete_object(Bucket=config.S3_BUCKET, Key=file_key)
                 print(f"Deleted file: {file_key}")
         else:
             print(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
@@ -30,7 +36,7 @@ def delete_file(job_id):
 
 def read_file(file_name):
     try:
-        response = s3.client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
+        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
         file_content = response["Body"].read().decode()
     except Exception as e:
         print(e)
@@ -47,7 +53,7 @@ def download_file(current_user, job_id, type, download):
             file_name = f"{job_id}.pdf"
             media_type = "application/pdf"
     try:
-        response = s3.client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
+        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
         content_disposition = f'{"attachment" if download else "inline"}; filename={file_name}'
         return StreamingResponse(response["Body"], media_type=media_type, headers={"Content-Disposition": content_disposition})
     except Exception as e:

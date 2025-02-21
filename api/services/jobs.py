@@ -97,7 +97,7 @@ def approve_job(current_user, job_id: str, approved: bool):
     return get_job(current_user, job_id)
 
 def delete_job(current_user, job_id):
-    job = get_job(current_user, job_id).dict()
+
 
     k8s.delete_workload(job_id)
 
@@ -105,7 +105,7 @@ def delete_job(current_user, job_id):
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
-    return {f"Job {job['name']} deleted"}
+    return {f"Job {job_id} deleted"}
 
 def reschedule_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()

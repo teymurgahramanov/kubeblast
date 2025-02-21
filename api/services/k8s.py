@@ -10,13 +10,17 @@ import logging
 k8s_config.load_incluster_config()
 
 def gen_labels(job_id):
-    return {"job-id": job_id}
+    return {"jrunnerJobId": job_id}
+
+def gen_label_selector(job_id):
+    return f"jrunnerJobId={job_id}"
+
 
 def stream_pod_logs(job_id):
     namespace = config.config.K8S_NAMESPACE
 
     try:
-        label_selector = gen_labels(job_id)
+        label_selector = gen_label_selector(job_id)
 
         pod_list = client.CoreV1Api().list_namespaced_pod(
             namespace=namespace,
@@ -90,13 +94,15 @@ def schedule_workload(job_id):
     
 def delete_workload(job_id):
   try:
-      label_selector = gen_labels(job_id)
+      label_selector = gen_label_selector(job_id)
 
+      print(f"Deleting Workload with label selector: {label_selector}")
       jobs = client.BatchV1Api().list_namespaced_job(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
       
+      print(f"Found {len(jobs.items)} Jobs to delete")
       for job_item in jobs.items:
           job_name = job_item.metadata.name
           client.BatchV1Api().delete_namespaced_job(
@@ -106,11 +112,13 @@ def delete_workload(job_id):
           )
           print(f"Job {job_name} deleted")
 
+      print(f"Deleting ConfigMaps with label selector: {label_selector}")
       config_maps = client.CoreV1Api().list_namespaced_config_map(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
 
+      print(f"Found {len(config_maps.items)} ConfigMaps to delete")
       for cm in config_maps.items:
           cm_name = cm.metadata.name
           client.CoreV1Api().delete_namespaced_config_map(
@@ -120,11 +128,13 @@ def delete_workload(job_id):
           print(f"ConfigMap {cm_name} deleted")
 
       # Delete Pods based on the label selector
+      print(f"Deleting Pods with label selector: {label_selector}")
       pods = client.CoreV1Api().list_namespaced_pod(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
       
+      print(f"Found {len(pods.items)} Pods to delete")
       for pod in pods.items:
           pod_name = pod.metadata.name
           print(f"Deleting Pod: {pod_name}")
