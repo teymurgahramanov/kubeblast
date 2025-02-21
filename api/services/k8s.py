@@ -10,7 +10,7 @@ import logging
 k8s_config.load_incluster_config()
 
 def gen_labels(job_id):
-    return {"jrunnerJobId": job_id}
+    return {"job-id": job_id}
 
 def stream_pod_logs(job_id):
     namespace = config.config.K8S_NAMESPACE
@@ -48,6 +48,7 @@ def stream_pod_logs(job_id):
 def schedule_workload(job_id):
     k8s_object_name = f"jrunner-{job_id}"
     k8s_object_labels = gen_labels(job_id)
+    print(k8s_object_labels)
     k8s_object_namespace = config.config.K8S_NAMESPACE
     k8s_configmap_key = "plan.jmx"
     file_name = f"{job_id}.jmx"
