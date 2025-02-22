@@ -98,7 +98,6 @@ def approve_job(current_user, job_id: str, approved: bool):
 
 def delete_job(current_user, job_id):
 
-
     k8s.delete_workload(job_id)
 
     files.delete_file(job_id)

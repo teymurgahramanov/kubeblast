@@ -12,28 +12,24 @@ api:
       value: "jrunner"
     - name: MONGO_DB_PASS
       value: "jrunner"
+    #- name: S3_URL
+    #  value: "https://s3.cbar.az"
+    #- name: S3_ACCESS_KEY
+    #  value: "sWN8vFdS4sXloyDXApdO"
+    #- name: S3_SECRET_KEY
+    #  value: "cHat4VLoAebDW8wCMWAMlP5vMFXSxNOFmYtDBgLD"
     - name: S3_URL
-      value: "https://s3.cbar.az"
+      value: "http://minio:9000"
     - name: S3_ACCESS_KEY
-      value: "sWN8vFdS4sXloyDXApdO"
+      value: "zuLhhLFEbSLj6NqaM4FR"
     - name: S3_SECRET_KEY
-      value: "cHat4VLoAebDW8wCMWAMlP5vMFXSxNOFmYtDBgLD"
+      value: "lngc216umXlcN3UFt8jq8XY1w6Ictg7r29Uv3Rwa"
     - name: S3_BUCKET
       value: "jrunner"
     - name: K8S_NAMESPACE
       value: "jrunner"
     - name: WORKER_WATCH_INTERVAL
       value: "10"
-    # Kubernetes Node Selector (as key-value pairs)
-    - name: K8S_NODE_SELECTOR
-      value: '{"kubernetes.io/role": "worker", "environment": "production"}'
-    # Kubernetes Tolerations (JSON format)
-    - name: K8S_TOLERATIONS
-      value: >-
-        [
-          {"key": "scope", "operator": "Equal", "value": "load-test", "effect": "NoExecute"},
-          {"key": "dedicated", "operator": "Exists", "effect": "NoSchedule"}
-        ]
   service:
     type: NodePort
     nodePort: "30800"

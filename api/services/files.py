@@ -1,5 +1,6 @@
 import io
 import boto3
+import logging
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from api.services import jobs
@@ -17,6 +18,7 @@ def create_file(file_content, file_name):
   try:
       s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
   except Exception as e:
+      logging.error(f"Failed to upload file to S3: {str(e)}")
       raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
   
 def delete_file(job_id):
@@ -27,19 +29,20 @@ def delete_file(job_id):
             for obj in response['Contents']:
                 file_key = obj['Key']
                 s3_client.delete_object(Bucket=config.S3_BUCKET, Key=file_key)
-                print(f"Deleted file: {file_key}")
+                logging.info(f"Deleted file: {file_key}")
         else:
-            print(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
+            logging.warning(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
 
     except Exception as e:
-        print(f"Failed to delete files from MinIO: {str(e)}")
+        logging.error(f"Failed to delete files from MinIO: {str(e)}")
 
 def read_file(file_name):
     try:
         response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
         file_content = response["Body"].read().decode()
+        logging.info(f"Read file from S3: {file_name}")
     except Exception as e:
-        print(e)
+        logging.error(f"Failed to read file from S3: {str(e)}")
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
@@ -55,6 +58,8 @@ def download_file(current_user, job_id, type, download):
     try:
         response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
         content_disposition = f'{"attachment" if download else "inline"}; filename={file_name}'
+        logging.info(f"Downloaded file: {file_name}")
         return StreamingResponse(response["Body"], media_type=media_type, headers={"Content-Disposition": content_disposition})
     except Exception as e:
+        logging.error(f"Failed to download file: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

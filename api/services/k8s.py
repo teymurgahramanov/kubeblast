@@ -22,18 +22,19 @@ def stream_pod_logs(job_id):
     try:
         label_selector = gen_label_selector(job_id)
 
+        logging.info(f"Looking for Pods with label selector: {label_selector}")
         pod_list = client.CoreV1Api().list_namespaced_pod(
             namespace=namespace,
             label_selector=label_selector
         )
 
         if not pod_list.items:
-            print(f"No Pods found for Job: {job_id}")
+            logging.warning(f"No Pods found for Job: {job_id}")
             yield "data: No pods found for this job.\n\n"
             return
         
         pod_name = pod_list.items[0].metadata.name
-        print(f"Streaming logs from pod: {pod_name}")
+        logging.info(f"Streaming logs from pod: {pod_name}")
 
         logs =client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
@@ -52,7 +53,6 @@ def stream_pod_logs(job_id):
 def schedule_workload(job_id):
     k8s_object_name = f"jrunner-{job_id}"
     k8s_object_labels = gen_labels(job_id)
-    print(k8s_object_labels)
     k8s_object_namespace = config.config.K8S_NAMESPACE
     k8s_configmap_key = "plan.jmx"
     file_name = f"{job_id}.jmx"
@@ -96,13 +96,13 @@ def delete_workload(job_id):
   try:
       label_selector = gen_label_selector(job_id)
 
-      print(f"Deleting Workload with label selector: {label_selector}")
+      logging.info(f"Deleting Workload with label selector: {label_selector}")
       jobs = client.BatchV1Api().list_namespaced_job(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
       
-      print(f"Found {len(jobs.items)} Jobs to delete")
+      logging.info(f"Found {len(jobs.items)} Jobs to delete")
       for job_item in jobs.items:
           job_name = job_item.metadata.name
           client.BatchV1Api().delete_namespaced_job(
@@ -110,34 +110,33 @@ def delete_workload(job_id):
               name=job_name,
               propagation_policy='Foreground'
           )
-          print(f"Job {job_name} deleted")
+          logging.info(f"Job {job_name} deleted")
 
-      print(f"Deleting ConfigMaps with label selector: {label_selector}")
+      logging.info(f"Deleting ConfigMaps with label selector: {label_selector}")
       config_maps = client.CoreV1Api().list_namespaced_config_map(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
 
-      print(f"Found {len(config_maps.items)} ConfigMaps to delete")
+      logging.info(f"Found {len(config_maps.items)} ConfigMaps to delete")
       for cm in config_maps.items:
           cm_name = cm.metadata.name
           client.CoreV1Api().delete_namespaced_config_map(
               namespace=config.config.K8S_NAMESPACE,
               name=cm_name
           )
-          print(f"ConfigMap {cm_name} deleted")
+          logging.info(f"ConfigMap {cm_name} deleted")
 
-      # Delete Pods based on the label selector
-      print(f"Deleting Pods with label selector: {label_selector}")
+      logging.info(f"Deleting Pods with label selector: {label_selector}")
       pods = client.CoreV1Api().list_namespaced_pod(
           namespace=config.config.K8S_NAMESPACE,
           label_selector=label_selector
       )
       
-      print(f"Found {len(pods.items)} Pods to delete")
+      logging.info(f"Found {len(pods.items)} Pods to delete")
       for pod in pods.items:
           pod_name = pod.metadata.name
-          print(f"Deleting Pod: {pod_name}")
+          logging.info(f"Deleting Pod: {pod_name}")
           client.CoreV1Api().delete_namespaced_pod(
               name=pod_name,
               namespace=config.config.K8S_NAMESPACE,
@@ -145,4 +144,4 @@ def delete_workload(job_id):
               grace_period_seconds=0
           )
   except Exception as e:
-      print(e)
+      logging.error(f"Failed to delete workload {job_id}: {e}")

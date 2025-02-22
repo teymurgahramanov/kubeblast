@@ -64,4 +64,4 @@ router = APIRouter()
 async def get_logs(current_user: Annotated[models.User, Depends(auth.check_role([]))], job_id: str):
     """Stream Kubernetes pod logs using SSE."""
     jobs.get_job(current_user, job_id)
-    return StreamingResponse(k8s.stream_pod_logs(current_user, job_id), media_type="text/event-stream")
+    return StreamingResponse(k8s.stream_pod_logs(job_id), media_type="text/event-stream")
