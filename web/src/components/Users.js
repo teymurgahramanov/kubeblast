@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axiosInstance from "../utils/axiosInstance";
-import { Box, Typography, MenuItem, IconButton, Modal } from '@mui/material';
+import { Box, Typography, MenuItem, IconButton, Modal, Menu } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Edit, Delete } from '@mui/icons-material';
+import { Edit, Delete, MoreVert } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import FormAddUser from "./AddUser";
 
@@ -11,6 +11,8 @@ const Users = () => {
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(5);
   const [openAddUser, setOpenAddUser] = useState(false); // Modal state
+  const [anchorEl, setAnchorEl] = useState(null); // Added state for menu
+  const [selectedUserId, setSelectedUserId] = useState(null); // Added state for selected user
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -40,15 +42,28 @@ const Users = () => {
     updated_at: user.updated_at
   })), [users]);
 
-  const handleMenuOpen = (event, job_id) => {
+  const handleMenuOpen = (event, username) => {
     setAnchorEl(event.currentTarget);
-    setSelectedJobId(job_id);
+    setSelectedUserId(username);
   };
   
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setSelectedJobId(null);
+    setSelectedUserId(null);
   };
+
+  const deleteUser = async (username) => {
+    console.log("Deleting user:", username);
+  };
+
+  const handleAddUser = () => {
+    setOpenAddUser(true); // Open modal
+  };
+
+  const handleClose = () => {
+    setOpenAddUser(false); // Close modal
+  };
+
   const columns = useMemo(() => [
     { field: "id", headerName: "ID", width: 50 },
     { field: "username", headerName: "Username", width: 250 },
@@ -67,36 +82,24 @@ const Users = () => {
           </IconButton>
           <Menu
             anchorEl={anchorEl}
-            open={Boolean(anchorEl) && selectedJobId === params.row.id}
+            open={Boolean(anchorEl) && selectedUserId === params.row.id}
             onClose={handleMenuClose}
           >
-          <MenuItem title="Edit this user">
-            <IconButton component={Link} to={`/users/${params.row.username}`} color="primary">
-              <Edit />
-            </IconButton>
-          </MenuItem>
-          <MenuItem title="Delete this user">
-            <IconButton onClick={() => deleteUser(params.row.username)} color="error">
-              <Delete />
-            </IconButton>
-          </MenuItem>
-               </Menu>
+            <MenuItem title="Edit this user">
+              <IconButton component={Link} to={`/users/${params.row.username}`} color="primary">
+                <Edit />
+              </IconButton>
+            </MenuItem>
+            <MenuItem title="Delete this user">
+              <IconButton onClick={() => deleteUser(params.row.username)} color="error">
+                <Delete />
+              </IconButton>
+            </MenuItem>
+          </Menu>
         </>
       ),
     },
-  ], []);
-
-  const deleteUser = async (username) => {
-    console.log("Deleting user:", username);
-  };
-
-  const handleAddUser = () => {
-    setOpenAddUser(true); // Open modal
-  };
-
-  const handleClose = () => {
-    setOpenAddUser(false); // Close modal
-  };
+  ], [anchorEl, selectedUserId]);
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#14213D", padding: "20px" }}>
@@ -130,9 +133,9 @@ const Users = () => {
 
       {/* Modal for adding user */}
       <Modal open={openAddUser} onClose={handleClose}>
-        <div>
+        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: 3, borderRadius: 2 }}>
           <FormAddUser onAddUser={handleClose} />
-        </div>
+        </Box>
       </Modal>
     </div>
   );
