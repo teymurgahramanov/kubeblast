@@ -6,8 +6,7 @@ import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
-import generatePDF from "./generatePDF";
-
+import generatePDF from "./generatePDF"; 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');

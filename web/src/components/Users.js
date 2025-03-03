@@ -130,7 +130,7 @@ const Users = () => {
           </Link>
         </Box>
       </div>
-
+ 
       {/* Modal for adding user */}
       <Modal open={openAddUser} onClose={handleClose}>
         <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: 3, borderRadius: 2 }}>

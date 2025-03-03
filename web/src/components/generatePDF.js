@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { format } from "date-fns/format";
-
+ 
 
 const generatePDF = (jobs) => {
   const doc = new jsPDF();
