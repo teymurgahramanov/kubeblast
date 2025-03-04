@@ -18,7 +18,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 
 const FormEditUser = () => {
-  const { username } = useParams(); // Get username from the URL
+  const { username } = useParams(); 
   const [userData, setUserData] = useState({
     username: '',
     fullName: '',
@@ -129,7 +129,6 @@ const FormEditUser = () => {
             onChange={handleChange}
             name="username"
             required
-            disabled
           />
           <TextField
             label="Full Name"
@@ -150,9 +149,9 @@ const FormEditUser = () => {
               required
             >
               <MenuItem value="">Choose option</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-              <MenuItem value="moderator">Moderator</MenuItem>
-              <MenuItem value="user">User</MenuItem>
+              <MenuItem value="admin">admin</MenuItem>
+              <MenuItem value="moderator">moderator</MenuItem>
+              <MenuItem value="user">user</MenuItem>
             </Select>
           </FormControl>
           <TextField

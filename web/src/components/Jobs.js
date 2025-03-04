@@ -6,7 +6,7 @@ import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
-import generatePDF from "./generatePDF"; 
+import generatePDF from './generatePDF';
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
@@ -70,7 +70,12 @@ const Jobs = () => {
     }
   };
 
-  const viewLogs = async (job_id) => {
+  const viewLogs = async (job_id, job_status) => {
+    if (job_status !== 'running' && job_status !== 'completed') {
+      setError('Logs are only available for running or completed jobs.');
+      return;
+    }
+  
     try {
       const response = await axiosInstance.get(`/logs/${job_id}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
@@ -102,6 +107,7 @@ const Jobs = () => {
     }
   };
 
+
   const DownloadFile = async (job_id) => {
     try {
       if (!job_id) {
@@ -129,29 +135,40 @@ const Jobs = () => {
     }
   };
 
-  const DownloadReport = async (job_id) => {
+  const DownloadReport = async (job_id, job_status) => {
     try {
+      if (job_status !== 'completed') {
+        setError("Report is only available for completed jobs.");
+        return;
+      }
       if (!job_id) {
         setError("No job available.");
         return;
       }
-      const fileType = "report";
-      const shouldDownload = true;
-      const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-        params: { type: fileType, download: shouldDownload },
-        responseType: 'blob',
-      });
-      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
+
+      const job = jobs.find(job => job.id === job_id);
+      if (!job) {
+        setError("Job not found.");
+        return;
+      }
+  
+
+      const pdfBlob = await generatePDF(job); 
+  
+
+      const fileURL = window.URL.createObjectURL(pdfBlob);
+  
+
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = `${job_id}_${fileType}.pdf`;
+      link.download = `${job_id}_report.pdf`;
       link.click();
     } catch (error) {
-      setError("Error downloading report file: " + (error.response?.data || error.message));
+      setError("Error generating or downloading report: " + (error.response?.data || error.message));
     }
   };
-
+  
+  
   const deleteJob = async (job_id) => {
     try {
       await axiosInstance.delete(`/jobs/${job_id}`, {
@@ -169,16 +186,20 @@ const Jobs = () => {
         setError('Unauthorized: Please log in');
         return;
       }
+  
+
       const response = await axiosInstance.put(`/jobs/reschedule/${job_id}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-     
+  
       setJobs(jobs.map(job => job.id === job_id ? response.data : job));
-      setError(''); 
+
+      setError('');
     } catch (error) {
       setError('Error rescheduling job: ' + (error.response?.data || error.message));
     }
   };
+
   const handleAddJob = () => {
     setOpenAddJob(true);
   };
@@ -188,15 +209,15 @@ const Jobs = () => {
   };
 
   const columns = useMemo(() => [
-    { field: "id", headerName: "ID", width: 120 },
-    { field: "job_name", headerName: "Job Name", width: 200 },
-    { field: "owner", headerName: "Owner", width: 200 },
+    { field: "id", headerName: "ID", width: 150 },
+    { field: "job_name", headerName: "Job Name", width: 150 },
+    { field: "owner", headerName: "Owner", width: 150 },
     { field: "description", headerName: "Description", width: 250 },
-    { field: "status", headerName: "Status", width: 150 },
+    { field: "status", headerName: "Status", width: 100 },
     {
       field: "actions",
       headerName: "Actions",
-      width: 200,
+      width: 100,
       renderCell: (params) => (
         <>
           <IconButton onClick={(event) => handleMenuOpen(event, params.row.id)}>
@@ -217,23 +238,23 @@ const Jobs = () => {
                 </MenuItem>
               </>
             )}
-            <MenuItem onClick={() => viewLogs(params.row.id)}>
-              <Visibility fontSize="small" /> View Logs
-            </MenuItem>
+           <MenuItem onClick={() => viewLogs(params.row.id, params.row.status)}>
+  <Visibility fontSize="small" /> View Logs
+</MenuItem>
             <MenuItem onClick={() => openPlanFile(params.row.id)}>
               <Description fontSize="small" /> Open Plan File
             </MenuItem>
             <MenuItem onClick={() => DownloadFile(params.row.id)}>
               <Description fontSize="small" /> Download File
             </MenuItem>
-            {params.row.status === 'completed' && (
-              <MenuItem onClick={() => DownloadReport(params.row.id)}>
-                <Description fontSize="small" /> Download Report
-              </MenuItem>
-            )} 
+
+            <MenuItem onClick={() => DownloadReport(params.row.id)}>
+             <Description fontSize="small" /> Download Report
+           </MenuItem>
+
             <MenuItem onClick={() => rescheduleJob(params.row.id)}>
-            <Schedule fontSize="small" />
-          </MenuItem>
+              <Schedule fontSize="small" /> Reschedule
+            </MenuItem>
             
             <MenuItem onClick={() => deleteJob(params.row.id)}>
               <Delete fontSize="small" /> Delete Job
@@ -258,12 +279,11 @@ const Jobs = () => {
         <Menuselect />
         <Typography variant="h3" align="center" color="white">Jobs</Typography>
         {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-        <Box sx={{ height: 400, width: "100%" }}>
+        <Box sx={{ height: 400, width:970}}>
           <DataGrid
             sx={{ border: "1px solid", m: 2, boxShadow: 5, backgroundColor: "white" }}
             columns={columns}
             rows={rows}
-            rowsPerPageOptions={[5, 10, 20]}
             pageSize={pageSize}
             onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
           />
@@ -273,11 +293,7 @@ const Jobs = () => {
             Add New Job
           </Link>
         </Box>
-        <Box textAlign="center" mt={2}>
-          <Button variant="contained" onClick={() => generatePDF(jobs)}>
-            Generate PDF Report
-          </Button>
-        </Box>
+      
       </div>
 
       <Modal open={openAddJob} onClose={handleClose}>

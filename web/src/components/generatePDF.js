@@ -1,38 +1,26 @@
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import { format } from "date-fns/format";
- 
+import { jsPDF } from "jspdf";
 
-const generatePDF = (jobs) => {
-  const doc = new jsPDF();
-  const tableColumn = ["ID", "Job Name", "Owner", "Description", "Closed on"];
-  const tableRows = [];
-
-  jobs.forEach((job) => {
-    const jobData = [
-      job.id,
-      job.name,
-      job.owner,
-      job.description,
-      format(new Date(job.updated_at), "yyyy-MM-dd"),
-    ];
-    tableRows.push(jobData);
+const generatePDF = (job) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new jsPDF();
+      
+      // Add title and job details to the PDF
+      doc.setFontSize(18);
+      doc.text("Job Report", 20, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Job Name: ${job.job_name}`, 20, 30);
+      doc.text(`Owner: ${job.owner}`, 20, 40);
+      doc.text(`Description: ${job.description}`, 20, 50);
+      doc.text(`Status: ${job.status}`, 20, 60);
+      
+      // Save the PDF as a Blob
+      const pdfBlob = doc.output("blob");
+      resolve(pdfBlob);
+    } catch (error) {
+      reject(error);
+    }
   });
-
-  // Use the new autoTable API
-  doc.autoTable({
-    
-    head: [tableColumn],
-    body: tableRows,
-    startY: 20,
-  });
-
-  // Create a date string for the file name
-  const date = new Date();
-  const dateStr = date.toISOString().replace(/[:\-T]/g, "").split(".")[0];
-
-  doc.text("Closed jobs within the last one month.", 14, 15);
-  doc.save(`report_${dateStr}.pdf`);
 };
-
-export default generatePDF;
+export default generatePDF

@@ -4,8 +4,8 @@ import axiosInstance from "../utils/axiosInstance";
 import { TextField, Button, Typography, Container, Alert, MenuItem, Select, FormControl, InputLabel, Box } from "@mui/material";
 
 const AddForm = ({ currentUser = {}, onAddJob }) => {
-    const [name, setName] = useState('');
-    const [owner, setOwner] = useState(currentUser?.username || '');
+    // const [name, setName] = useState('');
+    // const [owner, setOwner] = useState(currentUser?.username || '');
     const [description, setDescription] = useState('');
     const [file, setFile] = useState(null);
     const [msg, setMsg] = useState('');
@@ -20,8 +20,8 @@ const AddForm = ({ currentUser = {}, onAddJob }) => {
         }
 
         const formData = new FormData();
-        formData.append("name", name);
-        formData.append("owner", owner);
+        // formData.append("name", name);
+        // formData.append("owner", owner);
         formData.append("description", description);
 
         formData.append("file", file);
@@ -45,26 +45,7 @@ const AddForm = ({ currentUser = {}, onAddJob }) => {
                 </Typography>
                 {msg && <Alert severity="error">{msg}</Alert>}
                 <form onSubmit={handleSubmit}>
-                    <TextField
-                        label="Job Name"
-                        variant="outlined"
-                        fullWidth
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        label="Owner"
-                        variant="outlined"
-                        fullWidth
-                        value={owner}
-                        onChange={(e) => setOwner(e.target.value)}
-                        disabled={currentUser.role !== "Admin"}
-                        required
-                        sx={{ mb: 2 }}
-                    />
+          
 
                     <TextField
                         label="Description"

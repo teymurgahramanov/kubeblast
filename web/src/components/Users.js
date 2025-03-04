@@ -65,12 +65,10 @@ const Users = () => {
   };
 
   const columns = useMemo(() => [
-    { field: "id", headerName: "ID", width: 50 },
     { field: "username", headerName: "Username", width: 250 },
     { field: "full_name", headerName: "Name", width: 250 },
     { field: "role", headerName: "Role", width: 170 },
     { field: "created_at", headerName: "Created At", width: 180 },
-    { field: "updated_at", headerName: "Updated At", width: 180 },
     {
       field: "actions",
       headerName: "Actions",

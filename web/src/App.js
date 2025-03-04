@@ -41,9 +41,7 @@ const App = () => {
         <Route
           path="/users/:username"
           element={
-            <PrivateRoute requiredRole="admin">
               <FormEditUser />
-            </PrivateRoute>
           }
         />
       </Routes>
