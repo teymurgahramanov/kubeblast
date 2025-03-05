@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axiosInstance from "../utils/axiosInstance";
-import { Box, Typography, MenuItem, IconButton, Modal, Menu } from '@mui/material';
+import { Box, Typography, IconButton, Modal, Button } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Edit, Delete, MoreVert } from '@mui/icons-material';
+import { Edit, Delete } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import FormAddUser from "./AddUser";
 
@@ -10,9 +10,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(5);
-  const [openAddUser, setOpenAddUser] = useState(false); // Modal state
-  const [anchorEl, setAnchorEl] = useState(null); // Added state for menu
-  const [selectedUserId, setSelectedUserId] = useState(null); // Added state for selected user
+  const [openAddUser, setOpenAddUser] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -42,26 +40,16 @@ const Users = () => {
     updated_at: user.updated_at
   })), [users]);
 
-  const handleMenuOpen = (event, username) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedUserId(username);
-  };
-  
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedUserId(null);
-  };
-
   const deleteUser = async (username) => {
     console.log("Deleting user:", username);
   };
 
   const handleAddUser = () => {
-    setOpenAddUser(true); // Open modal
+    setOpenAddUser(true);
   };
 
   const handleClose = () => {
-    setOpenAddUser(false); // Close modal
+    setOpenAddUser(false);
   };
 
   const columns = useMemo(() => [
@@ -75,60 +63,47 @@ const Users = () => {
       width: 120,
       renderCell: (params) => (
         <>
-          <IconButton onClick={(event) => handleMenuOpen(event, params.row.id)}>
-            <MoreVert />
+          <IconButton component={Link} to={`/users/${params.row.username}`} color="primary">
+            <Edit />
           </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl) && selectedUserId === params.row.id}
-            onClose={handleMenuClose}
-          >
-            <MenuItem title="Edit this user">
-              <IconButton component={Link} to={`/users/${params.row.username}`} color="primary">
-                <Edit />
-              </IconButton>
-            </MenuItem>
-            <MenuItem title="Delete this user">
-              <IconButton onClick={() => deleteUser(params.row.username)} color="error">
-                <Delete />
-              </IconButton>
-            </MenuItem>
-          </Menu>
+          <IconButton onClick={() => deleteUser(params.row.username)} color="error">
+            <Delete />
+          </IconButton>
         </>
       ),
     },
-  ], [anchorEl, selectedUserId]);
+  ], []);
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#14213D", padding: "20px" }}>
-      <div className="container">
-        <Typography variant="h3" component="h3" align="center" color="white">
-          Users
-        </Typography>
-        {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-        <Box sx={{ height: 400, width: "100%" }}>
-          <DataGrid
-            sx={{ border: "1px solid", m: 2, boxShadow: 5, backgroundColor: "white" }}
-            columns={columns}
-            rows={rows}
-            rowsPerPageOptions={[5, 10, 20]}
-            pageSize={pageSize}
-            onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-          />
-        </Box>
-        <Box textAlign="center" mt={2}>
-          <Link
-            style={{ color: "#fff", fontSize: "18px", cursor: "pointer" }}
-            onClick={(e) => {
-              e.preventDefault();
-              handleAddUser();
-            }}
-          >
-            Add New User
-          </Link>
-        </Box>
-      </div>
- 
+    <div style={{ minHeight: "100vh", backgroundColor: "#0D0630", padding: "20px" }}>
+      <Typography variant="h3" align="center" color="white" gutterBottom>
+        Users
+      </Typography>
+      <Box textAlign="left" mt={2}>
+        <Button variant="contained" color="primary" onClick={handleAddUser}>
+          Add New User
+        </Button>
+      </Box>
+      {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
+      <Box sx={{ height: 400, width: "100%" }}>
+        <DataGrid
+          sx={{
+            border: "1px solid", 
+            m: 2, 
+            boxShadow: 5, 
+            backgroundColor: "white",
+            '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: "#18314F", color: "white" },
+            '& .MuiDataGrid-row:nth-of-type(odd)': { backgroundColor: "#384E77", color: "white" },
+          }}
+          columns={columns}
+          rows={rows}
+          rowsPerPageOptions={[5, 10, 20]}
+          pageSize={pageSize}
+          onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+        />
+      </Box>
+
+
       {/* Modal for adding user */}
       <Modal open={openAddUser} onClose={handleClose}>
         <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: 3, borderRadius: 2 }}>

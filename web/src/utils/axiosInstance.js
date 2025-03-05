@@ -1,12 +1,12 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "http://192.168.0.108:30800", 
+  baseURL: process.env.REACT_APP_API_BASE_URL
 });
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem("access_token");  // Use sessionStorage
+    const token = sessionStorage.getItem("access_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -16,4 +16,3 @@ axiosInstance.interceptors.request.use(
 );
 
 export default axiosInstance;
-

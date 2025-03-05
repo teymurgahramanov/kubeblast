@@ -100,7 +100,7 @@ const FormEditUser = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#14213D',
+        backgroundColor: '#0D0630',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -188,9 +188,9 @@ const FormEditUser = () => {
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             fullWidth
-            sx={{ mt: 3, backgroundColor: '#FCA311' }}
+            sx={{ mt: 3,    backgroundColor: "#8BBEB2",
+              borderRadius: "20px", }}
           >
             Save Changes
           </Button>

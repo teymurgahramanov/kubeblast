@@ -47,49 +47,73 @@ const Login = () => {
   };
 
   return (
-    <section className="d-flex align-items-center justify-content-center min-vh-100" style={{ backgroundColor: "#1F3A6D" }}>
+    <section className="d-flex align-items-center justify-content-center min-vh-100" style={{ backgroundColor: "#0D0630" }}>
       <div className="w-100 d-flex justify-content-center">
         <div className="col-lg-4 col-md-6 col-sm-8">
-          <div className="card shadow-lg rounded-lg" style={{ backgroundColor: "#2E3B55", borderRadius: "15px" }}>
-            <div className="card-body p-5">
+          <div className="card border-0" style={{ background: "none" }}>
+            <div
+              className="card-body text-center"
+              style={{
+                padding: '4rem',
+                borderRadius: '50%',
+                border: '5px solid #3A7D7D'
+               
+              }}
+            >
               <form onSubmit={handleSubmit}>
-                <h2 className="mb-4 text-center text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '500' }}>Welcome Back!</h2>
-                <h4 className="mb-5 text-center text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '300' }}>Log in to continue</h4>
+                <h2 className="mb-4 text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '500' }}>
+                  Welcome Back!
+                </h2>
+                <h4 className="mb-5 text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '300' }}>
+                  Log in to continue
+                </h4>
 
                 <div className="form-group mb-4">
-                  <label htmlFor="username" className="font-weight-bold text-light">Username</label>
                   <input
                     type="text"
-                    className="form-control"
+                    className="form-control text-white"
                     name="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    style={{ backgroundColor: "#E5E5E5", padding: "12px", borderRadius: "8px" }}
+                    style={{
+                      color: '#fff',
+                      backgroundColor: "#8BBEB2",
+                      padding: "12px",
+                      borderRadius: "50px",
+                      border: "none",
+                    }}
+                    placeholder="Username"
                   />
                 </div>
 
                 <div className="form-group mb-4">
-                  <label htmlFor="password" className="font-weight-bold text-light">Password</label>
                   <input
                     type="password"
-                    className="form-control"
+                    className="form-control text-white"
                     name="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    style={{ backgroundColor: "#E5E5E5", padding: "12px", borderRadius: "8px" }}
+                    style={{
+                      color: '#fff',
+                      backgroundColor: "#8BBEB2",
+                      padding: "12px",
+                      borderRadius: "50px",
+                      border: "none",
+                    }}
+                    placeholder="Password"
                   />
                 </div>
 
                 <div className="form-group mb-4">
                   <button
                     type="submit"
-                    className="btn btn-block w-100"
+                    className="btn w-50"
                     disabled={loading}
                     style={{
-                      background: "linear-gradient(90deg, #FCA311, #14213D)",
+                      backgroundColor: "#8BBEB2",
+                      borderRadius: "20px",
                       color: "#FFF",
                       border: "none",
-                      borderRadius: "8px",
                       padding: "14px",
                       fontWeight: "bold",
                       fontFamily: "'Roboto', sans-serif",
@@ -102,14 +126,6 @@ const Login = () => {
 
                 {error && <div className="alert alert-danger text-center">{error}</div>}
               </form>
-
-              {/* Display Access Token if it exists */}
-              {accessToken && (
-                <div className="mt-4 p-3 bg-gray-200 rounded-lg">
-                  <p className="text-sm text-muted">Access Token:</p>
-                  <pre className="break-all text-xs p-2 bg-gray-100 rounded">{accessToken}</pre>
-                </div>
-              )}
             </div>
           </div>
         </div>

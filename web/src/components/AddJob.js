@@ -38,7 +38,7 @@ const AddForm = ({ currentUser = {}, onAddJob }) => {
     };
 
     return (
-        <Box sx={{ minHeight: "100vh", backgroundColor: "#14213D", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{ minHeight: "100vh", backgroundColor: '#0D0630', display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Container maxWidth="sm" sx={{ backgroundColor: "#fff", padding: 4, borderRadius: 2, boxShadow: 3 }}>
                 <Typography variant="h4" align="center" gutterBottom>
                     Add New Job
@@ -67,7 +67,8 @@ const AddForm = ({ currentUser = {}, onAddJob }) => {
                     />
                     {file && <Typography variant="body2" sx={{ mt: 1 }}>Selected File: {file.name}</Typography>}
 
-                    <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
+                    <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }} style={{   backgroundColor: "#8BBEB2",
+                    borderRadius: "20px",}}>
                         Save
                     </Button>
                 </form>

@@ -70,7 +70,7 @@ const FormAddUser = ({ onAddUser }) => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#14213D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor:  '#0D0630' , display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Container maxWidth="sm" sx={{ backgroundColor: '#fff', padding: 4, borderRadius: 2, boxShadow: 3 }}>
         <Typography variant="h4" align="center" gutterBottom>
           Add User
@@ -138,9 +138,9 @@ const FormAddUser = ({ onAddUser }) => {
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             fullWidth
-            sx={{ mt: 3, backgroundColor: '#FCA311' }}
+            sx={{ mt: 3,   backgroundColor: "#8BBEB2",
+              borderRadius: "20px", }}
           >
             Add User
           </Button>

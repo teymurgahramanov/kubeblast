@@ -274,25 +274,32 @@ const Jobs = () => {
   })), [jobs]);
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#14213D", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "#0D0630", padding: "20px" }}>
       <div className="container">
-        <Menuselect />
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Menuselect style={{ backgroundColor: "#E6F9AF", padding: "10px", borderRadius: "5px" }} />
+          <Button variant="contained" color="primary" onClick={ handleAddJob}>
+            Add New Job
+          </Button>
+        </Box>
         <Typography variant="h3" align="center" color="white">Jobs</Typography>
         {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
         <Box sx={{ height: 400, width:970}}>
           <DataGrid
-            sx={{ border: "1px solid", m: 2, boxShadow: 5, backgroundColor: "white" }}
-            columns={columns}
+                 sx={{
+                  border: "1px solid", 
+                  m: 2, 
+                  boxShadow: 5, 
+                  backgroundColor: "white",
+                  '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: "#18314F", color: "white" },
+                  '& .MuiDataGrid-row:nth-of-type(odd)': { backgroundColor: "#384E77", color: "white" },
+                }}columns={columns}
             rows={rows}
             pageSize={pageSize}
             onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
           />
         </Box>
-        <Box textAlign="center" mt={2}>
-          <Link style={{ color: "#fff", fontSize: "18px" }} onClick={(e) => { e.preventDefault(); handleAddJob(); }}>
-            Add New Job
-          </Link>
-        </Box>
+
       
       </div>
 
