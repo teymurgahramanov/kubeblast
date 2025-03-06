@@ -51,15 +51,7 @@ const Login = () => {
       <div className="w-100 d-flex justify-content-center">
         <div className="col-lg-4 col-md-6 col-sm-8">
           <div className="card border-0" style={{ background: "none" }}>
-            <div
-              className="card-body text-center"
-              style={{
-                padding: '4rem',
-                borderRadius: '50%',
-                border: '5px solid #3A7D7D'
-               
-              }}
-            >
+          <div className="card-body text-center login-border">
               <form onSubmit={handleSubmit}>
                 <h2 className="mb-4 text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '500' }}>
                   Welcome Back!

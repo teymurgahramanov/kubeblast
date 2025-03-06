@@ -7,7 +7,7 @@ import PrivateRoute from './components/PrivateRoute';
 import FormAddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
-
+import './App.css';
 const App = () => {
   const [addUser, setAddUser] = useState(false);
   const [addJob, setAddJob] = useState(false);
