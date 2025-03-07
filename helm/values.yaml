@@ -9,25 +9,6 @@ global:
   tolerations: []
   affinity: {}
 
-ui:
-  env: []
-  envFromSecret: ""
-  podAnnotations: {}
-  podLabels: {}
-  image:
-    repository: jrunner
-    tag: latest
-  service:
-    type: ClusterIP
-    port: 8000
-    nodePort: ""
-  ingress:
-    enabled: false
-    annotations: {}
-    className: ""
-    host: ""
-  resources: {}
-
 api:
   env: []
   envFromSecret: ""
@@ -52,8 +33,27 @@ api:
     name: ""
   resources: {}
 
-  worker:
-    image:
-      repository: jrunner-worker
-      tag: latest
-    resources: {}
+worker:
+  image:
+    repository: jrunner-worker
+    tag: latest
+  resources: {}
+
+web:
+  env: []
+  envFromSecret: ""
+  podAnnotations: {}
+  podLabels: {}
+  image:
+    repository: jrunner
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8000
+    nodePort: ""
+  ingress:
+    enabled: false
+    annotations: {}
+    className: ""
+    host: ""
+  resources: {}

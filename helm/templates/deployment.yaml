@@ -58,14 +58,14 @@ spec:
         - name: {{ include "jrunner.fullname" . }}-worker
           securityContext:
             {{- toYaml .Values.global.securityContext | nindent 12 }}
-          image: "{{ .Values.api.worker.image.repository }}:{{ .Values.api.worker.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.global.imagepullPolicy }}
           livenessProbe:
-            {{- toYaml .Values.api.worker.livenessProbe | nindent 12 }}
+            {{- toYaml .Values.worker.livenessProbe | nindent 12 }}
           readinessProbe:
-            {{- toYaml .Values.api.worker.readinessProbe | nindent 12 }}
+            {{- toYaml .Values.worker.readinessProbe | nindent 12 }}
           resources:
-            {{- toYaml .Values.api.worker.resources | nindent 12 }}
+            {{- toYaml .Values.worker.resources | nindent 12 }}
           env:
             {{- toYaml .Values.api.env | nindent 12 }}
          {{- if .Values.api.envFromSecret }}

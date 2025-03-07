@@ -14,6 +14,10 @@ build:
     context: ./worker
     docker:
       dockerfile: Dockerfile
+  - image: jrunner-web
+    context: ./web
+    docker:
+      dockerfile: Dockerfile
 
 deploy:
   helm:
@@ -25,8 +29,10 @@ deploy:
       setValueTemplates:
         api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
         api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
-        api.worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
-        api.worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
+        worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
+        worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
+        web.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
+        web.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
       valuesFiles: 
         - .dev/values-jrunner.yaml
 
