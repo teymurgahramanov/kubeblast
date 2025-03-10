@@ -29,6 +29,28 @@ deploy:
       setValueTemplates:
         api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
         api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
+        api.env[0].name: MONGO_HOST
+        api.env[0].value: "mongodb"
+        api.env[1].name: MONGO_PORT
+        api.env[1].value: "27017"
+        api.env[2].name: MONGO_DB_NAME
+        api.env[2].value: "jrunner"
+        api.env[3].name: MONGO_DB_USER
+        api.env[3].value: "jrunner"
+        api.env[4].name: MONGO_DB_PASS
+        api.env[4].value: "jrunner"
+        api.env[5].name: S3_URL
+        api.env[5].value: "http://minio:9000"
+        api.env[6].name: S3_ACCESS_KEY
+        api.env[6].value: "zuLhhLFEbSLj6NqaM4FR"
+        api.env[7].name: S3_SECRET_KEY
+        api.env[7].value: "lngc216umXlcN3UFt8jq8XY1w6Ictg7r29Uv3Rwa"
+        api.env[8].name: S3_BUCKET
+        api.env[8].value: "jrunner"
+        api.env[9].name: K8S_NAMESPACE
+        api.env[9].value: "jrunner"
+        api.env[10].name: WORKER_WATCH_INTERVAL
+        api.env[10].value: "10"
         worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
         worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
         web.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
