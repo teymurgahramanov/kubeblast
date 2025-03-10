@@ -33,8 +33,23 @@ deploy:
         worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
         web.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
         web.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
+        web.env.0.name: "REACT_APP_API_BASE_URL"
+        web.env.0.value: "http://jrunner-api:8000"
       valuesFiles: 
         - .dev/values-jrunner.yaml
+
+portForward:
+- resourceType: deployment
+  resourceName: jrunner-web
+  namespace: jrunner
+  port: 3000
+  localPort: 9001
+- resourceType: deployment
+  resourceName: jrunner-api
+  namespace: jrunner
+  port: 8000
+  localPort: 9002
+
 
 profiles:
   - name: docker-desktop
