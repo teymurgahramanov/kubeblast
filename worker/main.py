@@ -15,6 +15,7 @@ DB_NAME = app_config.MONGO_DB_NAME
 COLLECTION_NAME = "jobs"
 NAMESPACE = app_config.K8S_NAMESPACE
 WORKER_WATCH_INTERVAL = app_config.WORKER_WATCH_INTERVAL
+print(NAMESPACE)
 
 # Load Kubernetes Configuration
 k8s_config.load_incluster_config()
