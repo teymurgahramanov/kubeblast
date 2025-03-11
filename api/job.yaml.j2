@@ -16,17 +16,42 @@ spec:
       containers:
       - name: jmeter
         image: busybox
-        #command: ["cat", "/tmp/{{ configmap_key }}"]
-        command: ["sh", "-c", "while true; do echo \"$(date): $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 8)\"; sleep 5; done"]
+        command: ["sh", "-c"]
+        args:
+          - jmeter -n -t {{ jmeter_base_dir }}/{{ configmap_key }} -l {{ jmeter_output_dir }}/result.jtl -e -o {{ jmeter_output_dir }}/report -Lorg.apache.jmeter=ERROR
         volumeMounts:
         - name: jmeter-plan
-          mountPath: /tmp/{{ configmap_key }}
+          mountPath: {{ jmeter_base_dir }}/{{ configmap_key }}
           subPath: {{ configmap_key }}
+        - name: output-volume
+          mountPath: {{ jmeter_output_dir }}
+      - name: uploader
+        image: minio/mc
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "Waiting for JMeter test results..."
+            while [ ! -f /output/result.jtl ]; do
+              if ! pgrep -x "jmeter" > /dev/null; then
+                echo "JMeter process not found. Exiting uploader."
+                exit 1
+              fi
+              sleep 5
+            done
+            echo "Uploading results to MinIO"
+            mc alias set minio {{ endpoint_url }} {{ access_key }} {{ secret_key }}
+            mc cp {{ jmeter_output_dir }}/result.jtl minio/{{ bucket }}/{{ name }}/result.jtl
+            mc cp --recursive {{ jmeter_output_dir }}/report minio/{{ bucket }}/{{ name }}/report
+        volumeMounts:
+        - name: output-volume
+          mountPath: {{ jmeter_output_dir }}
       restartPolicy: Never
       volumes:
       - name: jmeter-plan
         configMap:
           name: {{ name }}
+      - name: output-volume
+        emptyDir: {}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

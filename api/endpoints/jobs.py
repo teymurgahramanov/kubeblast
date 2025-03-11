@@ -5,7 +5,7 @@ from api.core import models, config, db
 from api.services import auth, jobs
 from datetime import datetime
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/jobs", response_model=List[models.JobFromDB])
 async def get_job(

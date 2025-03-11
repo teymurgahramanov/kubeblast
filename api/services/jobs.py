@@ -73,6 +73,7 @@ def create_job(current_user, file_content, description):
         files.create_file(file_content,file_name)
     except Exception as e:
         print(e)
+        raise HTTPException(status_code=500, detail="Failed to create job")
 
     return get_job(current_user, str(result.inserted_id))
 

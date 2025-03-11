@@ -6,7 +6,7 @@ from api.services import auth, jobs, k8s
 from api.core.config import config
 import asyncio
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get(
     "/logs/{job_id}",

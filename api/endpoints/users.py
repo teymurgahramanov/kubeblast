@@ -4,7 +4,7 @@ from api.core import models
 from api.services import auth, users
 from fastapi import Request
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/users", response_model=List[models.User])
 async def get_users(current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))]):

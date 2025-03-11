@@ -75,6 +75,12 @@ def schedule_workload(job_id):
         configmap_key=k8s_configmap_key,
         nodeSelector=config.config.K8S_NODE_SELECTOR,
         tolerations=config.config.K8S_TOLERATIONS,
+        jmeter_base_dir="/tmp",
+        jmeter_output_dir="/output",
+        endpoint_url=config.config.S3_URL,
+        access_key=config.config.S3_ACCESS_KEY,
+        secret_key=config.config.S3_SECRET_KEY,
+        bucket=config.config.S3_BUCKET
     )
 
     job_manifest = yaml.safe_load(rendered_job)

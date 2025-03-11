@@ -6,73 +6,73 @@ metadata:
 
 build:
   artifacts:
-  - image: jrunner-api
-    context: ./api
-    docker:
-      dockerfile: Dockerfile
-  - image: jrunner-worker
-    context: ./worker
-    docker:
-      dockerfile: Dockerfile
-  - image: jrunner-web
-    context: ./web
-    docker:
-      dockerfile: Dockerfile
+    - image: jrunner-api
+      context: ./api
+      docker:
+        dockerfile: Dockerfile
+    - image: jrunner-worker
+      context: ./worker
+      docker:
+        dockerfile: Dockerfile
+    - image: jrunner-web
+      context: ./web
+      docker:
+        dockerfile: Dockerfile
 
 deploy:
   helm:
     releases:
-    - name: jrunner
-      namespace: jrunner
-      createNamespace: true
-      chartPath: ./helm
-      setValueTemplates:
-        api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
-        api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
-        api.env[0].name: MONGO_HOST
-        api.env[0].value: "mongodb"
-        api.env[1].name: MONGO_PORT
-        api.env[1].value: "27017"
-        api.env[2].name: MONGO_DB_NAME
-        api.env[2].value: "jrunner"
-        api.env[3].name: MONGO_DB_USER
-        api.env[3].value: "jrunner"
-        api.env[4].name: MONGO_DB_PASS
-        api.env[4].value: "jrunner"
-        api.env[5].name: S3_URL
-        api.env[5].value: "http://minio:9000"
-        api.env[6].name: S3_ACCESS_KEY
-        api.env[6].value: "zuLhhLFEbSLj6NqaM4FR"
-        api.env[7].name: S3_SECRET_KEY
-        api.env[7].value: "lngc216umXlcN3UFt8jq8XY1w6Ictg7r29Uv3Rwa"
-        api.env[8].name: S3_BUCKET
-        api.env[8].value: "jrunner"
-        api.env[9].name: K8S_NAMESPACE
-        api.env[9].value: "jrunner"
-        api.env[10].name: WORKER_WATCH_INTERVAL
-        api.env[10].value: "10"
-        worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
-        worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
-        web.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
-        web.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
-        web.env.0.name: "REACT_APP_API_BASE_URL"
-        web.env.0.value: "http://jrunner-api:8000"
+      - name: jrunner
+        namespace: jrunner
+        createNamespace: true
+        chartPath: ./helm
+        setValueTemplates:
+          api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
+          api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
+          api.env:
+            - name: MONGO_HOST
+              value: "mongodb"
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_DB_NAME
+              value: "jrunner"
+            - name: MONGO_DB_USER
+              value: "jrunner"
+            - name: MONGO_DB_PASS
+              value: "jrunner"
+            - name: S3_URL
+              value: "http://minio:9000"
+            - name: S3_ACCESS_KEY
+              value: "zuLhhLFEbSLj6NqaM4FR" # Consider referencing from a Kubernetes Secret
+            - name: S3_SECRET_KEY
+              value: "lngc216umXlcN3UFt8jq8XY1w6Ictg7r29Uv3Rwa" # Consider referencing from a Kubernetes Secret
+            - name: S3_BUCKET
+              value: "jrunner"
+            - name: K8S_NAMESPACE
+              value: "jrunner"
+            - name: WORKER_WATCH_INTERVAL
+              value: "10"
+          web.ingress.enabled: true
+          web.ingress.host: "jrunner.local"
+          web.ingress.className: "nginx"
+          worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
+          worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
+          web.image.repository: "{{ .IMAGE_REPO_jrunner_web }}"
+          web.image.tag: "{{ .IMAGE_TAG_jrunner_web }}"
 
 portForward:
-- resourceType: deployment
-  resourceName: jrunner-web
-  namespace: jrunner
-  port: 3000
-  localPort: 9001
-- resourceType: deployment
-  resourceName: jrunner-api
-  namespace: jrunner
-  port: 8000
-  localPort: 9002
-
+  - resourceType: deployment
+    resourceName: jrunner-web
+    namespace: jrunner
+    port: 80
+    localPort: 9001
+  - resourceType: deployment
+    resourceName: jrunner-api
+    namespace: jrunner
+    port: 8000
+    localPort: 9002
 
 profiles:
   - name: docker-desktop
     activation:
       - kubeContext: docker-desktop
-        command: dev

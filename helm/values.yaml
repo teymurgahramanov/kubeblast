@@ -1,3 +1,4 @@
+nameOverride: ""
 fullnameOverride: ""
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
@@ -37,7 +38,7 @@ web:
     repository: jrunner-web
     tag: latest
   service:
-    port: 3000
+    port: 80
   ingress:
     enabled: false
     annotations: {}

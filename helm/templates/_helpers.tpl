@@ -21,14 +21,29 @@
 
 {{- define "jrunner.labels" -}}
 helm.sh/chart: {{ include "jrunner.chart" . }}
-{{ include "jrunner.selectorLabels" . }}
+app.kubernetes.io/name: {{ include "jrunner.fullname" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "jrunner.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "jrunner.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{- define "jrunner-api.resourceName" -}}
+{{ include "jrunner.fullname" . }}-api
+{{- end }}
+
+{{- define "jrunner-worker.resourceName" -}}
+{{ include "jrunner.fullname" . }}-worker
+{{- end }}
+
+{{- define "jrunner-web.resourceName" -}}
+{{ include "jrunner.fullname" . }}-web
+{{- end }}
+
+{{- define "jrunner-api.selectorLabels" -}}
+jrunner/component: api
+{{- end }}
+
+{{- define "jrunner-web.selectorLabels" -}}
+jrunner/component: web
 {{- end }}

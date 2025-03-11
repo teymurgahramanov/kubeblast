@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "jrunner-web.resourceName" . }}
   labels:
     {{- include "jrunner.labels" . | nindent 4 }}
 spec:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "jrunner.selectorLabels" . | nindent 4 }}
+    {{- include "jrunner-web.selectorLabels" . | nindent 4 }}

@@ -5,7 +5,7 @@ import os
 from api.core import models, config
 from api.services import jobs, auth, files
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 @router.get("/files/{job_id}")
 async def get_file(
