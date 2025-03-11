@@ -35,6 +35,7 @@ def delete_file(job_id):
 
     except Exception as e:
         logging.error(f"Failed to delete files from MinIO: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete files from MinIO: {str(e)}")
 
 def read_file(file_name):
     try:

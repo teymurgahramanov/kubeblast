@@ -151,3 +151,4 @@ def delete_workload(job_id):
           )
   except Exception as e:
       logging.error(f"Failed to delete workload {job_id}: {e}")
+      raise HTTPException(status_code=500, detail="Error deleting workload")
