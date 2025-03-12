@@ -69,10 +69,16 @@ def create_job(current_user, file_content, description):
 
     try:
         result = db.mongo.jobs.insert_one(job.dict())
-        file_name = f"{str(result.inserted_id)}.jmx"
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Failed to create job")
+
+    try:
+        file_name = f"{str(result.inserted_id)}/plan.jmx"
         files.create_file(file_content,file_name)
     except Exception as e:
         print(e)
+        db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(result.inserted_id)})
         raise HTTPException(status_code=500, detail="Failed to create job")
 
     return get_job(current_user, str(result.inserted_id))

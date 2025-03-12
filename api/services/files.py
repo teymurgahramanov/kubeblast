@@ -15,11 +15,11 @@ s3_client = boto3.client(
 )
 
 def create_file(file_content, file_name):
-  try:
-      s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
-  except Exception as e:
-      logging.error(f"Failed to upload file to S3: {str(e)}")
-      raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
+    try:
+        s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
+    except Exception as e:
+        logging.error(f"Failed to upload file to S3: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
   
 def delete_file(job_id):
     try:
@@ -51,7 +51,7 @@ def download_file(current_user, job_id, type, download):
     jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
-            file_name = f"{job_id}.jmx"
+            file_name = f"{job_id}/plan.jmx"
             media_type = "application/xml"
         case "report":
             file_name = f"{job_id}.pdf"

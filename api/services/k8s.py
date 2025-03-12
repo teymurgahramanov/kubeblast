@@ -10,10 +10,10 @@ import logging
 k8s_config.load_incluster_config()
 
 def gen_labels(job_id):
-    return {"jrunnerJobId": job_id}
+    return {"jrunner/job-id": job_id}
 
 def gen_label_selector(job_id):
-    return f"jrunnerJobId={job_id}"
+    return f"jrunner/job-id={job_id}"
 
 
 def stream_pod_logs(job_id):
@@ -39,6 +39,7 @@ def stream_pod_logs(job_id):
         logs =client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
+            container="jmeter",
             follow=True,
             _preload_content=False,
         )
@@ -47,6 +48,7 @@ def stream_pod_logs(job_id):
             yield f"data: {line.decode('utf-8')}\n\n"  # SSE format
 
     except client.exceptions.ApiException as e:
+        logging.error(f"Kubernetes API error: {e}")
         yield f"data: Error: {e.reason}\n\n"
         return
 
@@ -55,7 +57,7 @@ def schedule_workload(job_id):
     k8s_object_labels = gen_labels(job_id)
     k8s_object_namespace = config.config.K8S_NAMESPACE
     k8s_configmap_key = "plan.jmx"
-    file_name = f"{job_id}.jmx"
+    file_name = f"{job_id}/plan.jmx"
     job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
 
     file_content = files.read_file(file_name)
@@ -80,7 +82,8 @@ def schedule_workload(job_id):
         endpoint_url=config.config.S3_URL,
         access_key=config.config.S3_ACCESS_KEY,
         secret_key=config.config.S3_SECRET_KEY,
-        bucket=config.config.S3_BUCKET
+        bucket=config.config.S3_BUCKET,
+        job_id=job_id
     )
 
     job_manifest = yaml.safe_load(rendered_job)
