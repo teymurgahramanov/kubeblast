@@ -48,11 +48,13 @@ def process_job_update():
                 for job in jobs:
                     job_id = job.metadata.labels.get("jrunner/job-id")
                     if not job_id:
+                        logging.warning(f"Job {job.metadata.name} does not have a job ID.")
                         continue
                     
                     # Determine the current job status in Kubernetes
                     k8s_status = get_k8s_job_status(job)
                     if not k8s_status:
+                        logging.warning(f"Unrecognized status for job {job_id}.")
                         continue  # Skip if status is not relevant
                     
                     # Fetch the job from MongoDB
@@ -71,7 +73,7 @@ def process_job_update():
                         if update_result.modified_count > 0:
                             logging.info(f"Updated MongoDB: {job_id} -> status {k8s_status}")
                         else:
-                            logging.warning(f"No changes made for job {job_id}.")
+                            logging.error(f"No changes made for job {job_id}.")
         
         except client.exceptions.ApiException as e:
             logging.error(f"Kubernetes API error: {e}")

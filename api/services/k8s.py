@@ -78,7 +78,7 @@ def schedule_workload(job_id):
         nodeSelector=config.config.K8S_NODE_SELECTOR,
         tolerations=config.config.K8S_TOLERATIONS,
         jmeter_base_dir="/tmp",
-        jmeter_output_dir="/output",
+        job_image=config.config.K8S_JOB_IMAGE,
         endpoint_url=config.config.S3_URL,
         access_key=config.config.S3_ACCESS_KEY,
         secret_key=config.config.S3_SECRET_KEY,

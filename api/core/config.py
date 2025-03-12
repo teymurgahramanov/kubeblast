@@ -27,6 +27,7 @@ class Config:
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
+    K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "teymurgahramanov/jrunner-job:latest")
     K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
     K8S_NAMESPACE_QUOTA_POD_LIMIT: int = int(os.getenv("K8S_NAMESPACE_QUOTA_POD_LIMIT", 5))
 

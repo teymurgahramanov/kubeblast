@@ -13,35 +13,25 @@ spec:
     metadata:
       labels: {{ labels }}
     spec:
-      initContainers:
+      containers:
       - name: jmeter
-        image: alpine/jmeter:5.6
-        command: ["jmeter", "-n", "-t", "{{ jmeter_base_dir }}/{{ configmap_key }}", "-l", "{{ jmeter_output_dir }}/result.jtl", "-e", "-o", "{{ jmeter_output_dir }}/report", "-Lorg.apache.jmeter=ERROR"]
+        image: {{ job_image }}
+        command: ["sh", "-c"]
+        args:
+          - |
+            jmeter -n -t {{ jmeter_base_dir }}/{{ configmap_key }} -l result.jtl -e -o report
+            mc alias set minio {{ endpoint_url }} {{ access_key }} {{ secret_key }}
+            mc cp result.jtl minio/{{ bucket }}/{{ job_id }}/result.jtl
+            mc cp --recursive report minio/{{ bucket }}/{{ job_id }}/report        
         volumeMounts:
         - name: jmeter-plan
           mountPath: {{ jmeter_base_dir }}/{{ configmap_key }}
           subPath: {{ configmap_key }}
-        - name: output-volume
-          mountPath: {{ jmeter_output_dir }}
-      containers:
-      - name: uploader
-        image: minio/mc:RELEASE.2025-02-21T16-00-46Z-cpuv1
-        command: ["sh", "-c"]
-        args:
-          - |
-            mc alias set minio {{ endpoint_url }} {{ access_key }} {{ secret_key }}
-            mc cp {{ jmeter_output_dir }}/result.jtl minio/{{ bucket }}/{{ job_id }}/result.jtl
-            mc cp --recursive {{ jmeter_output_dir }}/report minio/{{ bucket }}/{{ job_id }}/report
-        volumeMounts:
-        - name: output-volume
-          mountPath: {{ jmeter_output_dir }}
       restartPolicy: Never
       volumes:
       - name: jmeter-plan
         configMap:
           name: {{ name }}
-      - name: output-volume
-        emptyDir: {}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}
