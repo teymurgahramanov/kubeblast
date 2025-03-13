@@ -7,13 +7,14 @@ securityContext: {}
 nodeSelector: {}
 tolerations: []
 affinity: {}
+namespaceQuota:
+  pods: 10
 
 api:
   env: []
   envFromSecret: ""
   podAnnotations: {}
   podLabels: {}
-
   image:
     repository: jrunner-api
     tag: latest

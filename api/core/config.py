@@ -5,10 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    DEBUG: bool = False
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin")
     PENDING_JOBS_LIMIT: int = int(os.getenv("PENDING_JOBS_LIMIT", 3))
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
@@ -27,26 +25,24 @@ class Config:
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
-    K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "teymurgahramanov/jrunner-job:latest")
-    K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
-    K8S_NAMESPACE_QUOTA_POD_LIMIT: int = int(os.getenv("K8S_NAMESPACE_QUOTA_POD_LIMIT", 5))
 
     # Load Kubernetes NodeSelector from JSON or parse key-value pairs
-    K8S_NODE_SELECTOR: dict = {}
-    node_selector_env = os.getenv("K8S_NODE_SELECTOR")
-    if node_selector_env:
+    K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "teymurgahramanov/jrunner-job:latest")
+    K8S_JOB_NODE_SELECTOR: dict = {}
+    job_node_selector_env = os.getenv("K8S_JOB_NODE_SELECTOR")
+    if job_node_selector_env:
         try:
-            K8S_NODE_SELECTOR = json.loads(node_selector_env)
+            K8S_JOB_NODE_SELECTOR = json.loads(job_node_selector_env)
         except json.JSONDecodeError:
-            K8S_NODE_SELECTOR = None
+            K8S_JOB_NODE_SELECTOR = None
 
     # Load Kubernetes Tolerations from JSON format
-    K8S_TOLERATIONS: list = []
-    tolerations_env = os.getenv("K8S_TOLERATIONS")
-    if tolerations_env:
+    K8S_JOB_TOLERATIONS: list = []
+    job_tolerations_env = os.getenv("K8S_JOB_TOLERATIONS")
+    if job_tolerations_env:
         try:
-            K8S_TOLERATIONS = json.loads(tolerations_env)
+            K8S_JOB_TOLERATIONS = json.loads(job_tolerations_env)
         except json.JSONDecodeError:
-            K8S_TOLERATIONS = None
+            K8S_JOB_TOLERATIONS = None
 
 config = Config()

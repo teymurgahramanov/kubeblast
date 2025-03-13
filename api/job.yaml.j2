@@ -19,14 +19,14 @@ spec:
         command: ["sh", "-c"]
         args:
           - |
-            jmeter -n -t {{ jmeter_base_dir }}/{{ configmap_key }} -l result.jtl -e -o report
-            mc alias set minio {{ endpoint_url }} {{ access_key }} {{ secret_key }}
-            mc cp result.jtl minio/{{ bucket }}/{{ job_id }}/result.jtl
-            mc cp --recursive report minio/{{ bucket }}/{{ job_id }}/report        
+            jmeter -n -t /tmp/plan.jmx -l result.jtl -e -o report
+            mc alias set minio {{ s3_url }} {{ s3_access_key }} {{ s3_secret_key }}
+            mc cp result.jtl minio/{{ s3_bucket }}/{{ job_id }}/result.jtl
+            mc cp --recursive report minio/{{ s3_bucket }}/{{ job_id }}/report        
         volumeMounts:
         - name: jmeter-plan
-          mountPath: {{ jmeter_base_dir }}/{{ configmap_key }}
-          subPath: {{ configmap_key }}
+          mountPath: /tmp/plan.jmx
+          subPath: plan.jmx
       restartPolicy: Never
       volumes:
       - name: jmeter-plan

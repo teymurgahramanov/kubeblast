@@ -9,22 +9,29 @@ import logging
 
 k8s_config.load_incluster_config()
 
+def get_current_namespace():
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "Namespace file not found"
+
 def gen_labels(job_id):
     return {"jrunner/job-id": job_id}
 
 def gen_label_selector(job_id):
     return f"jrunner/job-id={job_id}"
 
+current_namespace = get_current_namespace()
 
 def stream_pod_logs(job_id):
-    namespace = config.config.K8S_NAMESPACE
 
     try:
         label_selector = gen_label_selector(job_id)
 
         logging.info(f"Looking for Pods with label selector: {label_selector}")
         pod_list = client.CoreV1Api().list_namespaced_pod(
-            namespace=namespace,
+            namespace=current_namespace,
             label_selector=label_selector
         )
 
@@ -38,7 +45,7 @@ def stream_pod_logs(job_id):
 
         logs =client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
-            namespace=namespace,
+            namespace=current_namespace,
             container="jmeter",
             follow=True,
             _preload_content=False,
@@ -55,8 +62,7 @@ def stream_pod_logs(job_id):
 def schedule_workload(job_id):
     k8s_object_name = f"jrunner-{job_id}"
     k8s_object_labels = gen_labels(job_id)
-    k8s_object_namespace = config.config.K8S_NAMESPACE
-    k8s_configmap_key = "plan.jmx"
+    k8s_object_namespace = current_namespace
     file_name = f"{job_id}/plan.jmx"
     job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
 
@@ -64,7 +70,7 @@ def schedule_workload(job_id):
 
     configmap = client.V1ConfigMap(
         metadata=client.V1ObjectMeta(name=k8s_object_name, labels=k8s_object_labels),
-        data={k8s_configmap_key: file_content}
+        data={"plan.jmx": file_content}
     )
 
     with open(job_template_path, 'r') as file:
@@ -74,16 +80,14 @@ def schedule_workload(job_id):
         name=k8s_object_name,
         namespace=k8s_object_namespace,
         labels = k8s_object_labels,
-        configmap_key=k8s_configmap_key,
-        nodeSelector=config.config.K8S_NODE_SELECTOR,
-        tolerations=config.config.K8S_TOLERATIONS,
-        jmeter_base_dir="/tmp",
+        nodeSelector=config.config.K8S_JOB_NODE_SELECTOR,
+        tolerations=config.config.K8S_JOB_TOLERATIONS,
         job_image=config.config.K8S_JOB_IMAGE,
-        endpoint_url=config.config.S3_URL,
-        access_key=config.config.S3_ACCESS_KEY,
-        secret_key=config.config.S3_SECRET_KEY,
-        bucket=config.config.S3_BUCKET,
-        job_id=job_id
+        job_id=job_id,
+        s3_url=config.config.S3_URL,
+        s3_access_key=config.config.S3_ACCESS_KEY,
+        s3_secret_key=config.config.S3_SECRET_KEY,
+        s3_bucket=config.config.S3_BUCKET
     )
 
     job_manifest = yaml.safe_load(rendered_job)
@@ -107,7 +111,7 @@ def delete_workload(job_id):
 
       logging.info(f"Deleting Workload with label selector: {label_selector}")
       jobs = client.BatchV1Api().list_namespaced_job(
-          namespace=config.config.K8S_NAMESPACE,
+          namespace=current_namespace,
           label_selector=label_selector
       )
       
@@ -115,7 +119,7 @@ def delete_workload(job_id):
       for job_item in jobs.items:
           job_name = job_item.metadata.name
           client.BatchV1Api().delete_namespaced_job(
-              namespace=config.config.K8S_NAMESPACE,
+              namespace=current_namespace,
               name=job_name,
               propagation_policy='Foreground'
           )
@@ -123,7 +127,7 @@ def delete_workload(job_id):
 
       logging.info(f"Deleting ConfigMaps with label selector: {label_selector}")
       config_maps = client.CoreV1Api().list_namespaced_config_map(
-          namespace=config.config.K8S_NAMESPACE,
+          namespace=current_namespace,
           label_selector=label_selector
       )
 
@@ -131,14 +135,14 @@ def delete_workload(job_id):
       for cm in config_maps.items:
           cm_name = cm.metadata.name
           client.CoreV1Api().delete_namespaced_config_map(
-              namespace=config.config.K8S_NAMESPACE,
+              namespace=current_namespace,
               name=cm_name
           )
           logging.info(f"ConfigMap {cm_name} deleted")
 
       logging.info(f"Deleting Pods with label selector: {label_selector}")
       pods = client.CoreV1Api().list_namespaced_pod(
-          namespace=config.config.K8S_NAMESPACE,
+          namespace=current_namespace,
           label_selector=label_selector
       )
       
@@ -148,7 +152,7 @@ def delete_workload(job_id):
           logging.info(f"Deleting Pod: {pod_name}")
           client.CoreV1Api().delete_namespaced_pod(
               name=pod_name,
-              namespace=config.config.K8S_NAMESPACE,
+              namespace=current_namespace,
               body=client.V1DeleteOptions(),
               grace_period_seconds=0
           )
