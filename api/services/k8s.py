@@ -46,7 +46,6 @@ def stream_pod_logs(job_id):
         logs =client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
             namespace=current_namespace,
-            container="jmeter",
             follow=True,
             _preload_content=False,
         )

@@ -4,6 +4,7 @@
 - [ ] Logout happening when switching back to the main page. Fix it.
 - [ ] Reorganize page header.
 - [ ] Rename USER button to Menu.
+- [ ] Logs are available only when job is completed
 - [X] Configure changable parameters (API Address, etc.) as Environment values.
 
 ## API
