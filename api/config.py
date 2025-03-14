@@ -25,7 +25,6 @@ class Config:
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
-
     # Load Kubernetes NodeSelector from JSON or parse key-value pairs
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "teymurgahramanov/jrunner-job:latest")
     K8S_JOB_NODE_SELECTOR: dict = {}

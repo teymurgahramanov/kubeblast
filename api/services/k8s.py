@@ -1,5 +1,5 @@
 from kubernetes import client, config as k8s_config
-from api.core import config
+from api.config import config
 from api.services import files
 from jinja2 import Template
 from fastapi import HTTPException
@@ -16,13 +16,13 @@ def get_current_namespace():
     except FileNotFoundError:
         return "Namespace file not found"
 
+current_namespace = get_current_namespace()
+
 def gen_labels(job_id):
     return {"jrunner/job-id": job_id}
 
 def gen_label_selector(job_id):
     return f"jrunner/job-id={job_id}"
-
-current_namespace = get_current_namespace()
 
 def stream_pod_logs(job_id):
 
@@ -63,7 +63,7 @@ def schedule_workload(job_id):
     k8s_object_labels = gen_labels(job_id)
     k8s_object_namespace = current_namespace
     file_name = f"{job_id}/plan.jmx"
-    job_template_path = os.path.join(os.path.dirname(__file__), "../job.yaml.j2")
+    job_template_path = os.path.join(os.path.dirname(__file__), "../job/job.yaml.j2")
 
     file_content = files.read_file(file_name)
 
@@ -79,14 +79,14 @@ def schedule_workload(job_id):
         name=k8s_object_name,
         namespace=k8s_object_namespace,
         labels = k8s_object_labels,
-        nodeSelector=config.config.K8S_JOB_NODE_SELECTOR,
-        tolerations=config.config.K8S_JOB_TOLERATIONS,
-        job_image=config.config.K8S_JOB_IMAGE,
+        nodeSelector=config.K8S_JOB_NODE_SELECTOR,
+        tolerations=config.K8S_JOB_TOLERATIONS,
+        job_image=config.K8S_JOB_IMAGE,
         job_id=job_id,
-        s3_url=config.config.S3_URL,
-        s3_access_key=config.config.S3_ACCESS_KEY,
-        s3_secret_key=config.config.S3_SECRET_KEY,
-        s3_bucket=config.config.S3_BUCKET
+        s3_url=config.S3_URL,
+        s3_access_key=config.S3_ACCESS_KEY,
+        s3_secret_key=config.S3_SECRET_KEY,
+        s3_bucket=config.S3_BUCKET
     )
 
     job_manifest = yaml.safe_load(rendered_job)

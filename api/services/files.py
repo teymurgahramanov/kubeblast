@@ -4,7 +4,7 @@ import logging
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from api.services import jobs
-from api.core.config import config
+from api.config import config
 
 s3_client = boto3.client(
     "s3",

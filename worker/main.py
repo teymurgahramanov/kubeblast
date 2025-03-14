@@ -13,11 +13,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 MONGO_URI = app_config.MONGO_URI
 DB_NAME = app_config.MONGO_DB_NAME
 COLLECTION_NAME = "jobs"
-NAMESPACE = app_config.K8S_NAMESPACE
 WORKER_WATCH_INTERVAL = app_config.WORKER_WATCH_INTERVAL
 
-# Load Kubernetes Configuration
 k8s_config.load_incluster_config()
+
+def get_current_namespace():
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "Namespace file not found"
+
+current_namespace = get_current_namespace()
 
 # Initialize MongoDB Client
 mongo_client = MongoClient(MONGO_URI)
@@ -41,7 +48,7 @@ def process_job_update():
     
     while True:
         try:
-            jobs = batch_v1.list_namespaced_job(namespace=NAMESPACE).items
+            jobs = batch_v1.list_namespaced_job(namespace=current_namespace).items
             if not jobs:
                 logging.info("No jobs found.")
             else:

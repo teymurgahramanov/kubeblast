@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi.responses import StreamingResponse
 from api.core import models
 from api.services import auth, jobs, k8s
-from api.core.config import config
 import asyncio
 
 router = APIRouter(prefix="/api")

@@ -74,11 +74,9 @@ class UserInDB(User):
     hashed_password: str
 
 class Job(BaseModel):
+    id: Optional[str] = None
     name: str
     owner: str
     description: Optional[str] = None
     status: Literal["pending", "approved", "declined", "running", "suspended", "completed", "failed"]
     created_at: Optional[datetime] = None
-
-class JobFromDB(Job):
-    id: str

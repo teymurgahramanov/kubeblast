@@ -3,12 +3,9 @@ from fastapi import HTTPException
 import bson
 import os
 import hashlib
-from api.core import config
-from kubernetes import client
+from api.config import config
 from datetime import datetime
 import logging
-from jinja2 import Template
-import yaml
 from api.services import files, k8s
 
 def get_jobs(current_user, status: str = None, owner: str = None, name: str = None):
@@ -27,7 +24,7 @@ def get_jobs(current_user, status: str = None, owner: str = None, name: str = No
     jobs = list(db.mongo.jobs.find(query))
     for job in jobs:
         job["id"] = str(job["_id"])
-    return [models.JobFromDB(**job) for job in jobs]
+    return [models.Job(**job) for job in jobs]
 
 def get_job(current_user, job_id):
     job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
@@ -36,7 +33,7 @@ def get_job(current_user, job_id):
     if current_user.role not in ["admin", "moderator"] and job["owner"] != current_user.username:
         raise HTTPException(status_code=403, detail="Insufficent permissions")
     job["id"] = str(job["_id"])
-    return models.JobFromDB(**job)
+    return models.Job(**job)
 
 def create_job(current_user, file_content, description):
     job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
@@ -46,10 +43,10 @@ def create_job(current_user, file_content, description):
         "owner": current_user.username
     })
     
-    if pending_jobs_count > config.config.PENDING_JOBS_LIMIT:
+    if pending_jobs_count > config.PENDING_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.config.PENDING_JOBS_LIMIT})"
+            detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.PENDING_JOBS_LIMIT})"
         )
 
     job = db.mongo.jobs.find_one({"name": job_name})

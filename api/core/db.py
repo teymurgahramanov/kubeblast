@@ -1,4 +1,4 @@
-from api.core.config import config
+from api.config import config
 from pymongo import MongoClient
 
 MONGO_URI = config.MONGO_URI

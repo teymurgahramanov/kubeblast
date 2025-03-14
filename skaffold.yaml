@@ -11,7 +11,7 @@ build:
       docker:
         dockerfile: Dockerfile
     - image: jrunner-job
-      context: ./api
+      context: ./api/job
       docker:
         dockerfile: job.Dockerfile
     - image: jrunner-worker
@@ -47,11 +47,11 @@ deploy:
             - name: S3_URL
               value: "http://minio.infra:9000"
             - name: S3_ACCESS_KEY
-              #value: "FBUuscAKjIhPoEHnkL1H" # Home
-              value: "1MtdMlZehiTTeVqayB2T" # Office 
+              value: "FBUuscAKjIhPoEHnkL1H" # Home
+              #value: "1MtdMlZehiTTeVqayB2T" # Office 
             - name: S3_SECRET_KEY
-              #value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq" # Home
-              value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
+              value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq" # Home
+              #value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
             - name: S3_BUCKET
               value: "jrunner"
             - name: K8S_NAMESPACE
