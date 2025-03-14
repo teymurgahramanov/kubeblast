@@ -90,15 +90,6 @@ const Login = () => {
           >
             JRunner
           </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              color: 'var(--text-secondary)',
-              fontWeight: 500
-            }}
-          >
-            Sign in to your account
-          </Typography>
         </Box>
 
         {error && (
