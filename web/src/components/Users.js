@@ -1,116 +1,277 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axiosInstance from "../utils/axiosInstance";
-import { Box, Typography, IconButton, Modal, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, Delete } from '@mui/icons-material';
+import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import FormAddUser from "./AddUser";
+import { Delete, Edit, MoreVert, PersonAdd } from '@mui/icons-material';
+import axiosInstance from "../utils/axiosInstance";
+import Menuselect from "./Menuselect";
+import EditUser from "./EditUser";
 
-const Users = () => {
+const Users = ({ setAddUser }) => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
-  const [pageSize, setPageSize] = useState(5);
-  const [openAddUser, setOpenAddUser] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const userRole = sessionStorage.getItem('user_role');
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        setError('Unauthorized: Please log in');
-        return;
-      }
-      try {
-        const response = await axiosInstance.get("/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(response.data);
-      } catch (error) {
-        setError('Error fetching Users: ' + (error.response?.data || error.message));
-      }
-    };
     fetchUsers();
   }, []);
 
-  const rows = useMemo(() => users.map((user) => ({
-    id: user.id || user.username,
+  const fetchUsers = async () => {
+    try {
+      const response = await axiosInstance.get("/users", {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      });
+      setUsers(response.data);
+    } catch (error) {
+      setError('Error fetching users: ' + (error.response?.data || error.message));
+    }
+  };
+
+  const handleMenuOpen = (event, username) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedUserId(username);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedUserId(null);
+  };
+
+  const handleDeleteUser = async (username) => {
+    try {
+      await axiosInstance.delete(`/users/${username}`, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      });
+      setUsers(users.filter(user => user.username !== username));
+      handleMenuClose();
+    } catch (error) {
+      setError('Error deleting user: ' + (error.response?.data || error.message));
+    }
+  };
+
+  const rows = users.map((user) => ({
+    id: user.id,
     username: user.username,
-    full_name: user.full_name,
+    full_name: user.full_name || '',
+    email: user.email || '',
     role: user.role,
-    created_at: user.created_at,
-    updated_at: user.updated_at
-  })), [users]);
+    enabled: user.enabled,
+  }));
 
-  const deleteUser = async (username) => {
-    console.log("Deleting user:", username);
-  };
-
-  const handleAddUser = () => {
-    setOpenAddUser(true);
-  };
-
-  const handleClose = () => {
-    setOpenAddUser(false);
-  };
-
-  const columns = useMemo(() => [
-    { field: "username", headerName: "Username", width: 250 },
-    { field: "full_name", headerName: "Name", width: 250 },
-    { field: "role", headerName: "Role", width: 170 },
-    { field: "created_at", headerName: "Created At", width: 180 },
+  const columns = [
+    { field: 'username', headerName: 'Username', width: 180, flex: 1 },
+    { field: 'full_name', headerName: 'Full Name', width: 200, flex: 1 },
+    { field: 'role', headerName: 'Role', width: 150, flex: 1 },
     {
-      field: "actions",
-      headerName: "Actions",
+      field: 'enabled',
+      headerName: 'Status',
       width: 120,
+      flex: 0.8,
       renderCell: (params) => (
-        <>
-          <IconButton component={Link} to={`/users/${params.row.username}`} color="primary">
-            <Edit />
+        <Box sx={{
+          backgroundColor: params.row.enabled ? '#D1FAE5' : '#FEE2E2',
+          color: params.row.enabled ? '#065F46' : '#991B1B',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+        }}>
+          {params.row.enabled ? 'Enabled' : 'Disabled'}
+        </Box>
+      )
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      flex: 0.5,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <IconButton 
+            onClick={(event) => handleMenuOpen(event, params.row.username)}
+            sx={{ 
+              '&:hover': { 
+                backgroundColor: 'var(--background-light)',
+                color: 'var(--primary-color)'
+              }
+            }}
+          >
+            <MoreVert />
           </IconButton>
-          <IconButton onClick={() => deleteUser(params.row.username)} color="error">
-            <Delete />
-          </IconButton>
-        </>
+        </Box>
       ),
     },
-  ], []);
+  ];
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#0D0630", padding: "20px" }}>
-      <Typography variant="h3" align="center" color="white" gutterBottom>
-        Users
-      </Typography>
-      <Box textAlign="left" mt={2}>
-        <Button variant="contained" color="primary" onClick={handleAddUser}>
-          Add New User
-        </Button>
-      </Box>
-      {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-      <Box sx={{ height: 400, width: "100%" }}>
-        <DataGrid
-          sx={{
-            border: "1px solid", 
-            m: 2, 
-            boxShadow: 5, 
-            backgroundColor: "white",
-            '& .MuiDataGrid-row:nth-of-type(even)': { backgroundColor: "#18314F", color: "white" },
-            '& .MuiDataGrid-row:nth-of-type(odd)': { backgroundColor: "#384E77", color: "white" },
-          }}
-          columns={columns}
-          rows={rows}
-          rowsPerPageOptions={[5, 10, 20]}
-          pageSize={pageSize}
-          onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-        />
-      </Box>
-
-
-      {/* Modal for adding user */}
-      <Modal open={openAddUser} onClose={handleClose}>
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: 3, borderRadius: 2 }}>
-          <FormAddUser onAddUser={handleClose} />
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <Box sx={{ 
+        borderBottom: '1px solid var(--border-color)',
+        backgroundColor: 'white',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1100,
+        px: 3,
+        py: 1.5,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Link to="/jobs" style={{ textDecoration: 'none' }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'var(--primary-color)',
+              '&:hover': { color: 'var(--primary-dark)' }
+            }}
+          >
+            JRunner
+          </Typography>
+        </Link>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Menuselect />
         </Box>
-      </Modal>
-    </div>
+      </Box>
+
+      <Box className="page-container fade-in">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+            Users
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => setAddUser(true)}
+            startIcon={<PersonAdd />}
+            sx={{
+              backgroundColor: 'var(--primary-color)',
+              '&:hover': { backgroundColor: 'var(--primary-dark)' },
+              borderRadius: '8px',
+              textTransform: 'none',
+              px: 3
+            }}
+          >
+            Add
+          </Button>
+        </Box>
+
+        {error && (
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              color="error" 
+              sx={{ 
+                p: 2, 
+                bgcolor: '#FEE2E2', 
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
+              {error}
+            </Typography>
+          </Box>
+        )}
+
+        <Box sx={{ 
+          height: 'calc(100vh - 280px)',
+          width: '100%',
+          '& .status-cell': {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start'
+          }
+        }}>
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            getRowId={(row) => row.username}
+            hideFooter
+            disableSelectionOnClick
+            sx={{
+              '& .MuiDataGrid-cell:focus': {
+                outline: 'none'
+              },
+              '& .MuiDataGrid-row:hover': {
+                backgroundColor: 'var(--background-light)'
+              }
+            }}
+          />
+        </Box>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: {
+              mt: 1,
+              '& .MuiMenuItem-root': {
+                py: 1,
+                gap: 1
+              }
+            }
+          }}
+        >
+          <MenuItem 
+            onClick={() => {
+              const user = users.find(u => u.username === selectedUserId);
+              setSelectedUser(user);
+              handleMenuClose();
+            }}
+            sx={{ color: 'var(--primary-color)' }}
+          >
+            <Edit fontSize="small" />
+            Edit
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleDeleteUser(selectedUserId)}
+            sx={{ color: 'var(--danger-color)' }}
+          >
+            <Delete fontSize="small" />
+            Delete
+          </MenuItem>
+        </Menu>
+
+        <Modal
+          open={Boolean(selectedUser)}
+          onClose={() => setSelectedUser(null)}
+          aria-labelledby="edit-user-modal"
+          sx={{
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: 600,
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2
+          }}>
+            {selectedUser && (
+              <EditUser
+                user={selectedUser}
+                onClose={() => setSelectedUser(null)}
+                onUpdate={fetchUsers}
+              />
+            )}
+          </Box>
+        </Modal>
+      </Box>
+    </Box>
   );
 };
 

@@ -1,153 +1,275 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Typography,
-  TextField,
-  Button,
-  Container,
-  Box,
-  Alert,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  FormControlLabel,
-  Switch,
-} from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 
-const FormAddUser = ({ onAddUser }) => {
-  const [username, setUsername] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('');
-  const [password, setPassword] = useState('');
-  const [confPassword, setConfPassword] = useState('');
-  const [enabled, setEnabled] = useState(true);
-  const [msg, setMsg] = useState('');
-  const navigate = useNavigate(); // Assuming navigate is being used
+const AddUser = ({ onClose }) => {
+  const [userData, setUserData] = useState({
+    username: '',
+    full_name: '',
+    role: '',
+    password: '',
+    confirmPassword: '',
+    enabled: true
+  });
+  const [error, setError] = useState('');
+
+  const handleInputChange = (e) => {
+    const { name, value, checked } = e.target;
+    setUserData(prev => ({
+      ...prev,
+      [name]: name === 'enabled' ? checked : value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (password !== confPassword) {
-      setMsg('Passwords do not match!');
+    if (userData.password !== userData.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
-    if (!role) {
-      setMsg('Please select a role.');
-      return;
-    }
-    if (!username) {
-      setMsg('Please enter a username.');
-      return;
-    }
-
-    // Create FormData instance
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('full_name', fullName);
-    formData.append('role', role);
-    formData.append('password', password);
-    formData.append('enabled', enabled);
 
     try {
-      // Send FormData with Content-Type application/x-www-form-urlencoded
-      const response = await axiosInstance.post('/users', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      const formData = new URLSearchParams();
+      formData.append('username', userData.username);
+      formData.append('full_name', userData.full_name);
+      formData.append('role', userData.role);
+      formData.append('password', userData.password);
+      formData.append('enabled', userData.enabled);
+
+      await axiosInstance.post('/users', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       });
-
-      onAddUser(response.data); // Pass the new user data back to parent
-      navigate('/users'); // Navigate to the user list page or another appropriate page
+      
+      onClose();
+      window.location.reload(); // Refresh to show the new user
     } catch (error) {
-      console.error("Error occurred:", error.response?.data); // Log the full error response
-      setMsg(error.response?.data?.msg || 'An error occurred while saving.');
+      setError('Error creating user: ' + (error.response?.data || error.message));
     }
-  };
-
-  const handleRoleChange = (e) => {
-    setRole(e.target.value);
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor:  '#0D0630' , display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Container maxWidth="sm" sx={{ backgroundColor: '#fff', padding: 4, borderRadius: 2, boxShadow: 3 }}>
-        <Typography variant="h4" align="center" gutterBottom>
+    <Box sx={{ position: 'relative' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3
+      }}>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
           Add User
         </Typography>
-        {msg && <Alert severity="error">{msg}</Alert>}
-        <form onSubmit={handleSubmit}>
+        <IconButton 
+          onClick={onClose}
+          sx={{ 
+            color: 'var(--text-secondary)',
+            '&:hover': { color: 'var(--text-primary)' }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </Box>
+
+      {error && (
+        <Box sx={{ mb: 3 }}>
+          <Typography 
+            color="error" 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#FEE2E2', 
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            {error}
+          </Typography>
+        </Box>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <TextField
+            required
+            fullWidth
             label="Username"
-            fullWidth
-            value={username} // Ensure controlled input
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <TextField
-            label="Full Name"
-            fullWidth
-            value={fullName} // Ensure controlled input
-            onChange={(e) => setFullName(e.target.value)}
-            required
+            name="username"
+            value={userData.username}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
           />
 
-          <FormControl fullWidth variant="outlined" margin="normal">
-            <InputLabel>Role*</InputLabel>
+          <TextField
+            fullWidth
+            label="Full Name"
+            name="full_name"
+            value={userData.full_name}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <FormControl fullWidth>
+            <InputLabel id="role-label" sx={{ 
+              '&.Mui-focused': { 
+                color: 'var(--primary-color)' 
+              } 
+            }}>
+              Role
+            </InputLabel>
             <Select
+              labelId="role-label"
+              label="Role"
               name="role"
-              value={role} // Ensure controlled input
-              onChange={handleRoleChange}
+              value={userData.role}
+              onChange={handleInputChange}
               required
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': {
+                  '&:hover': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'var(--primary-color)',
+                },
+              }}
             >
-              <MenuItem value="">Choose option</MenuItem>
-              <MenuItem value="admin">admin</MenuItem>
-              <MenuItem value="moderator">moderator</MenuItem>
-              <MenuItem value="user">user</MenuItem>
+              <MenuItem value="user">User</MenuItem>
+              <MenuItem value="moderator">Moderator</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
             </Select>
           </FormControl>
 
           <TextField
+            required
+            fullWidth
             label="Password"
+            name="password"
             type="password"
-            fullWidth
-            value={password} // Ensure controlled input
-            onChange={(e) => setPassword(e.target.value)}
-            required
+            value={userData.password}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
           />
+
           <TextField
-            label="Confirm Password"
-            type="password"
-            fullWidth
-            value={confPassword} // Ensure controlled input
-            onChange={(e) => setConfPassword(e.target.value)}
             required
+            fullWidth
+            label="Confirm Password"
+            name="confirmPassword"
+            type="password"
+            value={userData.confirmPassword}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
           />
 
           <FormControlLabel
             control={
               <Switch
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
+                checked={userData.enabled}
+                onChange={handleInputChange}
+                name="enabled"
                 color="primary"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: 'var(--primary-color)',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: 'var(--primary-color)',
+                  },
+                }}
               />
             }
-            label="Enabled"
-            sx={{ mt: 2 }}
+            label={userData.enabled ? 'Enabled' : 'Disabled'}
+            sx={{ mb: 1 }}
           />
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            sx={{ mt: 3,   backgroundColor: "#8BBEB2",
-              borderRadius: "20px", }}
-          >
-            Add User
-          </Button>
-        </form>
-      </Container>
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              sx={{
+                color: 'var(--text-secondary)',
+                borderColor: 'var(--border-color)',
+                '&:hover': {
+                  borderColor: 'var(--text-primary)',
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                backgroundColor: 'var(--primary-color)',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' },
+                textTransform: 'none'
+              }}
+            >
+              Add User
+            </Button>
+          </Box>
+        </Box>
+      </form>
     </Box>
   );
 };
 
-export default FormAddUser;
+export default AddUser;

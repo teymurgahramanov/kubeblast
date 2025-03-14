@@ -52,30 +52,9 @@ const CustomizedMenus = () => {
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
 
-  // Manually decode the JWT stored in sessionStorage
-  let username = "User";
-  let role = "";
-  const token = sessionStorage.getItem("access_token");
-  if (token) {
-    try {
-      // JWT format: header.payload.signature
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => {
-            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-          })
-          .join("")
-      );
-      const decoded = JSON.parse(jsonPayload);
-      username = decoded.username || username;
-      role = decoded.role || role;
-    } catch (error) {
-      console.error("Error decoding token:", error);
-    }
-  }
+  // Get username from sessionStorage
+  const username = sessionStorage.getItem('username') || 'User';
+  const role = sessionStorage.getItem('user_role') || '';
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -93,23 +72,33 @@ const CustomizedMenus = () => {
   const handleLogout = () => {
     handleClose();
     sessionStorage.removeItem("access_token");
-    sessionStorage.removeItem("role");
+    sessionStorage.removeItem("user_role");
+    sessionStorage.removeItem("username");
     navigate("/");
   };
 
   return (
     <div>
       <Button
-        id="customized-button"
-        aria-controls={open ? "customized-menu" : undefined}
-        aria-haspopup="true"
-        aria-expanded={open ? "true" : undefined}
-        variant="contained"
-        disableElevation
         onClick={handleClick}
         endIcon={<KeyboardArrowDownIcon />}
+        sx={{
+          color: 'var(--text-primary)',
+          textTransform: 'none',
+          fontWeight: 500,
+          fontSize: '0.875rem',
+          backgroundColor: 'white',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          px: 2,
+          py: 1,
+          '&:hover': {
+            backgroundColor: 'var(--background-light)',
+            borderColor: 'var(--text-primary)'
+          }
+        }}
       >
-        {username}
+        @{username}
       </Button>
       <StyledMenu
         id="customized-menu"

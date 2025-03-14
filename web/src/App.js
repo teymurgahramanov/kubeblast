@@ -4,10 +4,11 @@ import Login from './components/Login';
 import Jobs from './components/Jobs';
 import Users from './components/Users';
 import PrivateRoute from './components/PrivateRoute';
-import FormAddUser from './components/AddUser';
+import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
 import './App.css';
+
 const App = () => {
   const [addUser, setAddUser] = useState(false);
   const [addJob, setAddJob] = useState(false);
@@ -22,17 +23,17 @@ const App = () => {
           path="/jobs"
           element={
             <PrivateRoute>
-              {addJob ? <AddJobForm setAddJob={setAddJob} /> : <Jobs setAddJob={setAddJob} />}
+              <Jobs />
             </PrivateRoute>
           }
         />
         
-        {/* Users route with conditional rendering for adding and listing */}
+        {/* Users route */}
         <Route
           path="/users"
           element={
-            <PrivateRoute >
-              {addUser ? <FormAddUser setAddUser={setAddUser} /> : <Users setAddUser={setAddUser} />}
+            <PrivateRoute>
+              <Users setAddUser={setAddUser} />
             </PrivateRoute>
           }
         />
@@ -45,6 +46,38 @@ const App = () => {
           }
         />
       </Routes>
+
+      {/* Add User Modal */}
+      {addUser && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '90%',
+              maxWidth: 600,
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '2rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <AddUser onClose={() => setAddUser(false)} />
+          </div>
+        </div>
+      )}
     </Router>
   );
 };

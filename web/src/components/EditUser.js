@@ -1,203 +1,316 @@
 // components/FormEditUser.js
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Typography,
-  TextField,
-  Button,
-  Container,
-  Box,
-  Alert,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  FormControlLabel,
-  Switch,
-} from '@mui/material';
-import axiosInstance from '../utils/axiosInstance';
+import React, { useState } from 'react';
+import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
+import { Close } from '@mui/icons-material';
+import axiosInstance from "../utils/axiosInstance";
 
-const FormEditUser = () => {
-  const { username } = useParams(); 
+const EditUser = ({ user, onClose, onUpdate }) => {
   const [userData, setUserData] = useState({
-    username: '',
-    fullName: '',
-    role: '',
+    username: user.username,
+    email: user.email || '',
+    full_name: user.full_name || '',
+    role: user.role,
+    enabled: user.enabled,
     password: '',
-    confPassword: '',
-    enabled: true,
+    confirmPassword: ''
   });
-  const [msg, setMsg] = useState('');
-  const navigate = useNavigate();
+  const [error, setError] = useState('');
 
-  // Fetch user data when the component mounts
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await axiosInstance.get(`/users/${username}`);
-        setUserData({
-          username: response.data.username,
-          fullName: response.data.full_name,
-          role: response.data.role,
-          password: '',
-          confPassword: '',
-          enabled: response.data.enabled,
-        });
-      } catch (error) {
-        setMsg('User not found or error fetching data.');
-      }
-    };
-    fetchUserData();
-  }, [username]);
+  const handleInputChange = (e) => {
+    const { name, value, checked } = e.target;
+    setUserData(prev => ({
+      ...prev,
+      [name]: name === 'enabled' ? checked : value
+    }));
+  };
 
-  // Handler for form submission
-  const editUser = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate that passwords match
-    if (userData.password !== userData.confPassword) {
-      setMsg('Passwords do not match!');
-      return;
-    }
-
-    // Validate that a role is selected
-    if (!userData.role) {
-      setMsg('Please select a role.');
+    if (userData.password && userData.password !== userData.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     try {
-      // Send PUT request to update the user
-      await axiosInstance.put(`/users/${username}`, {
-        username: userData.username,
-        full_name: userData.fullName,
+      const dataToUpdate = {
+        full_name: userData.full_name,
         role: userData.role,
-        password: userData.password, // Optionally, can handle password change separately
-        enabled: userData.enabled, // Include the enabled status
+        enabled: userData.enabled
+      };
+
+      // Only include email if it's not empty
+      if (userData.email) {
+        dataToUpdate.email = userData.email;
+      }
+
+      // Only include password if it's not empty
+      if (userData.password) {
+        dataToUpdate.password = userData.password;
+      }
+
+      const formData = new URLSearchParams();
+      Object.entries(dataToUpdate).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
       });
 
-      // Navigate to the users list page upon successful update
-      navigate('/users');
+      await axiosInstance.put(`/users/${user.username}`, formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+      onUpdate();
+      onClose();
     } catch (error) {
-      // Handle errors and display appropriate message
-      if (error.response) {
-        setMsg(error.response.data.msg);
-      } else {
-        setMsg('Something went wrong. Please try again.');
-      }
+      setError('Error updating user: ' + (error.response?.data || error.message));
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
-
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        backgroundColor: '#0D0630',
-        display: 'flex',
+    <Box sx={{ position: 'relative' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
         alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Container
-        maxWidth="sm"
-        sx={{
-          backgroundColor: '#fff',
-          padding: 4,
-          borderRadius: 2,
-          boxShadow: 3,
-        }}
-      >
-        <Typography variant="h4" align="center" gutterBottom>
+        mb: 3
+      }}>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
           Edit User
         </Typography>
-        {msg && <Alert severity="error">{msg}</Alert>}
-        <form onSubmit={editUser}>
+        <IconButton 
+          onClick={onClose}
+          sx={{ 
+            color: 'var(--text-secondary)',
+            '&:hover': { color: 'var(--text-primary)' }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </Box>
+
+      {error && (
+        <Box sx={{ mb: 3 }}>
+          <Typography 
+            color="error" 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#FEE2E2', 
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            {error}
+          </Typography>
+        </Box>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <TextField
+            required
+            fullWidth
             label="Username"
-            variant="outlined"
-            fullWidth
-            margin="normal"
-            value={userData.username}
-            onChange={handleChange}
             name="username"
-            required
-          />
-          <TextField
-            label="Full Name"
+            value={userData.username}
+            onChange={handleInputChange}
             variant="outlined"
-            fullWidth
-            margin="normal"
-            value={userData.fullName}
-            onChange={handleChange}
-            name="fullName"
-            required
+            disabled
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
           />
-          <FormControl fullWidth variant="outlined" margin="normal">
-            <InputLabel>Role*</InputLabel>
+
+          <TextField
+            fullWidth
+            label="Full Name"
+            name="full_name"
+            value={userData.full_name}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Email (Optional)"
+            name="email"
+            type="email"
+            value={userData.email}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <FormControl fullWidth>
+            <InputLabel id="role-label" sx={{ 
+              '&.Mui-focused': { 
+                color: 'var(--primary-color)' 
+              } 
+            }}>
+              Role
+            </InputLabel>
             <Select
+              labelId="role-label"
+              label="Role"
               name="role"
               value={userData.role}
-              onChange={handleChange}
+              onChange={handleInputChange}
               required
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': {
+                  '&:hover': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'var(--primary-color)',
+                },
+              }}
             >
-              <MenuItem value="">Choose option</MenuItem>
-              <MenuItem value="admin">admin</MenuItem>
-              <MenuItem value="moderator">moderator</MenuItem>
-              <MenuItem value="user">user</MenuItem>
+              <MenuItem value="user">User</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
             </Select>
           </FormControl>
+
           <TextField
-            label="Password"
-            type="password"
-            variant="outlined"
             fullWidth
-            margin="normal"
-            value={userData.password}
-            onChange={handleChange}
+            label="New Password (Optional)"
             name="password"
-          />
-          <TextField
-            label="Confirm Password"
             type="password"
+            value={userData.password}
+            onChange={handleInputChange}
             variant="outlined"
-            fullWidth
-            margin="normal"
-            value={userData.confPassword}
-            onChange={handleChange}
-            name="confPassword"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
           />
+
+          {userData.password && (
+            <TextField
+              fullWidth
+              label="Confirm New Password"
+              name="confirmPassword"
+              type="password"
+              value={userData.confirmPassword}
+              onChange={handleInputChange}
+              variant="outlined"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: 'var(--primary-color)',
+                },
+              }}
+            />
+          )}
+
           <FormControlLabel
             control={
               <Switch
                 checked={userData.enabled}
-                onChange={(e) => setUserData({ ...userData, enabled: e.target.checked })}
+                onChange={handleInputChange}
+                name="enabled"
                 color="primary"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: 'var(--primary-color)',
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: 'var(--primary-color)',
+                  },
+                }}
               />
             }
-            label="Enabled"
-            sx={{ mt: 2 }}
+            label={userData.enabled ? 'Enabled' : 'Disabled'}
+            sx={{ mb: 1 }}
           />
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            sx={{ mt: 3,    backgroundColor: "#8BBEB2",
-              borderRadius: "20px", }}
-          >
-            Save Changes
-          </Button>
-        </form>
-      </Container>
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              sx={{
+                color: 'var(--text-secondary)',
+                borderColor: 'var(--border-color)',
+                '&:hover': {
+                  borderColor: 'var(--text-primary)',
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                backgroundColor: 'var(--primary-color)',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' },
+                textTransform: 'none'
+              }}
+            >
+              Save
+            </Button>
+          </Box>
+        </Box>
+      </form>
     </Box>
   );
 };
 
-export default FormEditUser;
+export default EditUser;

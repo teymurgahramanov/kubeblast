@@ -1,80 +1,171 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
-import { TextField, Button, Typography, Container, Alert, MenuItem, Select, FormControl, InputLabel, Box } from "@mui/material";
 
-const AddForm = ({ currentUser = {}, onAddJob }) => {
-    // const [name, setName] = useState('');
-    // const [owner, setOwner] = useState(currentUser?.username || '');
-    const [description, setDescription] = useState('');
-    const [file, setFile] = useState(null);
-    const [msg, setMsg] = useState('');
-    const navigate = useNavigate();
+const AddJob = ({ onClose }) => {
+  const [jobData, setJobData] = useState({
+    description: '',
+    file: null
+  });
+  const [error, setError] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setJobData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-        if (!file) {
-            setMsg("Please select a file.");
-            return;
+  const handleFileChange = (e) => {
+    setJobData(prev => ({
+      ...prev,
+      file: e.target.files[0]
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('description', jobData.description);
+    formData.append('file', jobData.file);
+
+    try {
+      await axiosInstance.post('/jobs', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`
         }
+      });
+      onClose();
+    } catch (error) {
+      setError('Error creating job: ' + (error.response?.data || error.message));
+    }
+  };
 
-        const formData = new FormData();
-        // formData.append("name", name);
-        // formData.append("owner", owner);
-        formData.append("description", description);
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3
+      }}>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+          Add New Job
+        </Typography>
+        <IconButton 
+          onClick={onClose}
+          sx={{ 
+            color: 'var(--text-secondary)',
+            '&:hover': { color: 'var(--text-primary)' }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </Box>
 
-        formData.append("file", file);
-
-        try {
-            const response = await axiosInstance.post("/jobs", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            onAddJob(response.data);  // Pass the new job data back to parent
-            navigate("/jobs");
-        } catch (error) {
-            setMsg(error.response?.data?.msg || "An error occurred while saving.");
-        }
-    };
-
-    return (
-        <Box sx={{ minHeight: "100vh", backgroundColor: '#0D0630', display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Container maxWidth="sm" sx={{ backgroundColor: "#fff", padding: 4, borderRadius: 2, boxShadow: 3 }}>
-                <Typography variant="h4" align="center" gutterBottom>
-                    Add New Job
-                </Typography>
-                {msg && <Alert severity="error">{msg}</Alert>}
-                <form onSubmit={handleSubmit}>
-          
-
-                    <TextField
-                        label="Description"
-                        variant="outlined"
-                        multiline
-                        rows={3}
-                        fullWidth
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        sx={{ mb: 2 }}
-                    />
-
-
-
-                    <input
-                        type="file"
-                        onChange={(e) => setFile(e.target.files[0])}
-                        style={{ marginTop: 10 }}
-                    />
-                    {file && <Typography variant="body2" sx={{ mt: 1 }}>Selected File: {file.name}</Typography>}
-
-                    <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }} style={{   backgroundColor: "#8BBEB2",
-                    borderRadius: "20px",}}>
-                        Save
-                    </Button>
-                </form>
-            </Container>
+      {error && (
+        <Box sx={{ mb: 3 }}>
+          <Typography 
+            color="error" 
+            sx={{ 
+              p: 2, 
+              bgcolor: '#FEE2E2', 
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            {error}
+          </Typography>
         </Box>
-    );
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <TextField
+            fullWidth
+            label="Description (Optional)"
+            name="description"
+            value={jobData.description}
+            onChange={handleInputChange}
+            multiline
+            rows={4}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <Box sx={{ 
+            border: '2px dashed var(--border-color)',
+            borderRadius: 1,
+            p: 3,
+            textAlign: 'center',
+            cursor: 'pointer',
+            '&:hover': {
+              borderColor: 'var(--primary-color)',
+            }
+          }}>
+            <input
+              type="file"
+              required
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              id="job-file-input"
+              accept=".jmx"
+            />
+            <label htmlFor="job-file-input" style={{ cursor: 'pointer' }}>
+              <Typography color="var(--text-secondary)">
+                {jobData.file ? jobData.file.name : 'Click to upload JMX file'}
+              </Typography>
+            </label>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              sx={{
+                color: 'var(--text-secondary)',
+                borderColor: 'var(--border-color)',
+                '&:hover': {
+                  borderColor: 'var(--text-primary)',
+                  backgroundColor: 'transparent'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                backgroundColor: 'var(--primary-color)',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' },
+                textTransform: 'none'
+              }}
+            >
+              Create
+            </Button>
+          </Box>
+        </Box>
+      </form>
+    </Box>
+  );
 };
 
-export default AddForm;
+export default AddJob;

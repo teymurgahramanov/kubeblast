@@ -1,112 +1,197 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../utils/axiosInstance';
+import { Box, Typography, TextField, Button, Alert } from '@mui/material';
+import { Login as LoginIcon } from '@mui/icons-material';
+import axiosInstance from "../utils/axiosInstance";
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
+  });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
     try {
       const response = await axiosInstance.post('/token', {
-        username,
-        password,
+        username: credentials.username,
+        password: credentials.password
       }, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       });
+      
+      // Store the token
+      const token = response.data.access_token;
+      sessionStorage.setItem('access_token', token);
+      sessionStorage.setItem('username', credentials.username);
 
-      const { access_token } = response.data;
-      sessionStorage.setItem('access_token', access_token);
-      setError('');
-      setLoading(false);
+      // Decode the JWT token to get the role
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join('')
+        );
+        const decoded = JSON.parse(jsonPayload);
+        sessionStorage.setItem('user_role', decoded.role);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+
       navigate('/jobs');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to log in');
-      console.error('Login error:', err);
-      sessionStorage.removeItem('access_token');
-      setLoading(false);
+    } catch (error) {
+      setError('Invalid username or password');
     }
   };
 
   return (
-    <section className="d-flex align-items-center justify-content-center min-vh-100" style={{ backgroundColor: "#0D0630" }}>
-      <div className="w-100 d-flex justify-content-center">
-        <div className="col-lg-4 col-md-6 col-sm-8">
-          <div className="card border-0" style={{ background: "none" }}>
-            <div className="card-body text-center login-border">
-              <form onSubmit={handleSubmit}>
-                <h2 className="mb-4 text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '500' }}>
-                  Welcome Back!
-                </h2>
-                <h4 className="mb-5 text-light" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: '300' }}>
-                  Log in to continue
-                </h4>
-                <div className="form-group mb-4">
-                  <input
-                    type="text"
-                    className="form-control text-white"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    style={{
-                      color: '#fff',
-                      backgroundColor: "#8BBEB2",
-                      padding: "12px",
-                      borderRadius: "50px",
-                      border: "none",
-                    }}
-                    placeholder="Username"
-                  />
-                </div>
-                <div className="form-group mb-4">
-                  <input
-                    type="password"
-                    className="form-control text-white"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{
-                      color: '#fff',
-                      backgroundColor: "#8BBEB2",
-                      padding: "12px",
-                      borderRadius: "50px",
-                      border: "none",
-                    }}
-                    placeholder="Password"
-                  />
-                </div>
-                <div className="form-group mb-4">
-                  <button
-                    type="submit"
-                    className="btn w-50"
-                    disabled={loading}
-                    style={{
-                      backgroundColor: "#8BBEB2",
-                      borderRadius: "20px",
-                      color: "#FFF",
-                      border: "none",
-                      padding: "14px",
-                      fontWeight: "bold",
-                      fontFamily: "'Roboto', sans-serif",
-                    }}
-                  >
-                    {loading && <span className="spinner-border spinner-border-sm"></span>}
-                    <span>Login</span>
-                  </button>
-                </div>
-                {error && <div className="alert alert-danger text-center">{error}</div>}
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <Box sx={{ 
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'var(--background-light)'
+    }}>
+      <Box sx={{
+        width: '100%',
+        maxWidth: '400px',
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        p: 4,
+        mx: 2
+      }}>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'var(--text-primary)',
+              mb: 1
+            }}
+          >
+            JRunner
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'var(--text-secondary)',
+              fontWeight: 500
+            }}
+          >
+            Sign in to your account
+          </Typography>
+        </Box>
+
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 1,
+              backgroundColor: '#FEE2E2',
+              color: 'var(--danger-color)',
+              '& .MuiAlert-icon': {
+                color: 'var(--danger-color)'
+              }
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              required
+              fullWidth
+              label="Username"
+              name="username"
+              value={credentials.username}
+              onChange={handleInputChange}
+              variant="outlined"
+              autoComplete="username"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: 'var(--primary-color)',
+                },
+              }}
+            />
+
+            <TextField
+              required
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              value={credentials.password}
+              onChange={handleInputChange}
+              variant="outlined"
+              autoComplete="current-password"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary-color)',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: 'var(--primary-color)',
+                },
+              }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              startIcon={<LoginIcon />}
+              sx={{
+                backgroundColor: 'var(--primary-color)',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' },
+                textTransform: 'none',
+                py: 1.5,
+                mt: 2,
+                borderRadius: '8px',
+                fontWeight: 500
+              }}
+            >
+              Sign In
+            </Button>
+          </Box>
+        </form>
+      </Box>
+    </Box>
   );
 };
 

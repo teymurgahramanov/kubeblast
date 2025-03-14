@@ -47,20 +47,18 @@ def read_file(file_name):
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
-def download_file(current_user, job_id, type, download):
+def download_file(current_user, job_id, type):
     jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
             file_name = f"{job_id}/plan.jmx"
             media_type = "application/xml"
         case "report":
-            file_name = f"{job_id}.pdf"
-            media_type = "application/pdf"
+            file_name = f"{job_id}/report/index.html"
+            media_type = "text/html"
     try:
         response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
-        content_disposition = f'{"attachment" if download else "inline"}; filename={file_name}'
-        logging.info(f"Downloaded file: {file_name}")
-        return StreamingResponse(response["Body"], media_type=media_type, headers={"Content-Disposition": content_disposition})
+        return StreamingResponse(response["Body"], media_type=media_type, headers={"Content-Disposition": "inline"})
     except Exception as e:
-        logging.error(f"Failed to download file: {str(e)}")
+        logging.error(f"Failed to find file: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

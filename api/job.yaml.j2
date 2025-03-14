@@ -21,8 +21,8 @@ spec:
           - |
             jmeter -n -t /tmp/plan.jmx -l result.jtl -e -o report
             mc alias set minio {{ s3_url }} {{ s3_access_key }} {{ s3_secret_key }}
-            mc cp result.jtl minio/{{ s3_bucket }}/{{ job_id }}/result.jtl
-            mc cp --recursive report minio/{{ s3_bucket }}/{{ job_id }}/report        
+            mc cp result.jtl minio/{{ s3_bucket }}/{{ job_id }}
+            mc cp --recursive report minio/{{ s3_bucket }}/{{ job_id }}        
         volumeMounts:
         - name: jmeter-plan
           mountPath: /tmp/plan.jmx

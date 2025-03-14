@@ -11,7 +11,6 @@ router = APIRouter(prefix="/api")
 async def get_file(
     current_user: Annotated[models.User, Depends(auth.check_role([]))], 
     job_id: str, 
-    type: Annotated[Literal["plan", "report"], Query(...)],
-    download: Annotated[bool, Query(...)]
+    type: Annotated[Literal["plan", "report", "artifacts"], Query(...)]
 ):
-    return files.download_file(current_user, job_id, type, download)
+    return files.download_file(current_user, job_id, type)
