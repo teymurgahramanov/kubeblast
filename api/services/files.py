@@ -1,8 +1,8 @@
 import io
 import boto3
 import logging
-from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import HTTPException, Response 
+from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
 from api.services import jobs
 from api.config import config
 
@@ -47,18 +47,32 @@ def read_file(file_name):
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
+def generate_presigned_url(file_name: str, media_type):
+    """Generate a presigned URL and replace the hostname with a custom domain."""
+    try:
+        presigned_url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": config.S3_BUCKET, "Key": file_name, "ResponseContentType": media_type},
+            ExpiresIn=3600
+        )
+
+        if config.S3_ALT_URL:
+            presigned_url = presigned_url.replace(config.S3_URL, config.S3_ALT_URL)
+
+        print(presigned_url)
+        return presigned_url
+    except Exception as e:
+        logging.error(f"Failed to generate presigned URL for {file_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate URL")
+
 def download_file(current_user, job_id, type):
     jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
             file_name = f"{job_id}/plan.jmx"
-            media_type = "application/xml"
+            media_type = "text/xml"
+            presigned_url = generate_presigned_url(file_name, media_type)
+            return RedirectResponse(url=presigned_url)
         case "report":
             file_name = f"{job_id}/report/index.html"
             media_type = "text/html"
-    try:
-        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
-        return StreamingResponse(response["Body"], media_type=media_type, headers={"Content-Disposition": "inline"})
-    except Exception as e:
-        logging.error(f"Failed to find file: {str(e)}")
-        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
