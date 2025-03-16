@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Jobs from './components/Jobs';
 import Users from './components/Users';
@@ -7,7 +7,13 @@ import PrivateRoute from './components/PrivateRoute';
 import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
+import Profile from './components/Profile';
 import './App.css';
+
+const AdminRoute = ({ children }) => {
+  const isAdmin = sessionStorage.getItem('user_role') === 'admin';
+  return isAdmin ? children : <Navigate to="/jobs" />;
+};
 
 const App = () => {
   const [addUser, setAddUser] = useState(false);
@@ -16,7 +22,8 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Navigate to="/jobs" />} />
         
         {/* Jobs route with conditional rendering for adding and listing */}
         <Route
@@ -32,9 +39,9 @@ const App = () => {
         <Route
           path="/users"
           element={
-            <PrivateRoute>
+            <AdminRoute>
               <Users setAddUser={setAddUser} />
-            </PrivateRoute>
+            </AdminRoute>
           }
         />
 
@@ -43,6 +50,16 @@ const App = () => {
           path="/users/:username"
           element={
               <FormEditUser />
+          }
+        />
+
+        {/* Profile route */}
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
           }
         />
       </Routes>

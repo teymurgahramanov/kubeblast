@@ -42,12 +42,12 @@ async def approve_job(
     ):
     return jobs.approve_job(current_user, job_id, approved)
 
-@router.put("/jobs/reschedule/{job_id}", response_model=models.Job)
-async def reschedule_job(
+@router.put("/jobs/retry/{job_id}", response_model=models.Job)
+async def retry_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))],
     job_id: str
     ):
-    return jobs.reschedule_job(current_user, job_id)
+    return jobs.retry_job(current_user, job_id)
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):

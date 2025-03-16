@@ -1,60 +1,12 @@
-import React from "react";
-import { styled, alpha } from "@mui/material/styles";
-import Button from "@mui/material/Button";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { useNavigate } from "react-router-dom";
-import axiosInstance from "../utils/axiosInstance";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { AccountCircle, Logout, People, Work, Settings } from '@mui/icons-material';
 
-const StyledMenu = styled((props) => (
-  <Menu
-    elevation={0}
-    anchorOrigin={{
-      vertical: "bottom",
-      horizontal: "right",
-    }}
-    transformOrigin={{
-      vertical: "top",
-      horizontal: "right",
-    }}
-    {...props}
-  />
-))(({ theme }) => ({
-  "& .MuiPaper-root": {
-    borderRadius: 6,
-    marginTop: theme.spacing(1),
-    minWidth: 180,
-    color: theme.palette.text.primary,
-    boxShadow:
-      "rgb(255, 255, 255) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px",
-    "& .MuiMenu-list": {
-      padding: "4px 0",
-    },
-    "& .MuiMenuItem-root": {
-      "& .MuiSvgIcon-root": {
-        fontSize: 18,
-        color: theme.palette.text.secondary,
-        marginRight: theme.spacing(1.5),
-      },
-      "&:active": {
-        backgroundColor: alpha(
-          theme.palette.primary.main,
-          theme.palette.action.selectedOpacity
-        ),
-      },
-    },
-  },
-}));
-
-const CustomizedMenus = () => {
-  const [anchorEl, setAnchorEl] = React.useState(null);
-  const open = Boolean(anchorEl);
+const Menuselect = () => {
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
-
-  // Get username from sessionStorage
-  const username = sessionStorage.getItem('username') || 'User';
-  const role = sessionStorage.getItem('user_role') || '';
+  const userRole = sessionStorage.getItem('user_role');
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -64,62 +16,72 @@ const CustomizedMenus = () => {
     setAnchorEl(null);
   };
 
-  const handleUsers = () => {
-    handleClose();
-    navigate("/users");
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate('/login');
   };
 
-  const handleLogout = () => {
+  const handleNavigation = (path) => {
+    navigate(path);
     handleClose();
-    sessionStorage.removeItem("access_token");
-    sessionStorage.removeItem("user_role");
-    sessionStorage.removeItem("username");
-    navigate("/");
   };
 
   return (
     <div>
       <Button
         onClick={handleClick}
-        endIcon={<KeyboardArrowDownIcon />}
+        startIcon={<AccountCircle />}
         sx={{
           color: 'var(--text-primary)',
           textTransform: 'none',
-          fontWeight: 500,
-          fontSize: '0.875rem',
-          backgroundColor: 'white',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          px: 2,
-          py: 1,
-          '&:hover': {
-            backgroundColor: 'var(--background-light)',
-            borderColor: 'var(--text-primary)'
+          '&:hover': { backgroundColor: 'var(--background-light)' }
+        }}
+      >
+        {sessionStorage.getItem('username')}
+      </Button>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            '& .MuiMenuItem-root': {
+              py: 1,
+              px: 2
+            }
           }
         }}
       >
-        @{username}
-      </Button>
-      <StyledMenu
-        id="customized-menu"
-        MenuListProps={{
-          "aria-labelledby": "customized-button",
-        }}
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-      >
-        {role === "admin" && (
-          <MenuItem onClick={handleUsers} disableRipple>
-            Users
+        <MenuItem onClick={() => handleNavigation('/profile')}>
+          <ListItemIcon>
+            <Settings fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleNavigation('/jobs')}>
+          <ListItemIcon>
+            <Work fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Jobs</ListItemText>
+        </MenuItem>
+        {userRole === 'admin' && (
+          <MenuItem onClick={() => handleNavigation('/users')}>
+            <ListItemIcon>
+              <People fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Users</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={handleLogout} disableRipple>
-          Logout
+        <MenuItem onClick={handleLogout} sx={{ color: 'var(--danger-color)' }}>
+          <ListItemIcon>
+            <Logout fontSize="small" sx={{ color: 'var(--danger-color)' }} />
+          </ListItemIcon>
+          <ListItemText>Logout</ListItemText>
         </MenuItem>
-      </StyledMenu>
+      </Menu>
     </div>
   );
 };
 
-export default CustomizedMenus;
+export default Menuselect;

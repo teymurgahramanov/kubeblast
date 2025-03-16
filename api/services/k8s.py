@@ -24,8 +24,7 @@ def gen_labels(job_id):
 def gen_label_selector(job_id):
     return f"jrunner/job-id={job_id}"
 
-def stream_pod_logs(job_id):
-
+def stream_pod_logs(job_id, job_status):
     try:
         label_selector = gen_label_selector(job_id)
 
@@ -43,15 +42,21 @@ def stream_pod_logs(job_id):
         pod_name = pod_list.items[0].metadata.name
         logging.info(f"Streaming logs from pod: {pod_name}")
 
-        logs =client.CoreV1Api().read_namespaced_pod_log(
+        # Don't follow logs for completed or failed jobs
+        should_follow = job_status == 'running'
+
+        logs = client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
             namespace=current_namespace,
-            follow=True,
-            _preload_content=False,
+            follow=should_follow,
+            _preload_content=False,  # Don't preload content for better streaming
+            tail_lines=1000 if not should_follow else None  # Limit lines for completed jobs
         )
 
-        for line in logs.stream():
-            yield f"data: {line.decode('utf-8')}\n\n"  # SSE format
+        for line in logs:
+            if isinstance(line, bytes):
+                line = line.decode('utf-8')
+            yield f"data: {line}\n\n"  # SSE format
 
     except client.exceptions.ApiException as e:
         logging.error(f"Kubernetes API error: {e}")

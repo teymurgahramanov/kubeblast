@@ -41,26 +41,22 @@ router = APIRouter(prefix="/api")
     ```
 
     ### 🔹 JavaScript Client Example (Recommended for Browsers):
-    ```html
-    <script>
-        const jobId = "67a74316b2960a28417e248d";  // Example Job ID
-        const logOutput = document.getElementById("log-output");
+    ```javascript
+    const jobId = "67a74316b2960a28417e248d";  // Example Job ID
+    const eventSource = new EventSource(`/logs/${jobId}`);
 
-        const eventSource = new EventSource(`http://localhost:8000/logs/${jobId}`);
+    eventSource.onmessage = (event) => {
+        console.log(event.data);  // Process each log line
+    };
 
-        eventSource.onmessage = function(event) {
-            logOutput.innerText += event.data + "\\n";
-        };
-
-        eventSource.onerror = function() {
-            console.error("Log streaming connection lost.");
-            eventSource.close();
-        };
-    </script>
+    eventSource.onerror = () => {
+        console.error("Log streaming connection lost.");
+        eventSource.close();
+    };
     ```
     """,
 )
 async def get_logs(current_user: Annotated[models.User, Depends(auth.check_role([]))], job_id: str):
     """Stream Kubernetes pod logs using SSE."""
-    jobs.get_job(current_user, job_id)
-    return StreamingResponse(k8s.stream_pod_logs(job_id), media_type="text/event-stream")
+    job = jobs.get_job(current_user, job_id)
+    return StreamingResponse(k8s.stream_pod_logs(job_id, job.status), media_type="text/event-stream")

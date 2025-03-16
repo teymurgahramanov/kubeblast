@@ -20,7 +20,6 @@ class Config:
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
     S3_URL: str = os.getenv("S3_URL")
-    S3_ALT_URL: str = os.getenv("S3_ALT_URL")
     S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
     S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY")
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")

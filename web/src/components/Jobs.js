@@ -17,24 +17,36 @@ const Jobs = () => {
   const [openAddJob, setOpenAddJob] = useState(false);
   const userRole = sessionStorage.getItem('user_role');
 
+  const fetchJobs = async () => {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      setError('Unauthorized: Please log in');
+      return;
+    }
+    try {
+      const response = await axiosInstance.get("/jobs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobs(response.data);
+      setError(''); // Clear any existing errors on successful fetch
+    } catch (error) {
+      setError('Error fetching jobs: ' + (error.response?.data || error.message));
+    }
+  };
+
+  // Initial fetch
   useEffect(() => {
-    const fetchJobs = async () => {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        setError('Unauthorized: Please log in');
-        return;
-      }
-      try {
-        const response = await axiosInstance.get("/jobs", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log('Jobs response:', response.data); // Debug log
-        setJobs(response.data);
-      } catch (error) {
-        setError('Error fetching jobs: ' + (error.response?.data || error.message));
-      }
-    };
     fetchJobs();
+  }, []);
+
+  // Set up polling for auto-updates
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchJobs();
+    }, 5000); // Poll every 5 seconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleMenuOpen = (event, job_id) => {
@@ -45,6 +57,19 @@ const Jobs = () => {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedJobId(null);
+  };
+
+  const handleAddJob = () => {
+    setOpenAddJob(true);
+  };
+
+  const handleAddJobSuccess = () => {
+    fetchJobs();
+    setOpenAddJob(false);
+  };
+
+  const handleModalClose = () => {
+    setOpenAddJob(false);
   };
 
   const approveJob = async (job_id) => {
@@ -78,15 +103,60 @@ const Jobs = () => {
     }
   
     try {
-      const response = await axiosInstance.get(`/logs/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
+        setError('Unauthorized: Please log in');
+        return;
+      }
+
+      // Use fetch for streaming with authorization
+      const response = await fetch(`${axiosInstance.defaults.baseURL}/logs/${job_id}`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        }
       });
-      // Remove 'data:' prefix from each line
-      const cleanedLogs = response.data.replace(/^data:/gm, '').trim();
-      setLogs(cleanedLogs);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let logContent = '';
+
+      // Start reading the stream
+      const readStream = async () => {
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            
+            const text = decoder.decode(value);
+            const lines = text.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                logContent += line.slice(6) + '\n';
+              }
+            }
+            setLogs(logContent);
+          }
+        } catch (error) {
+          console.error('Stream reading error:', error);
+          if (!logContent) {
+            setError('Error reading logs. Please try again.');
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      };
+
+      readStream();
       handleMenuClose();
     } catch (error) {
-      setError('Error fetching logs: ' + (error.response?.data || error.message));
+      setError('Error fetching logs: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -97,18 +167,27 @@ const Jobs = () => {
         return;
       }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+        headers: { 
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          'Accept': 'application/xml'  // Request XML content type
+        },
         params: { type: "plan" },
         responseType: 'blob',
       });
-      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
+      
+      // Create blob with XML content type
+      const blob = new Blob([response.data], { type: 'application/xml' });
+      const fileURL = window.URL.createObjectURL(blob);
       window.open(fileURL, "_blank");
     } catch (error) {
-      setError("Error opening plan file: " + (error.response?.data || error.message));
+      const errorDetail = error.response?.data instanceof Blob ? 
+        await error.response.data.text() : 
+        error.response?.data?.detail || error.message;
+      setError("Error opening plan file: " + errorDetail);
     }
   };
 
-  const openReport = async (job_id) => {
+  const downloadReport = async (job_id) => {
     try {
       if (!job_id) {
         setError("No job available.");
@@ -119,31 +198,18 @@ const Jobs = () => {
         params: { type: "report" },
         responseType: 'blob',
       });
-      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
-      window.open(fileURL, "_blank");
-    } catch (error) {
-      setError("Error opening report: " + (error.response?.data || error.message));
-    }
-  };
-
-  const downloadArtifacts = async (job_id) => {
-    try {
-      if (!job_id) {
-        setError("No job available.");
-        return;
-      }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-        params: { type: "artifacts" },
-        responseType: 'blob',
-      });
-      const fileURL = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = `${job_id}_artifacts.zip`;
+      link.download = `${job_id}_report.zip`;
       link.click();
+      handleMenuClose();
     } catch (error) {
-      setError("Error downloading artifacts: " + (error.response?.data || error.message));
+      const errorDetail = error.response?.data instanceof Blob ? 
+        await error.response.data.text() : 
+        error.response?.data?.detail || error.message;
+      setError("Error downloading report: " + errorDetail);
     }
   };
 
@@ -153,8 +219,9 @@ const Jobs = () => {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
       });
       setJobs(jobs.filter(job => job.id !== job_id));
+      handleMenuClose();
     } catch (error) {
-      setError('Error deleting job: ' + (error.response?.data || error.message));
+      setError('Error deleting job: ' + (error.response?.data?.detail || error.message));
     }
   };
   const rescheduleJob = async (job_id) => {
@@ -165,25 +232,16 @@ const Jobs = () => {
         return;
       }
   
-
-      const response = await axiosInstance.put(`/jobs/reschedule/${job_id}`, {}, {
+      const response = await axiosInstance.put(`/jobs/retry/${job_id}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
   
       setJobs(jobs.map(job => job.id === job_id ? response.data : job));
-
+      handleMenuClose();
       setError('');
     } catch (error) {
-      setError('Error rescheduling job: ' + (error.response?.data || error.message));
+      setError('Error retrying job: ' + (error.response?.data || error.message));
     }
-  };
-
-  const handleAddJob = () => {
-    setOpenAddJob(true);
-  };
-
-  const handleClose = () => {
-    setOpenAddJob(false);
   };
 
   const columns = useMemo(() => {
@@ -311,20 +369,22 @@ const Jobs = () => {
           <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
             Jobs
           </Typography>
-          <Button
-            variant="contained"
-            onClick={handleAddJob}
-            startIcon={<Add />}
-            sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              borderRadius: '8px',
-              textTransform: 'none',
-              px: 3
-            }}
-          >
-            Add
-          </Button>
+          {(userRole === 'admin' || userRole === 'user') && (
+            <Button
+              variant="contained"
+              onClick={handleAddJob}
+              startIcon={<Add />}
+              sx={{
+                backgroundColor: 'var(--primary-color)',
+                '&:hover': { backgroundColor: 'var(--primary-dark)' },
+                borderRadius: '8px',
+                textTransform: 'none',
+                px: 3
+              }}
+            >
+              Add
+            </Button>
+          )}
         </Box>
 
         {error && (
@@ -403,30 +463,31 @@ const Jobs = () => {
               </MenuItem>
             </>
           )}
-          <MenuItem onClick={() => viewLogs(selectedJobId, jobs.find(j => j.id === selectedJobId)?.status)}>
-            <Visibility fontSize="small" />
-            View Logs
-          </MenuItem>
+          {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
+            <MenuItem onClick={() => viewLogs(selectedJobId, jobs.find(j => j.id === selectedJobId)?.status)}>
+              <Visibility fontSize="small" />
+              View Logs
+            </MenuItem>
+          )}
           <MenuItem onClick={() => openPlanFile(selectedJobId)}>
             <Description fontSize="small" />
             Open Plan File
           </MenuItem>
           {jobs.find(j => j.id === selectedJobId)?.status === 'completed' && (
-            <MenuItem onClick={() => openReport(selectedJobId)}>
+            <MenuItem onClick={() => downloadReport(selectedJobId)}>
               <Description fontSize="small" />
-              Open Report
+              Download Report
             </MenuItem>
           )}
-          {jobs.find(j => j.id === selectedJobId)?.status === 'completed' && (
-            <MenuItem onClick={() => downloadArtifacts(selectedJobId)}>
-              <Description fontSize="small" />
-              Download Artifacts
+          {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
+            <MenuItem 
+              onClick={() => rescheduleJob(selectedJobId)}
+              sx={{ color: 'var(--primary-color)' }}
+            >
+              <Schedule fontSize="small" />
+              Retry
             </MenuItem>
           )}
-          <MenuItem onClick={() => rescheduleJob(selectedJobId)}>
-            <Schedule fontSize="small" />
-            Reschedule
-          </MenuItem>
           <MenuItem 
             onClick={() => deleteJob(selectedJobId)}
             sx={{ color: 'var(--danger-color)' }}
@@ -484,7 +545,7 @@ const Jobs = () => {
 
         <Modal
           open={openAddJob}
-          onClose={handleClose}
+          onClose={handleModalClose}
           aria-labelledby="add-job-modal"
         >
           <Box sx={{
@@ -499,7 +560,7 @@ const Jobs = () => {
             p: 4,
             borderRadius: 2
           }}>
-            <AddJob onClose={handleClose} />
+            <AddJob onClose={handleAddJobSuccess} />
           </Box>
         </Modal>
       </Box>

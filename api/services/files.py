@@ -1,6 +1,7 @@
 import io
 import boto3
 import logging
+import zipfile
 from fastapi import HTTPException, Response 
 from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
 from api.services import jobs
@@ -47,32 +48,54 @@ def read_file(file_name):
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
-def generate_presigned_url(file_name: str, media_type):
-    """Generate a presigned URL and replace the hostname with a custom domain."""
-    try:
-        presigned_url = s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": config.S3_BUCKET, "Key": file_name, "ResponseContentType": media_type},
-            ExpiresIn=3600
-        )
-
-        if config.S3_ALT_URL:
-            presigned_url = presigned_url.replace(config.S3_URL, config.S3_ALT_URL)
-
-        print(presigned_url)
-        return presigned_url
-    except Exception as e:
-        logging.error(f"Failed to generate presigned URL for {file_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to generate URL")
-
 def download_file(current_user, job_id, type):
     jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
             file_name = f"{job_id}/plan.jmx"
-            media_type = "text/xml"
-            presigned_url = generate_presigned_url(file_name, media_type)
-            return RedirectResponse(url=presigned_url)
+            try:
+                response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
+                content = response['Body'].read().decode()
+                return Response(
+                    content=content,
+                    media_type="application/xml",
+                    headers={
+                        "Content-Disposition": "inline;"
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Failed to read plan from S3: {str(e)}")
+                raise HTTPException(status_code=404, detail="Plan file not found.")
         case "report":
-            file_name = f"{job_id}/report/index.html"
-            media_type = "text/html"
+            try:
+                # List all objects with the report prefix
+                response = s3_client.list_objects_v2(Bucket=config.S3_BUCKET, Prefix=f"{job_id}/report")
+                
+                if 'Contents' not in response:
+                    raise HTTPException(status_code=404, detail="No report files found")
+                    
+                # Create a zip file in memory
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    for obj in response['Contents']:
+                        file_key = obj['Key']
+                        # Get the relative path within the zip
+                        relative_path = file_key.replace(f"{job_id}/report/", "", 1)
+                        # Download the file from S3
+                        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_key)
+                        file_content = response['Body'].read()
+                        # Add file to zip
+                        zip_file.writestr(relative_path, file_content)
+                
+                return Response(
+                    content=zip_buffer.getvalue(),
+                    media_type="application/zip",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="{job_id}_report.zip"'
+                    }
+                )
+            except HTTPException as e:
+                raise e
+            except Exception as e:
+                logging.error(f"Failed to create report zip: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to create report zip: {str(e)}")

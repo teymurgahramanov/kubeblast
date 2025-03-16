@@ -111,7 +111,7 @@ def delete_job(current_user, job_id):
     
     return {f"Job {job_id} deleted"}
 
-def reschedule_job(current_user, job_id):
+def retry_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
     if job["status"] in ["pending","declined"]:
