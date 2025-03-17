@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, List
+from passlib.context import CryptContext
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from api.core import db, models, password
+from api.core import db, models
 from api.config import config
 
 SECRET_KEY = config.SECRET_KEY
@@ -13,6 +14,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password: str, hashed_password: str):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
 
 def get_user(username: str):
     user = db.mongo.users.find_one({"username": username})
@@ -25,7 +33,7 @@ def authenticate_user(username: str, plain_password: str):
     user = get_user(username)
     if not user:
         return False
-    if not password.verify_password(plain_password, user.hashed_password):
+    if not verify_password(plain_password, user.hashed_password):
         return False
     return user
 

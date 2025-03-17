@@ -15,7 +15,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def initialize():
   try:
-    from api.core import models, password, db
+    from api.core import models, db
     from api.services import auth
 
     # Create admin user
@@ -23,7 +23,7 @@ async def initialize():
     if not admin:
         admin = models.UserInDB(
             username="admin", 
-            hashed_password=password.hash_password("admin"),
+            hashed_password=auth.password.hash_password("admin"),
             role="admin"
         )
         db.mongo.users.insert_one(admin.dict())

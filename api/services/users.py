@@ -1,4 +1,5 @@
-from api.core import models, password, db
+from api.core import models, db
+from api.services import auth
 from fastapi import HTTPException
 
 def get_users():
@@ -18,7 +19,7 @@ def create_user(user_data):
         raise HTTPException(status_code=400, detail="User already exists")
 
     user_data_dict = user_data.dict()
-    user_data_dict["hashed_password"] = password.hash_password(user_data.password)
+    user_data_dict["hashed_password"] = auth.password.hash_password(user_data.password)
     user
 
     user_to_db = models.UserInDB(**user_data_dict)
@@ -33,7 +34,7 @@ def update_user(username: str, user_data: dict):
 
     user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
     if "password" in user_data:
-        user_data["hashed_password"] = password.hash_password(user_data.pop("password"))
+        user_data["hashed_password"] = auth.password.hash_password(user_data.pop("password"))
 
     db.mongo.users.update_one({"username": username}, {"$set": user_data})
     return get_user(username)
