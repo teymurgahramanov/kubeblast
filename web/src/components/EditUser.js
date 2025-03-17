@@ -206,6 +206,7 @@ const EditUser = ({ user, onClose, onUpdate }) => {
               }}
             >
               <MenuItem value="user">User</MenuItem>
+              <MenuItem value="moderator">Moderator</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
             </Select>
           </FormControl>

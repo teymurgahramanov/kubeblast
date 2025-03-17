@@ -23,7 +23,7 @@ async def initialize():
     if not admin:
         admin = models.UserInDB(
             username="admin", 
-            hashed_password=auth.password.hash_password("admin"),
+            hashed_password=auth.hash_password("admin"),
             role="admin"
         )
         db.mongo.users.insert_one(admin.dict())

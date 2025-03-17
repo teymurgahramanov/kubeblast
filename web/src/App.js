@@ -19,11 +19,22 @@ const App = () => {
   const [addUser, setAddUser] = useState(false);
   const [addJob, setAddJob] = useState(false);
 
+  const isAuthenticated = () => {
+    return !!sessionStorage.getItem('access_token');
+  };
+
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/jobs" />} />
+        <Route 
+          path="/" 
+          element={
+            isAuthenticated() ? 
+            <Navigate to="/jobs" /> : 
+            <Navigate to="/login" />
+          } 
+        />
         
         {/* Jobs route with conditional rendering for adding and listing */}
         <Route

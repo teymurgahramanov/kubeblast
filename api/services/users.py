@@ -6,7 +6,9 @@ def get_users():
     users = db.mongo.users.find()
     return [models.User(**user) for user in users]
 
-def get_user(username: str):
+def get_user(username: str, current_user=None):
+    if current_user and current_user.role != "admin":
+        username = current_user.username
     user = db.mongo.users.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -19,8 +21,7 @@ def create_user(user_data):
         raise HTTPException(status_code=400, detail="User already exists")
 
     user_data_dict = user_data.dict()
-    user_data_dict["hashed_password"] = auth.password.hash_password(user_data.password)
-    user
+    user_data_dict["hashed_password"] = auth.hash_password(user_data.password)
 
     user_to_db = models.UserInDB(**user_data_dict)
     
@@ -34,7 +35,7 @@ def update_user(username: str, user_data: dict):
 
     user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
     if "password" in user_data:
-        user_data["hashed_password"] = auth.password.hash_password(user_data.pop("password"))
+        user_data["hashed_password"] = auth.hash_password(user_data.pop("password"))
 
     db.mongo.users.update_one({"username": username}, {"$set": user_data})
     return get_user(username)

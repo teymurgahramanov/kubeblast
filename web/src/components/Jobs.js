@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Schedule, Add } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Schedule, Add, Refresh } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -224,6 +224,7 @@ const Jobs = () => {
       setError('Error deleting job: ' + (error.response?.data?.detail || error.message));
     }
   };
+
   const rescheduleJob = async (job_id) => {
     try {
       const token = sessionStorage.getItem('access_token');
@@ -445,56 +446,73 @@ const Jobs = () => {
             }
           }}
         >
-          {(userRole === 'admin' || userRole === 'moderator') && jobs.find(j => j.id === selectedJobId)?.status === 'pending' && (
+          {/* For moderators, only show approve/decline for pending jobs and plan file access */}
+          {userRole === 'moderator' ? (
             <>
-              <MenuItem 
-                onClick={() => approveJob(selectedJobId)}
-                sx={{ color: 'var(--success-color)' }}
-              >
-                <CheckCircle fontSize="small" />
-                Approve
+              {jobs.find(j => j.id === selectedJobId)?.status === 'pending' && (
+                <>
+                  <MenuItem 
+                    onClick={() => approveJob(selectedJobId)}
+                    sx={{ color: 'var(--success-color)' }}
+                  >
+                    <CheckCircle fontSize="small" />
+                    Approve
+                  </MenuItem>
+                  <MenuItem 
+                    onClick={() => declineJob(selectedJobId)}
+                    sx={{ color: 'var(--danger-color)' }}
+                  >
+                    <Cancel fontSize="small" />
+                    Decline
+                  </MenuItem>
+                </>
+              )}
+              <MenuItem onClick={() => openPlanFile(selectedJobId)}>
+                <Description fontSize="small" />
+                Open Plan File
               </MenuItem>
-              <MenuItem 
-                onClick={() => declineJob(selectedJobId)}
-                sx={{ color: 'var(--danger-color)' }}
-              >
-                <Cancel fontSize="small" />
-                Decline
+            </>
+          ) : (
+            // Existing menu items for other roles
+            <>
+              {(userRole === 'admin') && jobs.find(j => j.id === selectedJobId)?.status === 'pending' && (
+                <>
+                  <MenuItem onClick={() => approveJob(selectedJobId)} sx={{ color: 'var(--success-color)' }}>
+                    <CheckCircle fontSize="small" />
+                    Approve
+                  </MenuItem>
+                  <MenuItem onClick={() => declineJob(selectedJobId)} sx={{ color: 'var(--danger-color)' }}>
+                    <Cancel fontSize="small" />
+                    Decline
+                  </MenuItem>
+                </>
+              )}
+              {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
+                <MenuItem onClick={() => viewLogs(selectedJobId, jobs.find(j => j.id === selectedJobId)?.status)}>
+                  <Visibility fontSize="small" />
+                  View Logs
+                </MenuItem>
+              )}
+              <MenuItem onClick={() => openPlanFile(selectedJobId)}>
+                <Description fontSize="small" />
+                Open Plan File
+              </MenuItem>
+              {jobs.find(j => j.id === selectedJobId)?.status === 'completed' && (
+                <MenuItem onClick={() => downloadReport(selectedJobId)}>
+                  <Description fontSize="small" />
+                  Download Report
+                </MenuItem>
+              )}
+              <MenuItem onClick={() => rescheduleJob(selectedJobId)} sx={{ color: 'var(--primary-color)' }}>
+                <Refresh fontSize="small" />
+                Retry
+              </MenuItem>
+              <MenuItem onClick={() => deleteJob(selectedJobId)} sx={{ color: 'var(--danger-color)' }}>
+                <Delete fontSize="small" />
+                Delete Job
               </MenuItem>
             </>
           )}
-          {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
-            <MenuItem onClick={() => viewLogs(selectedJobId, jobs.find(j => j.id === selectedJobId)?.status)}>
-              <Visibility fontSize="small" />
-              View Logs
-            </MenuItem>
-          )}
-          <MenuItem onClick={() => openPlanFile(selectedJobId)}>
-            <Description fontSize="small" />
-            Open Plan File
-          </MenuItem>
-          {jobs.find(j => j.id === selectedJobId)?.status === 'completed' && (
-            <MenuItem onClick={() => downloadReport(selectedJobId)}>
-              <Description fontSize="small" />
-              Download Report
-            </MenuItem>
-          )}
-          {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
-            <MenuItem 
-              onClick={() => rescheduleJob(selectedJobId)}
-              sx={{ color: 'var(--primary-color)' }}
-            >
-              <Schedule fontSize="small" />
-              Retry
-            </MenuItem>
-          )}
-          <MenuItem 
-            onClick={() => deleteJob(selectedJobId)}
-            sx={{ color: 'var(--danger-color)' }}
-          >
-            <Delete fontSize="small" />
-            Delete Job
-          </MenuItem>
         </Menu>
 
         <Modal

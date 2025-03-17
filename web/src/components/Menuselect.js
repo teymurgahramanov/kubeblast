@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
-import { AccountCircle, Logout, People, Work, Settings } from '@mui/icons-material';
+import { AccountCircle, Logout, People, Settings } from '@mui/icons-material';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -58,12 +58,6 @@ const Menuselect = () => {
             <Settings fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleNavigation('/jobs')}>
-          <ListItemIcon>
-            <Work fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Jobs</ListItemText>
         </MenuItem>
         {userRole === 'admin' && (
           <MenuItem onClick={() => handleNavigation('/users')}>

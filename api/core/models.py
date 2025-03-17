@@ -11,6 +11,7 @@ class User(BaseModel):
     username: str
     full_name: Optional[str] = None
     role: Literal["user", "moderator", "admin"]
+    email: Optional[str] = None
     enabled: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -25,6 +26,7 @@ class UserCreate(User):
         password: Annotated[str, Form(...)],
         role: Annotated[Literal["user", "moderator", "admin"], Form(...)],
         full_name: Annotated[Optional[str], Form()] = None,
+        email: Annotated[Optional[str], Form()] = None,
         enabled: Annotated[bool, Form()] = True,
     ) -> "UserCreate":
         return cls(
@@ -32,6 +34,7 @@ class UserCreate(User):
             full_name=full_name,
             password=password,
             role=role,
+            email=email,
             enabled=enabled,
             created_at=datetime.now(),
         )
@@ -47,23 +50,23 @@ class UserUpdate(User):
         cls,
         full_name: Annotated[Optional[str], Form()] = None,
         password: Annotated[Optional[str], Form()] = None,
+        email: Annotated[Optional[str], Form()] = None,
     ) -> "UserUpdate":
         return cls(
             full_name=full_name,
             password=password,
+            email=email,
             updated_at=datetime.now(),
         )
     
     @classmethod
     def update_admin_form(
         cls,
-        full_name: Annotated[Optional[str], Form()] = None,
         password: Annotated[Optional[str], Form()] = None,
         role: Annotated[Optional[Literal["user", "moderator", "admin"]], Form()] = None,
-        enabled: Annotated[Optional[bool], Form()] = None
+        enabled: Annotated[Optional[bool], Form()] = None,
     ) -> "UserUpdate":
         return cls(
-            full_name=full_name,
             password=password,
             role=role,
             enabled=enabled,

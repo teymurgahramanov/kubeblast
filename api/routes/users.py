@@ -11,8 +11,8 @@ async def get_users(current_user: Annotated[models.User, Depends(auth.check_role
   return users.get_users()
 
 @router.get("/users/{username}", response_model=models.User)
-async def get_user(username: str, current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))]):
-  return users.get_user(username)
+async def get_user(username: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
+  return users.get_user(username, current_user)
 
 @router.post("/users", response_model=models.User)
 async def create_user(user_data: Annotated[models.UserCreate, Depends(models.UserCreate.create_form)], current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))]):

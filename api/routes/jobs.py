@@ -44,11 +44,11 @@ async def approve_job(
 
 @router.put("/jobs/retry/{job_id}", response_model=models.Job)
 async def retry_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))],
+    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
     job_id: str
     ):
     return jobs.retry_job(current_user, job_id)
 
 @router.delete("/jobs/{job_id}")
-async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
+async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
     return jobs.delete_job(current_user, job_id)
