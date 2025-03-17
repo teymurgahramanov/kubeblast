@@ -263,7 +263,7 @@ const AddUser = ({ onClose }) => {
                 textTransform: 'none'
               }}
             >
-              Add User
+              Add
             </Button>
           </Box>
         </Box>

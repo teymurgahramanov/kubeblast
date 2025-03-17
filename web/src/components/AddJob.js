@@ -53,7 +53,7 @@ const AddJob = ({ onClose }) => {
         mb: 3
       }}>
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-          Add New Job
+          Add Job
         </Typography>
         <IconButton 
           onClick={onClose}
