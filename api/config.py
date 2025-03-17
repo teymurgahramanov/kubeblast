@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    PENDING_JOBS_LIMIT: int = int(os.getenv("PENDING_JOBS_LIMIT", 3))
+    CURRENT_JOBS_LIMIT: int = int(os.getenv("CURRENT_JOBS_LIMIT", 3))
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))

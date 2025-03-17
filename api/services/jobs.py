@@ -38,15 +38,14 @@ def get_job(current_user, job_id):
 def create_job(current_user, file_content, description):
     job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
 
-    pending_jobs_count = db.mongo.jobs.count_documents({
-        "status": "pending",
+    current_jobs_count = db.mongo.jobs.count_documents({
         "owner": current_user.username
     })
     
-    if pending_jobs_count > config.PENDING_JOBS_LIMIT:
+    if current_jobs_count > config.CURRENT_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many pending jobs ({pending_jobs_count} pending, limit is {config.PENDING_JOBS_LIMIT})"
+            detail=f"Too many pending jobs ({current_jobs_count} pending, limit is {config.CURRENT_JOBS_LIMIT})"
         )
 
     job = db.mongo.jobs.find_one({"name": job_name})
