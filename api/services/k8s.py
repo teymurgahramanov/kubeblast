@@ -24,6 +24,42 @@ def gen_labels(job_id):
 def gen_label_selector(job_id):
     return f"jrunner/job-id={job_id}"
 
+def get_pod_ips(job_id):
+    """
+    Retrieves the list of pod IPs for a given job ID.
+    
+    Args:
+        job_id (str): The ID of the job to get pod IPs for
+        
+    Returns:
+        list: List of pod IPs as strings
+        
+    Raises:
+        HTTPException: If there's an error retrieving the pod IPs
+    """
+    try:
+        label_selector = gen_label_selector(job_id)
+        
+        logging.info(f"Retrieving pod IPs for job with label selector: {label_selector}")
+        pod_list = client.CoreV1Api().list_namespaced_pod(
+            namespace=current_namespace,
+            label_selector=label_selector
+        )
+        
+        pod_ips = []
+        for pod in pod_list.items:
+            if pod.status.pod_ip:
+                pod_ips.append(pod.status.pod_ip)
+            else:
+                logging.warning(f"Pod {pod.metadata.name} has no IP assigned yet")
+                
+        logging.info(f"Found {len(pod_ips)} pod IPs for job {job_id}")
+        return pod_ips
+        
+    except Exception as e:
+        logging.error(f"Failed to get pod IPs for job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error retrieving pod IPs")
+
 def stream_pod_logs(job_id, job_status):
     try:
         label_selector = gen_label_selector(job_id)
