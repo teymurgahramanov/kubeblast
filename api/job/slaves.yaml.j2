@@ -8,6 +8,21 @@ metadata:
     app: jrunner
     role: slave
 spec:
+  {% if nodeSelector %}
+  nodeSelector:
+    {% for key, value in nodeSelector.items() %}
+    {{ key }}: "{{ value }}"
+    {% endfor %}
+  {% endif %}
+  {% if tolerations %}
+  tolerations:
+    {% for toleration in tolerations %}
+    - key: "{{ toleration.key | default('') }}"
+      operator: "{{ toleration.operator | default('Exists') }}"
+      value: "{{ toleration.value | default('') }}"
+      effect: "{{ toleration.effect | default('NoExecute') }}"
+    {% endfor %}
+  {% endif %}
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
