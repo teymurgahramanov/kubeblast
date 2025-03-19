@@ -1,7 +1,7 @@
-dev/*.jmx
 node_modules
 *.tgz
 *.lock
 .venv
 __pycache__
 .env
+openapi.json
