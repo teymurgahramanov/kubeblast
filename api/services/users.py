@@ -1,5 +1,5 @@
-from api.core import models, db
-from api.services import auth
+from core import models, db
+from services import auth
 from fastapi import HTTPException
 
 def get_users():

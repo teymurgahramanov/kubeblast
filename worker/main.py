@@ -7,7 +7,10 @@ from pymongo import MongoClient
 from config import config as app_config
 
 # Logging Configuration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=app_config.LOG_LEVEL, 
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    format="%(asctime)s - WORKER - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 # MongoDB Configuration
 MONGO_URI = app_config.MONGO_URI
@@ -44,30 +47,30 @@ def get_k8s_job_status(job):
 def process_job_update():
     """Continuously sync job statuses between Kubernetes and MongoDB."""
     batch_v1 = client.BatchV1Api()
-    logging.info("Starting Kubernetes Job Updater...")
+    logger.info("Starting Kubernetes Job Updater...")
     
     while True:
         try:
             jobs = batch_v1.list_namespaced_job(namespace=current_namespace).items
             if not jobs:
-                logging.info("No jobs found.")
+                logger.info("No jobs found.")
             else:
                 for job in jobs:
                     job_id = job.metadata.labels.get("jrunner/job-id")
                     if not job_id:
-                        logging.warning(f"Job {job.metadata.name} does not have a job ID.")
+                        logger.warning(f"Job {job.metadata.name} does not have a job ID.")
                         continue
                     
                     # Determine the current job status in Kubernetes
                     k8s_status = get_k8s_job_status(job)
                     if not k8s_status:
-                        logging.warning(f"Unrecognized status for job {job_id}.")
+                        logger.warning(f"Unrecognized status for job {job_id}.")
                         continue  # Skip if status is not relevant
                     
                     # Fetch the job from MongoDB
                     mongo_job = jobs_collection.find_one({"_id": bson.ObjectId(job_id)})
                     if not mongo_job:
-                        logging.warning(f"Job {job_id} not found in MongoDB.")
+                        logger.warning(f"Job {job_id} not found in MongoDB.")
                         continue
                     
                     # Compare and update status if different
@@ -78,14 +81,14 @@ def process_job_update():
                         )
                         
                         if update_result.modified_count > 0:
-                            logging.info(f"Updated MongoDB: {job_id} -> status {k8s_status}")
+                            logger.info(f"Updated MongoDB: {job_id} -> status {k8s_status}")
                         else:
-                            logging.error(f"No changes made for job {job_id}.")
+                            logger.error(f"No changes made for job {job_id}.")
         
         except client.exceptions.ApiException as e:
-            logging.error(f"Kubernetes API error: {e}")
+            logger.error(f"Kubernetes API error: {e}")
         except Exception as e:
-            logging.error(f"Unexpected error in job update process: {e}")
+            logger.error(f"Unexpected error in job update process: {e}")
         
         sleep(WORKER_WATCH_INTERVAL)
 

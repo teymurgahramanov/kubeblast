@@ -331,9 +331,11 @@ const Jobs = () => {
                     </MenuItem>
                   </>
                 )}
-                <MenuItem onClick={() => viewLogs(job.id, job.status)}>
-                  <Visibility sx={{ mr: 1 }} /> View Logs
-                </MenuItem>
+                {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
+                  <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                    <Visibility sx={{ mr: 1 }} /> View Logs
+                  </MenuItem>
+                )}
                 <MenuItem onClick={() => openPlanFile(job.id)}>
                   <Description sx={{ mr: 1 }} /> View Plan
                 </MenuItem>
@@ -347,11 +349,9 @@ const Jobs = () => {
                     <Download sx={{ mr: 1 }} /> Download Report
                   </MenuItem>
                 )}
-                {userRole === 'admin' && (
-                  <MenuItem onClick={() => deleteJob(job.id)}>
-                    <Delete sx={{ mr: 1 }} /> Delete
-                  </MenuItem>
-                )}
+                <MenuItem onClick={() => deleteJob(job.id)}>
+                  <Delete sx={{ mr: 1 }} /> Delete
+                </MenuItem>
               </Menu>
             </Box>
           );

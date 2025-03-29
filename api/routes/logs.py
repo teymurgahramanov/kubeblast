@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from typing import Annotated
 from fastapi.responses import StreamingResponse
-from api.core import models
-from api.services import auth, jobs, k8s
+from core import models
+from services import auth, jobs, k8s
 import asyncio
 
 router = APIRouter(prefix="/api")

@@ -6,8 +6,8 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from api.core import db, models
-from api.config import config
+from core import db, models
+from config import config
 
 SECRET_KEY = config.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES

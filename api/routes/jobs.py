@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query
 from fastapi.responses import FileResponse
 from typing import Annotated, Literal, Optional, List
-from api.core import models, db
-from api.services import auth, jobs
+from core import models, db
+from services import auth, jobs
 from datetime import datetime
 
 router = APIRouter(prefix="/api")

@@ -1,8 +1,8 @@
-from api.services import auth
+from services import auth
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
-from api.core import models
+from core import models
 
 router = APIRouter(prefix="/api")
 

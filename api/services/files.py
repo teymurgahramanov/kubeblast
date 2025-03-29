@@ -1,11 +1,11 @@
 import io
 import boto3
-import logging
+from core.log import logger
 import zipfile
 from fastapi import HTTPException, Response 
 from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
-from api.services import jobs
-from api.config import config
+from services import jobs
+from config import config
 
 s3_client = boto3.client(
     "s3",
@@ -19,7 +19,7 @@ def create_file(file_content, file_name):
     try:
         s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
     except Exception as e:
-        logging.error(f"Failed to upload file to S3: {str(e)}")
+        logger.error(f"Failed to upload file to S3: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
   
 def delete_file(job_id):
@@ -30,21 +30,21 @@ def delete_file(job_id):
             for obj in response['Contents']:
                 file_key = obj['Key']
                 s3_client.delete_object(Bucket=config.S3_BUCKET, Key=file_key)
-                logging.info(f"Deleted file: {file_key}")
+                logger.info(f"Deleted file: {file_key}")
         else:
-            logging.warning(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
+            logger.warning(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
 
     except Exception as e:
-        logging.error(f"Failed to delete files from MinIO: {str(e)}")
+        logger.error(f"Failed to delete files from MinIO: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete files from MinIO: {str(e)}")
 
 def read_file(file_name):
     try:
         response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
         file_content = response["Body"].read().decode()
-        logging.info(f"Read file from S3: {file_name}")
+        logger.info(f"Read file from S3: {file_name}")
     except Exception as e:
-        logging.error(f"Failed to read file from S3: {str(e)}")
+        logger.error(f"Failed to read file from S3: {str(e)}")
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
@@ -64,7 +64,7 @@ def download_file(current_user, job_id, type):
                     }
                 )
             except Exception as e:
-                logging.error(f"Failed to read plan from S3: {str(e)}")
+                logger.error(f"Failed to read plan from S3: {str(e)}")
                 raise HTTPException(status_code=404, detail="Plan file not found.")
         case "report":
             try:
@@ -97,5 +97,5 @@ def download_file(current_user, job_id, type):
             except HTTPException as e:
                 raise e
             except Exception as e:
-                logging.error(f"Failed to create report zip: {str(e)}")
+                logger.error(f"Failed to create report zip: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"Failed to create report zip: {str(e)}")

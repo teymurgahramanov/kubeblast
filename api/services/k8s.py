@@ -1,11 +1,11 @@
 from kubernetes import client, config as k8s_config
-from api.config import config
-from api.services import files
+from config import config
+from services import files
 from jinja2 import Template
 from fastapi import HTTPException
 import yaml
 import os
-import logging
+from core.log import logger
 import time
 
 k8s_config.load_incluster_config()
@@ -29,19 +29,19 @@ def stream_pod_logs(job_id, job_status):
     try:
         label_selector = gen_label_selector(job_id,"master")
 
-        logging.info(f"Looking for Pods with label selector: {label_selector}")
+        logger.info(f"Looking for Pods with label selector: {label_selector}")
         pod_list = client.CoreV1Api().list_namespaced_pod(
             namespace=current_namespace,
             label_selector=label_selector
         )
 
         if not pod_list.items:
-            logging.warning(f"No Pods found for Job: {job_id}")
+            logger.warning(f"No Pods found for Job: {job_id}")
             yield "data: No pods found for this job.\n\n"
             return
         
         pod_name = pod_list.items[0].metadata.name
-        logging.info(f"Streaming logs from pod: {pod_name}")
+        logger.info(f"Streaming logs from pod: {pod_name}")
 
         # Don't follow logs for completed or failed jobs
         should_follow = job_status == 'running'
@@ -61,7 +61,7 @@ def stream_pod_logs(job_id, job_status):
             yield f"data: {line}\n\n"  # SSE format
 
     except client.exceptions.ApiException as e:
-        logging.error(f"Kubernetes API error: {e}")
+        logger.error(f"Kubernetes API error: {e}")
         yield f"data: Error: {e.reason}\n\n"
         return
 
@@ -83,10 +83,10 @@ def schedule_workload(job_id,distributed):
         )
 
         client.CoreV1Api().create_namespaced_config_map(namespace=k8s_object_namespace, body=configmap_manifest)
-        logging.info(f"Created ConfigMap for job {job_id}")
+        logger.info(f"Created ConfigMap for job {job_id}")
         
         if distributed:
-            logging.info(f"Creating DaemonSet for job {job_id}")
+            logger.info(f"Creating DaemonSet for job {job_id}")
             with open(daemonset_template_path, 'r') as file:
                 daemonset_template_content = file.read()
 
@@ -104,7 +104,7 @@ def schedule_workload(job_id,distributed):
             
             client.AppsV1Api().create_namespaced_daemon_set(namespace=current_namespace, body=daemonset_manifest)
             
-            logging.info(f"Created DaemonSet for job {job_id}")
+            logger.info(f"Created DaemonSet for job {job_id}")
 
             max_retries = 5
             retry_interval = 10
@@ -127,10 +127,10 @@ def schedule_workload(job_id,distributed):
                     slaves = [pod.status.pod_ip for pod in pod_list.items if pod.status.pod_ip]
                     
                     if slaves and len(slaves) == ds.status.number_ready:
-                        logging.info(f"DaemonSet ready with {len(slaves)} pods having IPs")
+                        logger.info(f"DaemonSet ready with {len(slaves)} pods having IPs")
                         break
                 
-                logging.info(f"Waiting for DaemonSet and pod IPs... Attempt {retry_count + 1}/{max_retries}")
+                logger.info(f"Waiting for DaemonSet and pod IPs... Attempt {retry_count + 1}/{max_retries}")
                 time.sleep(retry_interval)
                 retry_count += 1
                 
@@ -159,10 +159,10 @@ def schedule_workload(job_id,distributed):
 
         job_manifest = yaml.safe_load(rendered_job)
         client.BatchV1Api().create_namespaced_job(namespace=k8s_object_namespace, body=job_manifest)
-        logging.info(f"Created Kubernetes Job: {job_id}")
+        logger.info(f"Created Kubernetes Job: {job_id}")
 
     except Exception as e:
-        logging.error(f"Failed to create workload {job_id}: {e}")
+        logger.error(f"Failed to create workload {job_id}: {e}")
         delete_workload(job_id)
         raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
     
@@ -170,14 +170,14 @@ def delete_workload(job_id):
     try:
         label_selector = f"jrunner/job-id={job_id}"
 
-        logging.info(f"Deleting Workload with label selector: {label_selector}")
+        logger.info(f"Deleting Workload with label selector: {label_selector}")
 
         jobs = client.BatchV1Api().list_namespaced_job(
             namespace=current_namespace,
             label_selector=label_selector
         )
         
-        logging.info(f"Found {len(jobs.items)} Jobs to delete")
+        logger.info(f"Found {len(jobs.items)} Jobs to delete")
         for job_item in jobs.items:
             job_name = job_item.metadata.name
             client.BatchV1Api().delete_namespaced_job(
@@ -186,48 +186,48 @@ def delete_workload(job_id):
                 propagation_policy='Foreground',
                 grace_period_seconds = 0
             )
-            logging.info(f"Job {job_name} deleted")
+            logger.info(f"Job {job_name} deleted")
 
-        logging.info(f"Deleting DaemonSet with label selector: {label_selector}")
+        logger.info(f"Deleting DaemonSet with label selector: {label_selector}")
         daemonset = client.AppsV1Api().list_namespaced_daemon_set(
             namespace=current_namespace,
             label_selector=label_selector
         )
         
-        logging.info(f"Found {len(daemonset.items)} DaemonSets to delete")  
+        logger.info(f"Found {len(daemonset.items)} DaemonSets to delete")  
         for ds in daemonset.items:
             ds_name = ds.metadata.name
             client.AppsV1Api().delete_namespaced_daemon_set(
                 namespace=current_namespace,
                 name=ds_name
             )
-            logging.info(f"DaemonSet {ds_name} deleted")
+            logger.info(f"DaemonSet {ds_name} deleted")
 
-        logging.info(f"Deleting ConfigMaps with label selector: {label_selector}")
+        logger.info(f"Deleting ConfigMaps with label selector: {label_selector}")
         config_maps = client.CoreV1Api().list_namespaced_config_map(
             namespace=current_namespace,
             label_selector=label_selector
         )
 
-        logging.info(f"Found {len(config_maps.items)} ConfigMaps to delete")
+        logger.info(f"Found {len(config_maps.items)} ConfigMaps to delete")
         for cm in config_maps.items:
             cm_name = cm.metadata.name
             client.CoreV1Api().delete_namespaced_config_map(
                 namespace=current_namespace,
                 name=cm_name
             )
-            logging.info(f"ConfigMap {cm_name} deleted")
+            logger.info(f"ConfigMap {cm_name} deleted")
 
-        logging.info(f"Deleting Pods with label selector: {label_selector}")
+        logger.info(f"Deleting Pods with label selector: {label_selector}")
         pods = client.CoreV1Api().list_namespaced_pod(
             namespace=current_namespace,
             label_selector=label_selector
         )
         
-        logging.info(f"Found {len(pods.items)} Pods to delete")
+        logger.info(f"Found {len(pods.items)} Pods to delete")
         for pod in pods.items:
             pod_name = pod.metadata.name
-            logging.info(f"Deleting Pod: {pod_name}")
+            logger.info(f"Deleting Pod: {pod_name}")
             client.CoreV1Api().delete_namespaced_pod(
                 name=pod_name,
                 namespace=current_namespace,
@@ -235,5 +235,5 @@ def delete_workload(job_id):
                 grace_period_seconds=0
             )
     except Exception as e:
-        logging.error(f"Failed to delete workload {job_id}: {e}")
+        logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")

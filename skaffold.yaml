@@ -22,6 +22,8 @@ deploy:
           image.repository: "{{ .IMAGE_REPO_jrunner }}"
           image.tag: "{{ .IMAGE_TAG_jrunner }}"
           env:
+            - name: LOG_LEVEL
+              value: "ERROR"
             - name: MONGO_HOST
               value: "mongodb.infra"
             - name: MONGO_PORT

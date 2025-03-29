@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import token, users, jobs, logs, files
-import logging
+from routes import token, users, jobs, logs, files
+from core.log import logger
 
 app = FastAPI()
 
@@ -16,8 +16,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def initialize():
   try:
-    from api.core import models, db
-    from api.services import auth
+    from core import models, db
+    from services import auth
 
     # Create admin user
     admin = auth.get_user("admin")
@@ -29,7 +29,7 @@ async def initialize():
         )
         db.mongo.users.insert_one(admin.dict())
   except Exception as e:
-     logging.error(e)
+     logger.error(e)
      exit(1)
 
 app.include_router(token.router,tags=["token"])

@@ -1,7 +1,7 @@
 from typing import Annotated, List
 from fastapi import Depends, APIRouter
-from api.core import models
-from api.services import auth, users
+from core import models
+from services import auth, users
 from fastapi import Request
 
 router = APIRouter(prefix="/api")
