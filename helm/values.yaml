@@ -10,39 +10,22 @@ affinity: {}
 namespaceQuota:
   pods: 10
 
-api:
-  env: []
-  envFromSecret: ""
-  podAnnotations: {}
-  podLabels: {}
-  image:
-    repository: jrunner-api
-    tag: latest
-  service:
-    port: 8000
-  serviceAccount:
-    annotations: {}
-  resources: {}
-
-worker:
-  image:
-    repository: jrunner-worker
-    tag: latest
-  resources: {}
-
-web:
-  env: []
-  envFromSecret: ""
-  podAnnotations: {}
-  podLabels: {}
-  image:
-    repository: jrunner-web
-    tag: latest
-  service:
-    port: 80
-  ingress:
-    enabled: false
-    annotations: {}
-    className: ""
-    host: ""
-  resources: {}
+env: []
+envFromSecret: ""
+podAnnotations: {}
+podLabels: {}
+image:
+  repository: jrunner
+  tag: latest
+service:
+  port:
+    web: 80
+    api: 8000
+serviceAccount:
+  annotations: {}
+resources: {}
+ingress:
+  enabled: false
+  annotations: {}
+  className: ""
+  host: ""

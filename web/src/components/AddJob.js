@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, FormControlLabel, Checkbox } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 
 const AddJob = ({ onClose }) => {
   const [jobData, setJobData] = useState({
     description: '',
-    file: null
+    file: null,
+    distributed: false
   });
   const [error, setError] = useState('');
 
@@ -30,6 +31,7 @@ const AddJob = ({ onClose }) => {
     const formData = new FormData();
     formData.append('description', jobData.description);
     formData.append('file', jobData.file);
+    formData.append('distributed', jobData.distributed);
 
     try {
       await axiosInstance.post('/jobs', formData, {
@@ -134,6 +136,31 @@ const AddJob = ({ onClose }) => {
               </Typography>
             </label>
           </Box>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={jobData.distributed}
+                onChange={(e) => setJobData(prev => ({
+                  ...prev,
+                  distributed: e.target.checked
+                }))}
+                sx={{
+                  color: 'var(--text-secondary)',
+                  '&.Mui-checked': {
+                    color: 'var(--primary-color)',
+                  },
+                }}
+              />
+            }
+            label="Distributed"
+            sx={{
+              color: 'var(--text-secondary)',
+              '& .MuiTypography-root': {
+                color: 'var(--text-secondary)',
+              },
+            }}
+          />
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
             <Button

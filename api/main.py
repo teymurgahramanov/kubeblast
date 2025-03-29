@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import token, users, jobs, logs, files
+import logging
 
 app = FastAPI()
 
@@ -28,7 +29,7 @@ async def initialize():
         )
         db.mongo.users.insert_one(admin.dict())
   except Exception as e:
-     print(e)
+     logging.error(e)
      exit(1)
 
 app.include_router(token.router,tags=["token"])

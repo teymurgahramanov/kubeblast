@@ -3,7 +3,10 @@ kind: Job
 metadata:
   name: {{ name }}
   namespace: {{ namespace }}
-  labels: {{ labels }}
+  labels:
+    {% for key, value in labels.items() %}
+    {{ key }}: "{{ value }}"
+    {% endfor %}
 spec:
   parallelism: 1
   completions: 1
@@ -11,27 +14,57 @@ spec:
   ttlSecondsAfterFinished: 172800
   template:
     metadata:
-      labels: {{ labels }}
+      labels:
+        {% for key, value in labels.items() %}
+        {{ key }}: "{{ value }}"
+        {% endfor %}
     spec:
-      containers:
+      initContainers:
       - name: jmeter
-        image: {{ job_image }}
+        image: {{ image }}
         command: ["sh", "-c"]
         args:
           - |
-            jmeter -n -t /tmp/plan.jmx -l result.jtl -e -o report
-            mc alias set minio {{ s3_url }} {{ s3_access_key }} {{ s3_secret_key }}
-            mc cp result.jtl minio/{{ s3_bucket }}/{{ job_id }}
-            mc cp --recursive report minio/{{ s3_bucket }}/{{ job_id }}        
+            {% if slaves %}
+            jmeter -n -t /tmp/plan.jmx -l /shared/result.jtl -e -o /shared/report -Jserver.rmi.ssl.disable=true -R {%for slave in slaves%}{{ slave }},{%endfor%}
+            {% else %}
+            jmeter -n -t /tmp/plan.jmx -l /shared/result.jtl -e -o /shared/report -Jserver.rmi.ssl.disable=true
+            {% endif %}
         volumeMounts:
         - name: jmeter-plan
           mountPath: /tmp/plan.jmx
           subPath: plan.jmx
+        - name: shared-volume
+          mountPath: /shared
+      containers:
+      - name: minio
+        image: minio/mc:RELEASE.2025-03-12T17-29-24Z-cpuv1
+        command: ["sh", "-c"]
+        args:
+          - |
+            mc alias set minio {{ s3_url }} {{ s3_access_key }} {{ s3_secret_key }}
+            mc cp /shared/result.jtl minio/{{ s3_bucket }}/{{ job_id }}
+            mc cp --recursive /shared/report minio/{{ s3_bucket }}/{{ job_id }}        
+        volumeMounts:
+        - name: jmeter-plan
+          mountPath: /tmp/plan.jmx
+          subPath: plan.jmx
+        - name: shared-volume
+          mountPath: /shared
       restartPolicy: Never
       volumes:
       - name: jmeter-plan
         configMap:
           name: {{ name }}
+      - name: shared-volume
+        emptyDir: {}
+      {% if resources %}
+      resources:
+        requests:
+          {{ resources.requests | default('') }}
+        limits:
+          {{ resources.limits | default('') }}
+      {% endif %}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

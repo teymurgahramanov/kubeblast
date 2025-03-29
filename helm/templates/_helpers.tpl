@@ -28,22 +28,6 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "jrunner-api.resourceName" -}}
-{{ include "jrunner.fullname" . }}-api
-{{- end }}
-
-{{- define "jrunner-worker.resourceName" -}}
-{{ include "jrunner.fullname" . }}-worker
-{{- end }}
-
-{{- define "jrunner-web.resourceName" -}}
-{{ include "jrunner.fullname" . }}-web
-{{- end }}
-
-{{- define "jrunner-api.selectorLabels" -}}
-jrunner/component: api
-{{- end }}
-
-{{- define "jrunner-web.selectorLabels" -}}
-jrunner/component: web
+{{- define "jrunner.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "jrunner.fullname" . }}
 {{- end }}

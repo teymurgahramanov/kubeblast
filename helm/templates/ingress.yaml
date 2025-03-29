@@ -1,34 +1,34 @@
-{{- if .Values.web.ingress.enabled -}}
+{{- if .Values.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "jrunner-web.resourceName" . }}
+  name: {{ include "jrunner.fullname" . }}
   labels:
     {{- include "jrunner.labels" . | nindent 4 }}
-  {{- with .Values.web.ingress.annotations }}
+  {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with .Values.web.ingress.className }}
+  {{- with .Values.ingress.className }}
   ingressClassName: {{ . }}
   {{- end }}
   rules:
-    - host: {{ .Values.web.ingress.host }}
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: {{ include "jrunner-api.resourceName" . }}
+                name: {{ include "jrunner.fullname" . }}
                 port:
-                  number: {{ .Values.api.service.port }}
+                  number: {{ .Values.service.port.api }}
           - path: /
             pathType: ImplementationSpecific
             backend:
               service:
-                name: {{ include "jrunner-web.resourceName" . }}
+                name: {{ include "jrunner.fullname" . }}
                 port:
-                  number: {{ .Values.web.service.port }}
+                  number: {{ .Values.service.port.web }}
 {{- end }}

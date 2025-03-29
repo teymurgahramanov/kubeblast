@@ -26,8 +26,30 @@ class Config:
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
     # Load Kubernetes NodeSelector from JSON or parse key-value pairs
-    K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "teymurgahramanov/jrunner-job:latest")
+    K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
+    K8S_JOB_JMETER_JVM_ARGS: str = os.getenv("K8S_JOB_JMETER_JVM_ARGS", "")
+    
+    K8S_JOB_SLAVE_RESOURCES: dict = {}
+    # Load Kubernetes Slave Resources from JSON format
+    slave_resources_env = os.getenv("K8S_JOB_SLAVE_RESOURCES")
+    if slave_resources_env:
+        try:
+            K8S_JOB_SLAVE_RESOURCES = json.loads(slave_resources_env)
+        except json.JSONDecodeError:
+            K8S_JOB_SLAVE_RESOURCES = None
+    
+    
+    K8S_JOB_MASTER_RESOURCES: dict = {}
+    # Load Kubernetes Master Resources from JSON format
+    master_resources_env = os.getenv("K8S_JOB_MASTER_RESOURCES")
+    if master_resources_env:
+        try:
+            K8S_JOB_MASTER_RESOURCES = json.loads(master_resources_env)
+        except json.JSONDecodeError:
+            K8S_JOB_MASTER_RESOURCES = None
+    
     K8S_JOB_NODE_SELECTOR: dict = {}
+    # Load Kubernetes NodeSelector from JSON format
     job_node_selector_env = os.getenv("K8S_JOB_NODE_SELECTOR")
     if job_node_selector_env:
         try:
@@ -35,8 +57,9 @@ class Config:
         except json.JSONDecodeError:
             K8S_JOB_NODE_SELECTOR = None
 
-    # Load Kubernetes Tolerations from JSON format
+    
     K8S_JOB_TOLERATIONS: list = []
+    # Load Kubernetes Tolerations from JSON format
     job_tolerations_env = os.getenv("K8S_JOB_TOLERATIONS")
     if job_tolerations_env:
         try:

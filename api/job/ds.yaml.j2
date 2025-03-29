@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace }}
+  labels:
+    {% for key, value in labels.items() %}
+    {{ key }}: "{{ value }}"
+    {% endfor %}
+spec:
+  selector:
+    matchLabels:
+      {% for key, value in labels.items() %}
+      {{ key }}: "{{ value }}"
+      {% endfor %}
+  template:
+    metadata:
+      labels:
+        {% for key, value in labels.items() %}
+        {{ key }}: "{{ value }}"
+        {% endfor %}
+    spec:
+      {% if nodeSelector %}
+      nodeSelector:
+        {% for key, value in nodeSelector.items() %}
+        {{ key }}: "{{ value }}"
+        {% endfor %}
+      {% endif %}
+      {% if tolerations %}
+      tolerations:
+        {% for toleration in tolerations %}
+        - key: "{{ toleration.key | default('') }}"
+          operator: "{{ toleration.operator | default('Exists') }}"
+          value: "{{ toleration.value | default('') }}"
+          effect: "{{ toleration.effect | default('NoExecute') }}"
+        {% endfor %}
+      {% endif %}
+      containers:
+      - name: jmeter
+        image: {{ image }}
+        command: ["sh", "-c"]
+        args:
+          - jmeter-server -Jserver.rmi.ssl.disable=true
+        ports:
+          - name: jmeter
+            containerPort: 1099
+            protocol: TCP
+        {% if resources %}
+        resources:
+          requests:
+            {{ resources.requests | default('') }}
+          limits:
+            {{ resources.limits | default('') }}
+        {% endif %}

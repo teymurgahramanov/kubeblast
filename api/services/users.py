@@ -30,7 +30,6 @@ def create_user(user_data):
     return get_user(user_data.username)
 
 def update_user(username: str, user_data: dict):
-    print(username)
     user = get_user(username)
 
     user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}

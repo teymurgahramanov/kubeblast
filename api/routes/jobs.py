@@ -24,7 +24,8 @@ async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth
 async def create_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
     description: Annotated[Optional[str], Form(max_length=60)] = None,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    distributed: Annotated[Optional[bool], Form()] = False,
     ):
 
     if file.content_type not in ["text/plain", "application/xml", "application/octet-stream"]:
@@ -32,7 +33,7 @@ async def create_job(
 
     file_content = await file.read()
 
-    return jobs.create_job(current_user, file_content, description)
+    return jobs.create_job(current_user, file_content, description, distributed)
 
 @router.put("/jobs/approve/{job_id}", response_model=models.Job)
 async def approve_job(

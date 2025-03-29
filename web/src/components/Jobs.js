@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Schedule, Add, Refresh } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -240,6 +240,8 @@ const Jobs = () => {
       setJobs(jobs.map(job => job.id === job_id ? response.data : job));
       handleMenuClose();
       setError('');
+      // Add immediate refresh after retry
+      fetchJobs();
     } catch (error) {
       setError('Error retrying job: ' + (error.response?.data || error.message));
     }
@@ -272,6 +274,8 @@ const Jobs = () => {
                 return { bg: '#FEE2E2', text: '#991B1B' };
               case 'declined':
                 return { bg: '#F3F4F6', text: '#1F2937' };
+              case 'retrying':
+                return { bg: '#FEF3C7', text: '#92400E' };
               default:
                 return { bg: '#F3F4F6', text: '#1F2937' };
             }
@@ -299,28 +303,62 @@ const Jobs = () => {
         }
       },
       {
-        field: "actions",
-        headerName: "Actions",
-        width: 100,
-        flex: 0.5,
-        renderCell: (params) => (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton 
-              onClick={(event) => handleMenuOpen(event, params.row.id)}
-              sx={{ 
-                '&:hover': { 
-                  backgroundColor: 'var(--background-light)',
-                  color: 'var(--primary-color)'
-                }
-              }}
-            >
-              <MoreVert />
-            </IconButton>
-          </Box>
-        )
+        field: 'actions',
+        headerName: 'Actions',
+        width: 120,
+        renderCell: (params) => {
+          const job = params.row;
+          return (
+            <Box>
+              <IconButton
+                onClick={(e) => handleMenuOpen(e, job.id)}
+                size="small"
+              >
+                <MoreVert />
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl) && selectedJobId === job.id}
+                onClose={handleMenuClose}
+              >
+                {job.status === 'pending' && userRole === 'admin' && (
+                  <>
+                    <MenuItem onClick={() => approveJob(job.id)}>
+                      <CheckCircle sx={{ mr: 1 }} /> Approve
+                    </MenuItem>
+                    <MenuItem onClick={() => declineJob(job.id)}>
+                      <Cancel sx={{ mr: 1 }} /> Decline
+                    </MenuItem>
+                  </>
+                )}
+                <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                  <Visibility sx={{ mr: 1 }} /> View Logs
+                </MenuItem>
+                <MenuItem onClick={() => openPlanFile(job.id)}>
+                  <Description sx={{ mr: 1 }} /> View Plan
+                </MenuItem>
+                {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'moderator') && (
+                  <MenuItem onClick={() => rescheduleJob(job.id)}>
+                    <Autorenew sx={{ mr: 1 }} /> Retry
+                  </MenuItem>
+                )}
+                {job.status === 'completed' && (
+                  <MenuItem onClick={() => downloadReport(job.id)}>
+                    <Download sx={{ mr: 1 }} /> Download Report
+                  </MenuItem>
+                )}
+                {userRole === 'admin' && (
+                  <MenuItem onClick={() => deleteJob(job.id)}>
+                    <Delete sx={{ mr: 1 }} /> Delete
+                  </MenuItem>
+                )}
+              </Menu>
+            </Box>
+          );
+        },
       }
     ];
-  }, [userRole]);
+  }, [anchorEl, selectedJobId, userRole]);
 
   const rows = useMemo(() => jobs.map((job) => {
     console.log('Mapping job:', job); // Debug log
@@ -431,89 +469,6 @@ const Jobs = () => {
             }}
           />
         </Box>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-          PaperProps={{
-            sx: {
-              mt: 1,
-              '& .MuiMenuItem-root': {
-                py: 1,
-                gap: 1
-              }
-            }
-          }}
-        >
-          {/* For moderators, only show approve/decline for pending jobs and plan file access */}
-          {userRole === 'moderator' ? (
-            <>
-              {jobs.find(j => j.id === selectedJobId)?.status === 'pending' && (
-                <>
-                  <MenuItem 
-                    onClick={() => approveJob(selectedJobId)}
-                    sx={{ color: 'var(--success-color)' }}
-                  >
-                    <CheckCircle fontSize="small" />
-                    Approve
-                  </MenuItem>
-                  <MenuItem 
-                    onClick={() => declineJob(selectedJobId)}
-                    sx={{ color: 'var(--danger-color)' }}
-                  >
-                    <Cancel fontSize="small" />
-                    Decline
-                  </MenuItem>
-                </>
-              )}
-              <MenuItem onClick={() => openPlanFile(selectedJobId)}>
-                <Description fontSize="small" />
-                Open Plan File
-              </MenuItem>
-            </>
-          ) : (
-            // Existing menu items for other roles
-            <>
-              {(userRole === 'admin') && jobs.find(j => j.id === selectedJobId)?.status === 'pending' && (
-                <>
-                  <MenuItem onClick={() => approveJob(selectedJobId)} sx={{ color: 'var(--success-color)' }}>
-                    <CheckCircle fontSize="small" />
-                    Approve
-                  </MenuItem>
-                  <MenuItem onClick={() => declineJob(selectedJobId)} sx={{ color: 'var(--danger-color)' }}>
-                    <Cancel fontSize="small" />
-                    Decline
-                  </MenuItem>
-                </>
-              )}
-              {['running', 'completed', 'failed'].includes(jobs.find(j => j.id === selectedJobId)?.status) && (
-                <MenuItem onClick={() => viewLogs(selectedJobId, jobs.find(j => j.id === selectedJobId)?.status)}>
-                  <Visibility fontSize="small" />
-                  View Logs
-                </MenuItem>
-              )}
-              <MenuItem onClick={() => openPlanFile(selectedJobId)}>
-                <Description fontSize="small" />
-                Open Plan File
-              </MenuItem>
-              {jobs.find(j => j.id === selectedJobId)?.status === 'completed' && (
-                <MenuItem onClick={() => downloadReport(selectedJobId)}>
-                  <Description fontSize="small" />
-                  Download Report
-                </MenuItem>
-              )}
-              <MenuItem onClick={() => rescheduleJob(selectedJobId)} sx={{ color: 'var(--primary-color)' }}>
-                <Refresh fontSize="small" />
-                Retry
-              </MenuItem>
-              <MenuItem onClick={() => deleteJob(selectedJobId)} sx={{ color: 'var(--danger-color)' }}>
-                <Delete fontSize="small" />
-                Delete Job
-              </MenuItem>
-            </>
-          )}
-        </Menu>
 
         <Modal
           open={Boolean(logs)}

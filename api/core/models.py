@@ -80,6 +80,7 @@ class Job(BaseModel):
     id: Optional[str] = None
     name: str
     owner: str
+    distributed: Optional[bool] = False
     description: Optional[str] = None
-    status: Literal["pending", "approved", "declined", "running", "suspended", "completed", "failed"]
+    status: Literal["pending", "approved", "declined", "running", "retrying", "completed", "failed"]
     created_at: Optional[datetime] = None

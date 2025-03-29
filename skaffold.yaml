@@ -6,20 +6,8 @@ metadata:
 
 build:
   artifacts:
-    - image: jrunner-api
-      context: ./api
-      docker:
-        dockerfile: Dockerfile
-    - image: jrunner-job
-      context: ./api/job
-      docker:
-        dockerfile: job.Dockerfile
-    - image: jrunner-worker
-      context: ./worker
-      docker:
-        dockerfile: Dockerfile
-    - image: jrunner-web
-      context: ./web
+    - image: jrunner
+      context: ./
       docker:
         dockerfile: Dockerfile
 
@@ -31,9 +19,9 @@ deploy:
         createNamespace: true
         chartPath: ./helm
         setValueTemplates:
-          api.image.repository: "{{ .IMAGE_REPO_jrunner_api }}"
-          api.image.tag: "{{ .IMAGE_TAG_jrunner_api }}"
-          api.env:
+          image.repository: "{{ .IMAGE_REPO_jrunner }}"
+          image.tag: "{{ .IMAGE_TAG_jrunner }}"
+          env:
             - name: MONGO_HOST
               value: "mongodb.infra"
             - name: MONGO_PORT
@@ -47,33 +35,27 @@ deploy:
             - name: S3_URL
               value: "http://minio.infra:9000"
             - name: S3_ACCESS_KEY
-              #value: "FBUuscAKjIhPoEHnkL1H" # Home
-              value: "1MtdMlZehiTTeVqayB2T" # Office 
+              value: "FBUuscAKjIhPoEHnkL1H" # Home
+              #value: "1MtdMlZehiTTeVqayB2T" # Office 
             - name: S3_SECRET_KEY
-              #value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq" # Home
-              value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
+              value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq" # Home
+              #value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
             - name: S3_BUCKET
               value: "jrunner"
             - name: K8S_NAMESPACE
               value: "jrunner"
-            - name: K8S_JOB_IMAGE
-              value: "{{ .IMAGE_REPO_jrunner_job }}:{{ .IMAGE_TAG_jrunner_job }}"
-          web.ingress.enabled: true
-          web.ingress.host: "jrunner.local"
-          web.ingress.className: "nginx"
-          worker.image.repository: "{{ .IMAGE_REPO_jrunner_worker }}"
-          worker.image.tag: "{{ .IMAGE_TAG_jrunner_worker }}"
-          web.image.repository: "{{ .IMAGE_REPO_jrunner_web }}"
-          web.image.tag: "{{ .IMAGE_TAG_jrunner_web }}"
+          ingress.enabled: true
+          ingress.host: "jrunner.local"
+          ingress.className: "nginx"
 
 portForward:
   - resourceType: deployment
-    resourceName: jrunner-web
+    resourceName: jrunner
     namespace: jrunner
     port: 80
     localPort: 9001
   - resourceType: deployment
-    resourceName: jrunner-api
+    resourceName: jrunner
     namespace: jrunner
     port: 8000
     localPort: 9002

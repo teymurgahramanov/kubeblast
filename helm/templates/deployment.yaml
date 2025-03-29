@@ -1,26 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "jrunner-api.resourceName" . }}
+  name: {{ include "jrunner.fullname" . }}
   labels:
     {{- include "jrunner.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "jrunner-api.selectorLabels" . | nindent 6 }}
+      {{- include "jrunner.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.api.podAnnotations }}
+      labels:
+        {{- include "jrunner.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      labels:
-        {{- include "jrunner.labels" . | nindent 8 }}
-        {{- include "jrunner-api.selectorLabels" . | nindent 8 }}
-        {{- with .Values.api.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -30,68 +26,30 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ include "jrunner-api.resourceName" . }}
+        - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.imagepullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.api.service.port }}
+            - name: web
+              containerPort: {{ .Values.service.port.web }}
               protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.api.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.api.readinessProbe | nindent 12 }}
-          resources:
-            {{- toYaml .Values.api.resources | nindent 12 }}
-          {{- if .Values.api.env }}
+            - name: api
+              containerPort: {{ .Values.service.port.api }}
+              protocol: TCP
           env:
-            {{- range .Values.api.env }}
+            {{- range .Values.env }}
             - name: {{ .name }}
-              value: "{{ .value }}"  # Ensures all values are strings
+              value: {{ .value | quote }}
             {{- end }}
-          {{- end }}
-          {{- if .Values.api.envFromSecret }}
+          {{- if .Values.envFromSecret }}
           envFrom:
             - secretRef:
-                name: {{ .Values.api.envFromSecret }}
+                name: {{ .Values.envFromSecret }}
           {{- end }}
-          {{- with .Values.api.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-        - name: {{ include "jrunner-worker.resourceName" . }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.imagepullPolicy }}
-          livenessProbe:
-            {{- toYaml .Values.worker.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.worker.readinessProbe | nindent 12 }}
           resources:
-            {{- toYaml .Values.worker.resources | nindent 12 }}
-          {{- if .Values.api.env }}
-          env:
-            {{- range .Values.api.env }}
-            - name: {{ .name }}
-              value: "{{ .value }}"  # Ensures all values are strings
-            {{- end }}
-          {{- end }}
-          {{- if .Values.api.envFromSecret }}
-          envFrom:
-            - secretRef:
-                name: {{ .Values.api.envFromSecret }}
-          {{- end }}
-          {{- with .Values.worker.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
-      volumes:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+            {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

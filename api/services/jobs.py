@@ -1,12 +1,13 @@
 from api.core import db, models
 from fastapi import HTTPException
 import bson
-import os
+from time import sleep
 import hashlib
 from api.config import config
 from datetime import datetime
 import logging
 from api.services import files, k8s
+import asyncio
 
 def get_jobs(current_user, status: str = None, owner: str = None, name: str = None):
     query = {}
@@ -35,7 +36,7 @@ def get_job(current_user, job_id):
     job["id"] = str(job["_id"])
     return models.Job(**job)
 
-def create_job(current_user, file_content, description):
+def create_job(current_user, file_content, description, distributed):
     job_name = f"{current_user.username}-{hashlib.sha256(file_content).hexdigest()[:6]}"
 
     current_jobs_count = db.mongo.jobs.count_documents({
@@ -45,7 +46,7 @@ def create_job(current_user, file_content, description):
     if current_jobs_count > config.CURRENT_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many pending jobs ({current_jobs_count} pending, limit is {config.CURRENT_JOBS_LIMIT})"
+            detail=f"Too many current jobs ({current_jobs_count}, limit is {config.CURRENT_JOBS_LIMIT})"
         )
 
     job = db.mongo.jobs.find_one({"name": job_name})
@@ -59,21 +60,22 @@ def create_job(current_user, file_content, description):
         name=job_name,
         owner=current_user.username,
         description=description,
+        distributed=distributed,
         status="pending",
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
 
     try:
         result = db.mongo.jobs.insert_one(job.dict())
     except Exception as e:
-        print(e)
+        logging.error(e)
         raise HTTPException(status_code=500, detail="Failed to create job")
 
     try:
         file_name = f"{str(result.inserted_id)}/plan.jmx"
         files.create_file(file_content,file_name)
     except Exception as e:
-        print(e)
+        logging.error(e)
         db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(result.inserted_id)})
         raise HTTPException(status_code=500, detail="Failed to create job")
 
@@ -86,11 +88,18 @@ def approve_job(current_user, job_id: str, approved: bool):
         raise HTTPException(status_code=400, detail="Cannot update job in current state")
 
     if approved:
-        k8s.schedule_workload(job_id)
-        db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
-            {"$set": {"status": "approved"}}
-        )
+        try:
+            db.mongo.jobs.update_one(
+                {"_id": bson.objectid.ObjectId(job_id)},
+                {"$set": {"status": "approved"}}
+            )
+            k8s.schedule_workload(job_id,job["distributed"])
+        except Exception as e:
+            db.mongo.jobs.update_one(
+                {"_id": bson.objectid.ObjectId(job_id)},
+                {"$set": {"status": "pending"}}
+            )
+            raise HTTPException(status_code=500, detail="Failed to approve job")
     else: 
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
@@ -113,10 +122,23 @@ def delete_job(current_user, job_id):
 def retry_job(current_user, job_id):
     job = get_job(current_user, job_id).dict()
 
-    if job["status"] in ["pending","declined"]:
+    if job["status"] in ["pending","declined","retrying"]:
         raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
+    
+    db.mongo.jobs.update_one(
+        {"_id": bson.objectid.ObjectId(job_id)},
+        {"$set": {"status": "retrying"}}
+    )
 
-    k8s.delete_workload(job_id)
-    k8s.schedule_workload(job_id)
+    try:
+        k8s.delete_workload(job_id)
+        sleep(10)
+        k8s.schedule_workload(job_id,job["distributed"])
+    except Exception as e:
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=500, detail="Failed to retry job")
 
     return get_job(current_user, job_id)
