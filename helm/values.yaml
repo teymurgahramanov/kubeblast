@@ -1,7 +1,5 @@
 nameOverride: ""
 fullnameOverride: ""
-imagePullSecrets: []
-imagePullPolicy: IfNotPresent
 podSecurityContext: {}
 securityContext: {}
 nodeSelector: {}
@@ -17,6 +15,8 @@ podLabels: {}
 image:
   repository: jrunner
   tag: latest
+imagePullSecrets: []
+imagePullPolicy: IfNotPresent
 service:
   port:
     web: 80

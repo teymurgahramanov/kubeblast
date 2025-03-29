@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import ErrorMessage from './ErrorMessage';
 
 const EditUser = ({ user, onClose, onUpdate }) => {
   const [userData, setUserData] = useState({
@@ -17,10 +18,10 @@ const EditUser = ({ user, onClose, onUpdate }) => {
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
-    const { name, value, checked } = e.target;
+    const { name, value } = e.target;
     setUserData(prev => ({
       ...prev,
-      [name]: name === 'enabled' ? checked : value
+      [name]: value
     }));
   };
 
@@ -64,7 +65,7 @@ const EditUser = ({ user, onClose, onUpdate }) => {
       onUpdate();
       onClose();
     } catch (error) {
-      setError('Error updating user: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -90,23 +91,7 @@ const EditUser = ({ user, onClose, onUpdate }) => {
         </IconButton>
       </Box>
 
-      {error && (
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            color="error" 
-            sx={{ 
-              p: 2, 
-              bgcolor: '#FEE2E2', 
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            {error}
-          </Typography>
-        </Box>
-      )}
+      <ErrorMessage message={error} />
 
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -264,8 +249,10 @@ const EditUser = ({ user, onClose, onUpdate }) => {
             control={
               <Switch
                 checked={userData.enabled}
-                onChange={handleInputChange}
-                name="enabled"
+                onChange={(e) => setUserData(prev => ({
+                  ...prev,
+                  enabled: e.target.checked
+                }))}
                 color="primary"
                 sx={{
                   '& .MuiSwitch-switchBase.Mui-checked': {

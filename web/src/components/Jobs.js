@@ -6,6 +6,7 @@ import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
+import ErrorMessage from './ErrorMessage';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -30,7 +31,7 @@ const Jobs = () => {
       setJobs(response.data);
       setError(''); // Clear any existing errors on successful fetch
     } catch (error) {
-      setError('Error fetching jobs: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -80,7 +81,7 @@ const Jobs = () => {
       setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'approved' } : job));
       handleMenuClose();
     } catch (error) {
-      setError('Error approving job: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -92,7 +93,7 @@ const Jobs = () => {
       setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'declined' } : job));
       handleMenuClose();
     } catch (error) {
-      setError('Error declining job: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -119,7 +120,8 @@ const Jobs = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body.getReader();
@@ -146,7 +148,7 @@ const Jobs = () => {
         } catch (error) {
           console.error('Stream reading error:', error);
           if (!logContent) {
-            setError('Error reading logs. Please try again.');
+            setError(error.message || 'Error reading logs. Please try again.');
           }
         } finally {
           reader.releaseLock();
@@ -156,7 +158,7 @@ const Jobs = () => {
       readStream();
       handleMenuClose();
     } catch (error) {
-      setError('Error fetching logs: ' + (error.message || 'Unknown error'));
+      setError(error.message || 'Error fetching logs');
     }
   };
 
@@ -169,13 +171,12 @@ const Jobs = () => {
       const response = await axiosInstance.get(`/files/${job_id}`, {
         headers: { 
           Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
-          'Accept': 'application/xml'  // Request XML content type
+          'Accept': 'application/xml'
         },
         params: { type: "plan" },
         responseType: 'blob',
       });
       
-      // Create blob with XML content type
       const blob = new Blob([response.data], { type: 'application/xml' });
       const fileURL = window.URL.createObjectURL(blob);
       window.open(fileURL, "_blank");
@@ -183,7 +184,7 @@ const Jobs = () => {
       const errorDetail = error.response?.data instanceof Blob ? 
         await error.response.data.text() : 
         error.response?.data?.detail || error.message;
-      setError("Error opening plan file: " + errorDetail);
+      setError(errorDetail);
     }
   };
 
@@ -209,7 +210,7 @@ const Jobs = () => {
       const errorDetail = error.response?.data instanceof Blob ? 
         await error.response.data.text() : 
         error.response?.data?.detail || error.message;
-      setError("Error downloading report: " + errorDetail);
+      setError(errorDetail);
     }
   };
 
@@ -221,7 +222,7 @@ const Jobs = () => {
       setJobs(jobs.filter(job => job.id !== job_id));
       handleMenuClose();
     } catch (error) {
-      setError('Error deleting job: ' + (error.response?.data?.detail || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -240,10 +241,9 @@ const Jobs = () => {
       setJobs(jobs.map(job => job.id === job_id ? response.data : job));
       handleMenuClose();
       setError('');
-      // Add immediate refresh after retry
       fetchJobs();
     } catch (error) {
-      setError('Error retrying job: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -426,24 +426,7 @@ const Jobs = () => {
           )}
         </Box>
 
-        {error && (
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              color="error" 
-              sx={{ 
-                p: 2, 
-                bgcolor: '#FEE2E2', 
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              <Cancel fontSize="small" />
-              {error}
-            </Typography>
-          </Box>
-        )}
+        <ErrorMessage message={error} />
 
         <Box sx={{ 
           height: 'calc(100vh - 280px)', // Adjusted for header

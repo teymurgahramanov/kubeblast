@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, TextField, Button, IconButton, FormControlLabel, Checkbox } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import ErrorMessage from './ErrorMessage';
 
 const AddJob = ({ onClose }) => {
   const [jobData, setJobData] = useState({
@@ -42,7 +43,7 @@ const AddJob = ({ onClose }) => {
       });
       onClose();
     } catch (error) {
-      setError('Error creating job: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -68,23 +69,7 @@ const AddJob = ({ onClose }) => {
         </IconButton>
       </Box>
 
-      {error && (
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            color="error" 
-            sx={{ 
-              p: 2, 
-              bgcolor: '#FEE2E2', 
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            {error}
-          </Typography>
-        </Box>
-      )}
+      <ErrorMessage message={error} />
 
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -186,7 +171,7 @@ const AddJob = ({ onClose }) => {
                 textTransform: 'none'
               }}
             >
-              Create
+              Add
             </Button>
           </Box>
         </Box>

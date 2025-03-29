@@ -6,6 +6,7 @@ import { Delete, Edit, MoreVert, PersonAdd } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import Menuselect from "./Menuselect";
 import EditUser from "./EditUser";
+import ErrorMessage from './ErrorMessage';
 
 const Users = ({ setAddUser }) => {
   const [users, setUsers] = useState([]);
@@ -26,7 +27,7 @@ const Users = ({ setAddUser }) => {
       });
       setUsers(response.data);
     } catch (error) {
-      setError('Error fetching users: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -48,8 +49,17 @@ const Users = ({ setAddUser }) => {
       setUsers(users.filter(user => user.username !== username));
       handleMenuClose();
     } catch (error) {
-      setError('Error deleting user: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
+  };
+
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+  };
+
+  const handleUserUpdate = () => {
+    fetchUsers();
+    setSelectedUser(null);
   };
 
   const rows = users.map((user) => ({
@@ -93,7 +103,7 @@ const Users = ({ setAddUser }) => {
       flex: 0.5,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton 
+          <IconButton
             onClick={(event) => handleMenuOpen(event, params.row.username)}
             sx={{ 
               '&:hover': { 
@@ -162,23 +172,7 @@ const Users = ({ setAddUser }) => {
           </Button>
         </Box>
 
-        {error && (
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              color="error" 
-              sx={{ 
-                p: 2, 
-                bgcolor: '#FEE2E2', 
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              {error}
-            </Typography>
-          </Box>
-        )}
+        <ErrorMessage message={error} />
 
         <Box sx={{ 
           height: 'calc(100vh - 280px)',
@@ -265,7 +259,7 @@ const Users = ({ setAddUser }) => {
               <EditUser
                 user={selectedUser}
                 onClose={() => setSelectedUser(null)}
-                onUpdate={fetchUsers}
+                onUpdate={handleUserUpdate}
               />
             )}
           </Box>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import ErrorMessage from './ErrorMessage';
 
 const AddUser = ({ onClose }) => {
   const [userData, setUserData] = useState({
@@ -15,10 +16,10 @@ const AddUser = ({ onClose }) => {
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
-    const { name, value, checked } = e.target;
+    const { name, value } = e.target;
     setUserData(prev => ({
       ...prev,
-      [name]: name === 'enabled' ? checked : value
+      [name]: value
     }));
   };
 
@@ -33,7 +34,9 @@ const AddUser = ({ onClose }) => {
     try {
       const formData = new URLSearchParams();
       formData.append('username', userData.username);
-      formData.append('full_name', userData.full_name);
+      if (userData.full_name) {
+        formData.append('full_name', userData.full_name);
+      }
       formData.append('role', userData.role);
       formData.append('password', userData.password);
       formData.append('enabled', userData.enabled);
@@ -47,7 +50,7 @@ const AddUser = ({ onClose }) => {
       onClose();
       window.location.reload(); // Refresh to show the new user
     } catch (error) {
-      setError('Error creating user: ' + (error.response?.data || error.message));
+      setError(error.response?.data?.detail || error.message);
     }
   };
 
@@ -73,23 +76,7 @@ const AddUser = ({ onClose }) => {
         </IconButton>
       </Box>
 
-      {error && (
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            color="error" 
-            sx={{ 
-              p: 2, 
-              bgcolor: '#FEE2E2', 
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            {error}
-          </Typography>
-        </Box>
-      )}
+      <ErrorMessage message={error} />
 
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -118,7 +105,7 @@ const AddUser = ({ onClose }) => {
 
           <TextField
             fullWidth
-            label="Full Name"
+            label="Full Name (Optional)"
             name="full_name"
             value={userData.full_name}
             onChange={handleInputChange}
@@ -222,8 +209,10 @@ const AddUser = ({ onClose }) => {
             control={
               <Switch
                 checked={userData.enabled}
-                onChange={handleInputChange}
-                name="enabled"
+                onChange={(e) => setUserData(prev => ({
+                  ...prev,
+                  enabled: e.target.checked
+                }))}
                 color="primary"
                 sx={{
                   '& .MuiSwitch-switchBase.Mui-checked': {

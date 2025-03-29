@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, Button, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button } from '@mui/material';
 import { Login as LoginIcon } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import ErrorMessage from './ErrorMessage';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -57,7 +58,7 @@ const Login = () => {
 
       navigate('/jobs');
     } catch (error) {
-      setError('Invalid username or password');
+      setError(error.response?.data?.detail || 'Invalid username or password');
     }
   };
 
@@ -92,95 +93,43 @@ const Login = () => {
           </Typography>
         </Box>
 
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3,
-              borderRadius: 1,
-              backgroundColor: '#FEE2E2',
-              color: 'var(--danger-color)',
-              '& .MuiAlert-icon': {
-                color: 'var(--danger-color)'
-              }
+        <ErrorMessage message={error} />
+
+        <Box component="form" onSubmit={handleSubmit}>
+          <TextField
+            fullWidth
+            label="Username"
+            name="username"
+            value={credentials.username}
+            onChange={handleInputChange}
+            required
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            type="password"
+            label="Password"
+            name="password"
+            value={credentials.password}
+            onChange={handleInputChange}
+            required
+            margin="normal"
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            startIcon={<LoginIcon />}
+            sx={{
+              mt: 3,
+              backgroundColor: 'var(--primary-color)',
+              '&:hover': { backgroundColor: 'var(--primary-dark)' },
+              textTransform: 'none'
             }}
           >
-            {error}
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <TextField
-              required
-              fullWidth
-              label="Username"
-              name="username"
-              value={credentials.username}
-              onChange={handleInputChange}
-              variant="outlined"
-              autoComplete="username"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  '&:hover fieldset': {
-                    borderColor: 'var(--primary-color)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'var(--primary-color)',
-                  },
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: 'var(--primary-color)',
-                },
-              }}
-            />
-
-            <TextField
-              required
-              fullWidth
-              label="Password"
-              name="password"
-              type="password"
-              value={credentials.password}
-              onChange={handleInputChange}
-              variant="outlined"
-              autoComplete="current-password"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  '&:hover fieldset': {
-                    borderColor: 'var(--primary-color)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'var(--primary-color)',
-                  },
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: 'var(--primary-color)',
-                },
-              }}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              startIcon={<LoginIcon />}
-              sx={{
-                backgroundColor: 'var(--primary-color)',
-                '&:hover': { backgroundColor: 'var(--primary-dark)' },
-                textTransform: 'none',
-                py: 1.5,
-                mt: 2,
-                borderRadius: '8px',
-                fontWeight: 500
-              }}
-            >
-              Sign In
-            </Button>
-          </Box>
-        </form>
+            Login
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
