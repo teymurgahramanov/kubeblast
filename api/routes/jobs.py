@@ -28,27 +28,11 @@ async def create_job(
     distributed: Annotated[Optional[bool], Form()] = False,
     ):
 
-    if file.content_type not in ["text/plain", "application/xml", "application/octet-stream"]:
+    if file.content_type not in ["text/xml", "application/xml", "application/octet-stream"]:
         raise HTTPException(status_code=400, detail=f"Invalid file type. Received: {file.content_type}")
-
-    file_content = await file.read()
-
-    return jobs.create_job(current_user, file_content, description, distributed)
-
-@router.put("/jobs/approve/{job_id}", response_model=models.Job)
-async def approve_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["moderator", "admin"]))],
-    job_id: str,
-    approved: Annotated[bool, Query(...)]
-    ):
-    return jobs.approve_job(current_user, job_id, approved)
-
-@router.put("/jobs/retry/{job_id}", response_model=models.Job)
-async def retry_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
-    job_id: str
-    ):
-    return jobs.retry_job(current_user, job_id)
+    else:
+        file_content = await file.read()
+        return jobs.create_job(current_user, file_content, description, distributed)
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):

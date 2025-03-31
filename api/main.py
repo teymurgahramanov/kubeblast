@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import token, users, jobs, logs, files
+from routes import token, users, user_profile, jobs, jobs_extra, logs, files
 from core.log import logger
+from config import config
 
 app = FastAPI()
 
@@ -33,7 +34,11 @@ async def initialize():
      exit(1)
 
 app.include_router(token.router,tags=["token"])
-app.include_router(users.router,tags=["users"])
+app.include_router(user_profile.router,tags=["profile"])
 app.include_router(jobs.router,tags=["jobs"])
 app.include_router(logs.router,tags=["logs"])
 app.include_router(files.router,tags=["files"])
+
+if config.IS_PRO:
+    app.include_router(jobs_extra.router,tags=["jobs_extra"])
+    app.include_router(users.router,tags=["users"])

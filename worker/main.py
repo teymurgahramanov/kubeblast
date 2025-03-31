@@ -34,16 +34,6 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 jobs_collection = db[COLLECTION_NAME]
 
-def get_k8s_job_status(job):
-    """Determine the status of a Kubernetes Job."""
-    if job.status.active:
-        return "running"
-    elif job.status.succeeded:
-        return "completed"
-    elif job.status.failed:
-        return "failed"
-    return None  # Unrecognized status
-
 def process_job_update():
     """Continuously sync job statuses between Kubernetes and MongoDB."""
     batch_v1 = client.BatchV1Api()
@@ -61,9 +51,13 @@ def process_job_update():
                         logger.warning(f"Job {job.metadata.name} does not have a job ID.")
                         continue
                     
-                    # Determine the current job status in Kubernetes
-                    k8s_status = get_k8s_job_status(job)
-                    if not k8s_status:
+                    if job.status.active:
+                        k8s_status = "running"
+                    elif job.status.succeeded:
+                        k8s_status = "completed"
+                    elif job.status.failed:
+                        k8s_status = "failed"
+                    else:
                         logger.warning(f"Unrecognized status for job {job_id}.")
                         continue  # Skip if status is not relevant
                     

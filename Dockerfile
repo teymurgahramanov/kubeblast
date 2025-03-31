@@ -1,5 +1,6 @@
 # Build stage for the web frontend
 FROM node:18-alpine AS web-build
+ENV REACT_APP_IS_PRO=false
 WORKDIR /app
 COPY web/package*.json ./
 RUN npm install
@@ -25,7 +26,8 @@ RUN apk add --no-cache \
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_BREAK_SYSTEM_PACKAGES=1
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    IS_PRO=false
 
 # Copy and install API dependencies
 COPY api/requirements.txt /app/api/

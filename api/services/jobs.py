@@ -43,7 +43,7 @@ def create_job(current_user, file_content, description, distributed):
         "owner": current_user.username
     })
     
-    if current_jobs_count > config.CURRENT_JOBS_LIMIT:
+    if current_jobs_count >= config.CURRENT_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
             detail=f"Too many current jobs ({current_jobs_count}, limit is {config.CURRENT_JOBS_LIMIT})"
@@ -79,34 +79,19 @@ def create_job(current_user, file_content, description, distributed):
         db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(result.inserted_id)})
         raise HTTPException(status_code=500, detail="Failed to create job")
 
-    return get_job(current_user, str(result.inserted_id))
-
-def approve_job(current_user, job_id: str, approved: bool):
-    job = get_job(current_user, job_id).dict()
-
-    if job["status"] != "pending":
-        raise HTTPException(status_code=400, detail="Cannot update job in current state")
-
-    if approved:
-        try:
-            db.mongo.jobs.update_one(
-                {"_id": bson.objectid.ObjectId(job_id)},
-                {"$set": {"status": "approved"}}
-            )
-            k8s.schedule_workload(job_id,job["distributed"])
+    if not config.IS_PRO:
+        try:    
+            k8s.schedule_workload(str(result.inserted_id),distributed)
+            return get_job(current_user, str(result.inserted_id))
         except Exception as e:
             db.mongo.jobs.update_one(
-                {"_id": bson.objectid.ObjectId(job_id)},
-                {"$set": {"status": "pending"}}
+                {"_id": bson.objectid.ObjectId(str(result.inserted_id))},
+                {"$set": {"status": "failed"}}
             )
-            raise HTTPException(status_code=500, detail="Failed to approve job")
-    else: 
-        db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
-            {"$set": {"status": "declined"}}
-        )
-
-    return get_job(current_user, job_id)
+            logger.error(e)
+            raise HTTPException(status_code=500, detail="Failed to schedule workload")
+    else:
+        return get_job(current_user, str(result.inserted_id))
 
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()
@@ -118,27 +103,3 @@ def delete_job(current_user, job_id):
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
     return {f"Job {job_id} deleted"}
-
-def retry_job(current_user, job_id):
-    job = get_job(current_user, job_id).dict()
-
-    if job["status"] in ["pending","declined","retrying"]:
-        raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
-    
-    db.mongo.jobs.update_one(
-        {"_id": bson.objectid.ObjectId(job_id)},
-        {"$set": {"status": "retrying"}}
-    )
-
-    try:
-        k8s.delete_workload(job_id)
-        sleep(10)
-        k8s.schedule_workload(job_id,job["distributed"])
-    except Exception as e:
-        db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
-            {"$set": {"status": "failed"}}
-        )
-        raise HTTPException(status_code=500, detail="Failed to retry job")
-
-    return get_job(current_user, job_id)

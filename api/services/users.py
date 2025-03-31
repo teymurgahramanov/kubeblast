@@ -6,9 +6,7 @@ def get_users():
     users = db.mongo.users.find()
     return [models.User(**user) for user in users]
 
-def get_user(username: str, current_user=None):
-    if current_user and current_user.role != "admin":
-        username = current_user.username
+def get_user(username: str):
     user = db.mongo.users.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

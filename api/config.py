@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    IS_PRO: bool = os.getenv("IS_PRO", False)
+
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     CURRENT_JOBS_LIMIT: int = int(os.getenv("CURRENT_JOBS_LIMIT", 3))

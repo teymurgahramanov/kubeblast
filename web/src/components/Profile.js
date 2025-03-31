@@ -23,7 +23,7 @@ const Profile = () => {
         throw new Error('No username found in session');
       }
       
-      const response = await axiosInstance.get(`/users/${username}`, {
+      const response = await axiosInstance.get(`/profile`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       
@@ -52,7 +52,7 @@ const Profile = () => {
       formData.append('full_name', profile.full_name);
       formData.append('email', profile.email);
 
-      await axiosInstance.put('/users/me', formData, {
+      await axiosInstance.put('/profile', formData, {
         headers: { 
           Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -82,7 +82,7 @@ const Profile = () => {
       const formData = new URLSearchParams();
       formData.append('password', passwords.new_password);
 
-      await axiosInstance.put('/users/me', formData, {
+      await axiosInstance.put('/profile', formData, {
         headers: { 
           Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
           'Content-Type': 'application/x-www-form-urlencoded'

@@ -4,8 +4,8 @@ from core.log import logger
 import zipfile
 from fastapi import HTTPException, Response 
 from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
-from services import jobs
 from config import config
+from services import jobs
 
 s3_client = boto3.client(
     "s3",

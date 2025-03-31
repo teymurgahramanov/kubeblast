@@ -8,6 +8,7 @@ import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
 import Profile from './components/Profile';
+import Settings from './components/Settings';
 import './App.css';
 
 const AdminRoute = ({ children }) => {
@@ -70,6 +71,16 @@ const App = () => {
           element={
             <PrivateRoute>
               <Profile />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Settings route */}
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute>
+              <Settings />
             </PrivateRoute>
           }
         />

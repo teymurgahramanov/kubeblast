@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from typing import Annotated, Literal
 import os
 from core import models
-from services import jobs, auth, files
+from services import auth, files
 
 router = APIRouter(prefix="/api")
 

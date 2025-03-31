@@ -12,15 +12,11 @@ async def get_users(current_user: Annotated[models.User, Depends(auth.check_role
 
 @router.get("/users/{username}", response_model=models.User)
 async def get_user(username: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
-  return users.get_user(username, current_user)
+  return users.get_user(username)
 
 @router.post("/users", response_model=models.User)
 async def create_user(user_data: Annotated[models.UserCreate, Depends(models.UserCreate.create_form)], current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))]):
   return users.create_user(user_data)
-
-@router.put("/users/me", response_model=models.User)
-async def update_user_me(user_data: Annotated[models.UserUpdate, Depends(models.UserUpdate.update_self_form)], current_user: Annotated[models.User, Depends(auth.get_current_active_user)]):
-  return users.update_user(current_user.username, user_data=dict(user_data))
 
 @router.put("/users/{username}", response_model=models.User)
 async def update_user(user_data: Annotated[models.UserUpdate, Depends(models.UserUpdate.update_admin_form)], username: str, current_user: Annotated[models.User, Depends(auth.check_role(["admin"]))]):
