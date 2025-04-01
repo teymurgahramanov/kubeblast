@@ -1,6 +1,7 @@
 # Build stage for the web frontend
 FROM node:18-alpine AS web-build
-ENV REACT_APP_IS_PRO=false
+ARG EDITION_IS_PRO="false"
+ENV REACT_APP_IS_PRO=${EDITION_IS_PRO}
 WORKDIR /app
 COPY web/package*.json ./
 RUN npm install
@@ -10,6 +11,8 @@ RUN npm run build
 
 # Main stage that combines all services
 FROM alpine:3.19 AS base
+
+ARG EDITION_IS_PRO="true"
 
 # Install runtime dependencies
 RUN apk add --no-cache \
@@ -27,7 +30,7 @@ RUN apk add --no-cache \
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_BREAK_SYSTEM_PACKAGES=1 \
-    IS_PRO=false
+    IS_PRO=${EDITION_IS_PRO}
 
 # Copy and install API dependencies
 COPY api/requirements.txt /app/api/

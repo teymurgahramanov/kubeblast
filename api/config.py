@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    IS_PRO: bool = os.getenv("IS_PRO", False)
+    if os.getenv("IS_PRO") == "true":
+        IS_PRO = True
+    else:
+        IS_PRO = False
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
