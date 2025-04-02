@@ -1,8 +1,8 @@
-{{- define "jrunner.name" -}}
+{{- define "kubeblast.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "jrunner.fullname" -}}
+{{- define "kubeblast.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,19 +15,19 @@
 {{- end }}
 {{- end }}
 
-{{- define "jrunner.chart" -}}
+{{- define "kubeblast.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "jrunner.labels" -}}
-helm.sh/chart: {{ include "jrunner.chart" . }}
-app.kubernetes.io/name: {{ include "jrunner.fullname" . }}
+{{- define "kubeblast.labels" -}}
+helm.sh/chart: {{ include "kubeblast.chart" . }}
+app.kubernetes.io/name: {{ include "kubeblast.fullname" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "jrunner.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "jrunner.fullname" . }}
+{{- define "kubeblast.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kubeblast.fullname" . }}
 {{- end }}

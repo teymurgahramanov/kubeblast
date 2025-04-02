@@ -1,7 +1,10 @@
 # Build stage for the web frontend
 FROM node:18-alpine AS web-build
+
 ARG EDITION_IS_PRO="false"
 ENV REACT_APP_IS_PRO=${EDITION_IS_PRO}
+ENV REACT_APP_PRO_REDIRECT_URL=https://kubeblast.io
+
 WORKDIR /app
 COPY web/package*.json ./
 RUN npm install
@@ -10,9 +13,18 @@ COPY web/src/ src/
 RUN npm run build
 
 # Main stage that combines all services
-FROM alpine:3.19 AS base
+FROM alpine/git:2.47.2 AS submodules
+ARG EDITION_IS_PRO="false"
+ENV IS_PRO=${EDITION_IS_PRO}
 
-ARG EDITION_IS_PRO="true"
+RUN if [ "$IS_PRO" = "true" ]; then \
+    git submodule update --init --recursive \
+    else \
+    mkdir -p /app/api/pro; \
+    fi
+
+FROM alpine:3.19 AS base
+ARG EDITION_IS_PRO="false"
 
 # Install runtime dependencies
 RUN apk add --no-cache \

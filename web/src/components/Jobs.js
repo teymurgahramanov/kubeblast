@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -17,6 +17,19 @@ const Jobs = () => {
   const [logs, setLogs] = useState(null);
   const [openAddJob, setOpenAddJob] = useState(false);
   const userRole = sessionStorage.getItem('user_role');
+  const isPro = process.env.REACT_APP_IS_PRO === 'true';
+  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
+
+  const handleProFeature = () => {
+    window.location.href = proRedirectUrl;
+  };
+
+  const renderProFeature = (text) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{text}</Typography>
+      <Star fontSize="small" sx={{ color: 'var(--warning-color)', fontSize: '0.8rem' }} />
+    </Box>
+  );
 
   const fetchJobs = async () => {
     const token = sessionStorage.getItem('access_token');
@@ -321,7 +334,7 @@ const Jobs = () => {
                 open={Boolean(anchorEl) && selectedJobId === job.id}
                 onClose={handleMenuClose}
               >
-                {job.status === 'pending' && userRole === 'admin' && (
+                {job.status === 'pending' && userRole === 'admin' && isPro && (
                   <>
                     <MenuItem onClick={() => approveJob(job.id)}>
                       <CheckCircle sx={{ mr: 1 }} /> Approve
@@ -333,20 +346,21 @@ const Jobs = () => {
                 )}
                 {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
                   <MenuItem onClick={() => viewLogs(job.id, job.status)}>
-                    <Visibility sx={{ mr: 1 }} /> View Logs
+                    <Visibility sx={{ mr: 1 }} /> Logs
                   </MenuItem>
                 )}
                 <MenuItem onClick={() => openPlanFile(job.id)}>
-                  <Description sx={{ mr: 1 }} /> View Plan
+                  <Description sx={{ mr: 1 }} /> Plan
                 </MenuItem>
                 {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'moderator') && (
-                  <MenuItem onClick={() => rescheduleJob(job.id)}>
-                    <Autorenew sx={{ mr: 1 }} /> Retry
+                  <MenuItem onClick={isPro ? () => rescheduleJob(job.id) : handleProFeature}>
+                    <Autorenew sx={{ mr: 1 }} />
+                    {isPro ? 'Retry' : renderProFeature('Retry')}
                   </MenuItem>
                 )}
                 {job.status === 'completed' && (
                   <MenuItem onClick={() => downloadReport(job.id)}>
-                    <Download sx={{ mr: 1 }} /> Download Report
+                    <Download sx={{ mr: 1 }} /> Report
                   </MenuItem>
                 )}
                 <MenuItem onClick={() => deleteJob(job.id)}>
@@ -358,7 +372,7 @@ const Jobs = () => {
         },
       }
     ];
-  }, [anchorEl, selectedJobId, userRole]);
+  }, [anchorEl, selectedJobId, userRole, isPro]);
 
   const rows = useMemo(() => jobs.map((job) => {
     console.log('Mapping job:', job); // Debug log
@@ -387,16 +401,16 @@ const Jobs = () => {
         alignItems: 'center'
       }}>
         <Link to="/jobs" style={{ textDecoration: 'none' }}>
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontWeight: 600, 
-              color: 'var(--primary-color)',
-              '&:hover': { color: 'var(--primary-dark)' }
+          <Box
+            component="img"
+            src="/logo.svg"
+            alt="KubeBlast"
+            sx={{
+              height: 48,
+              width: 'auto',
+              '&:hover': { opacity: 0.8 }
             }}
-          >
-            JRunner
-          </Typography>
+          />
         </Link>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Menuselect />

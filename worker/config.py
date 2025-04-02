@@ -8,9 +8,9 @@ class Config:
     
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
     MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
-    MONGO_DB_USER: str = os.getenv("MONGO_DB_USER", "jrunner")
-    MONGO_DB_PASS: str = os.getenv("MONGO_DB_PASS", "jrunner")
-    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jrunner")
+    MONGO_DB_USER: str = os.getenv("MONGO_DB_USER", "kubeblast")
+    MONGO_DB_PASS: str = os.getenv("MONGO_DB_PASS", "kubeblast")
+    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "kubeblast")
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
  
 

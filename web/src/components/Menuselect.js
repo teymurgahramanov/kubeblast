@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box } from '@mui/material';
-import { AccountCircle, Logout, People, Settings, Star } from '@mui/icons-material';
+import { AccountCircle, Logout, People, Settings, Star, Person } from '@mui/icons-material';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
+  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -28,7 +29,7 @@ const Menuselect = () => {
   };
 
   const handleProFeature = () => {
-    window.location.href = 'https://jrunner.teymur.pro';
+    window.location.href = proRedirectUrl;
   };
 
   const renderProFeature = (text) => (
@@ -67,7 +68,7 @@ const Menuselect = () => {
       >
         <MenuItem onClick={() => handleNavigation('/profile')}>
           <ListItemIcon>
-            <Settings fontSize="small" />
+            <Person fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
         </MenuItem>
@@ -75,7 +76,7 @@ const Menuselect = () => {
         {userRole === 'admin' && (
           <MenuItem onClick={isPro ? () => handleNavigation('/settings') : handleProFeature}>
             <ListItemIcon>
-              <People fontSize="small" />
+              <Settings fontSize="small" />
             </ListItemIcon>
             <ListItemText>
               {isPro ? 'Settings' : renderProFeature('Settings')}

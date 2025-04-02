@@ -80,17 +80,16 @@ const Login = () => {
         mx: 2
       }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ 
-              fontWeight: 600, 
-              color: 'var(--text-primary)',
-              mb: 1
+          <Box
+            component="img"
+            src="/logo.svg"
+            alt="KubeBlast"
+            sx={{
+              height: 72,
+              width: 'auto',
+              mb: 2
             }}
-          >
-            JRunner
-          </Typography>
+          />
         </Box>
 
         <ErrorMessage message={error} />

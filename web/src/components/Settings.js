@@ -20,16 +20,16 @@ const Settings = () => {
         alignItems: 'center'
       }}>
         <Link to="/jobs" style={{ textDecoration: 'none' }}>
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontWeight: 600, 
-              color: 'var(--primary-color)',
-              '&:hover': { color: 'var(--primary-dark)' }
+          <Box
+            component="img"
+            src="/logo.svg"
+            alt="KubeBlast"
+            sx={{
+              height: 48,
+              width: 'auto',
+              '&:hover': { opacity: 0.8 }
             }}
-          >
-            JRunner
-          </Typography>
+          />
         </Link>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Menuselect />

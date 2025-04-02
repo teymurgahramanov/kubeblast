@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -27,11 +27,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "jrunner.fullname" . }}
+    name: {{ include "kubeblast.fullname" . }}
 roleRef:
   kind: Role
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
   apiGroup: rbac.authorization.k8s.io

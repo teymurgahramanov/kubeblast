@@ -46,7 +46,7 @@ def process_job_update():
                 logger.info("No jobs found.")
             else:
                 for job in jobs:
-                    job_id = job.metadata.labels.get("jrunner/job-id")
+                    job_id = job.metadata.labels.get("kubeblast/job-id")
                     if not job_id:
                         logger.warning(f"Job {job.metadata.name} does not have a job ID.")
                         continue

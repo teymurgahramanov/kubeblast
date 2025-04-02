@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
   labels:
-    {{- include "jrunner.labels" . | nindent 4 }}
+    {{- include "kubeblast.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "jrunner.selectorLabels" . | nindent 6 }}
+      {{- include "kubeblast.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "jrunner.selectorLabels" . | nindent 8 }}
+        {{- include "kubeblast.selectorLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
@@ -22,7 +22,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "jrunner.fullname" . }}
+      serviceAccountName: {{ include "kubeblast.fullname" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:

@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
   labels:
-    {{- include "jrunner.labels" . | nindent 4 }}
+    {{- include "kubeblast.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -21,14 +21,14 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "jrunner.fullname" . }}
+                name: {{ include "kubeblast.fullname" . }}
                 port:
                   number: {{ .Values.service.port.api }}
           - path: /
             pathType: ImplementationSpecific
             backend:
               service:
-                name: {{ include "jrunner.fullname" . }}
+                name: {{ include "kubeblast.fullname" . }}
                 port:
                   number: {{ .Values.service.port.web }}
 {{- end }}

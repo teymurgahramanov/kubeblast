@@ -13,7 +13,7 @@ envFromSecret: ""
 podAnnotations: {}
 podLabels: {}
 image:
-  repository: jrunner
+  repository: kubeblast
   tag: latest
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent

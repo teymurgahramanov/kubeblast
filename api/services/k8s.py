@@ -20,10 +20,10 @@ def get_current_namespace():
 current_namespace = get_current_namespace()
 
 def gen_labels(job_id,job_component):
-    return {"jrunner/job-id": job_id, "jrunner/job-component": job_component}
+    return {"kubeblast/job-id": job_id, "kubeblast/job-component": job_component}
 
 def gen_label_selector(job_id,job_component):
-    return f"jrunner/job-id={job_id},jrunner/job-component={job_component}"
+    return f"kubeblast/job-id={job_id},kubeblast/job-component={job_component}"
 
 def stream_pod_logs(job_id, job_status):
     try:
@@ -66,7 +66,7 @@ def stream_pod_logs(job_id, job_status):
         return
 
 def schedule_workload(job_id,distributed):
-    k8s_object_name = f"jrunner-{job_id}"
+    k8s_object_name = f"kubeblast-{job_id}"
     k8s_object_namespace = current_namespace
     file_name = f"{job_id}/plan.jmx"
     file_content = files.read_file(file_name)
@@ -168,7 +168,7 @@ def schedule_workload(job_id,distributed):
     
 def delete_workload(job_id):
     try:
-        label_selector = f"jrunner/job-id={job_id}"
+        label_selector = f"kubeblast/job-id={job_id}"
 
         logger.info(f"Deleting Workload with label selector: {label_selector}")
 

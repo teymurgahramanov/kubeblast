@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "jrunner.fullname" . }}
+  name: {{ include "kubeblast.fullname" . }}
   labels:
-    {{- include "jrunner.labels" . | nindent 4 }}
+    {{- include "kubeblast.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -16,4 +16,4 @@ spec:
       protocol: TCP
       name: api
   selector:
-    {{- include "jrunner.selectorLabels" . | nindent 4 }}
+    {{- include "kubeblast.selectorLabels" . | nindent 4 }}
