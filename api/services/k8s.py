@@ -92,7 +92,8 @@ def schedule_workload(job_id,distributed):
                 slaves = k8s_extra.create_slaves(job_id)
             except Exception as e:
                 logger.error(f"Failed to create slaves for job {job_id}: {e}")
-                slaves = []
+                delete_workload(job_id)
+                raise HTTPException(status_code=500, detail=f"Error creating slaves: {str(e)}")
 
         # Create Job
         with open(job_template_path, 'r') as file:

@@ -34,7 +34,7 @@ async def create_job(
         file_content = await file.read()
         return jobs.create_job(current_user, file_content, description, distributed)
 
-@router.put("/jobs/start/{job_id}", response_model=models.Job)
+@router.put("/jobs/start/{job_id}")
 async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
     background_tasks.add_task(jobs.start_job, current_user, job_id)
     return {"message": "Starting job"}

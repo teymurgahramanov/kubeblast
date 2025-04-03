@@ -13,7 +13,7 @@ async def approve_job(
     ):
     return jobs_extra.approve_job(current_user, job_id, approved)
 
-@router.put("/jobs/retry/{job_id}", response_model=models.Job)
+@router.put("/jobs/retry/{job_id}")
 async def retry_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
     job_id: str,

@@ -57,7 +57,7 @@ def create_job(current_user, file_content, description, distributed):
         )
     
     if not config.IS_PRO:
-        job_status = "approved"
+        job_status = "ready"
     else:
         job_status = "pending"
 
@@ -83,15 +83,15 @@ def create_job(current_user, file_content, description, distributed):
 
 def start_job(current_user, job_id):
     job = get_job(current_user, job_id)
-    if job.status != "approved":
-        raise HTTPException(status_code=400, detail="Cannot start job that is not approved")
+    if job.status != "ready":
+        raise HTTPException(status_code=400, detail="Cannot start job that is not ready")
     try:
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "running"}}
         )
         k8s.schedule_workload(job_id, job.distributed)
-        return job
+        return {"message": f"Job {job_id} started"}
     except Exception as e:
         logger.error(f"Failed to schedule workload for job {job_id}: {e}")
         db.mongo.jobs.update_one(
@@ -109,4 +109,4 @@ def delete_job(current_user, job_id):
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     
-    return {f"Job {job_id} deleted"}
+    return {"message": f"Job {job_id} deleted"}

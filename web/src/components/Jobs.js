@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -91,7 +91,7 @@ const Jobs = () => {
       await axiosInstance.put(`/jobs/approve/${job_id}?approved=true`, {}, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
       });
-      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'approved' } : job));
+      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'ready' } : job));
       handleMenuClose();
     } catch (error) {
       setError(error.response?.data?.detail || error.message);
@@ -241,20 +241,23 @@ const Jobs = () => {
 
   const rescheduleJob = async (job_id) => {
     try {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        setError('Unauthorized: Please log in');
-        return;
-      }
-  
-      const response = await axiosInstance.put(`/jobs/retry/${job_id}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      await axiosInstance.put(`/jobs/retry/${job_id}`, {}, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
       });
-  
-      setJobs(jobs.map(job => job.id === job_id ? response.data : job));
+      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'retrying' } : job));
       handleMenuClose();
-      setError('');
-      fetchJobs();
+    } catch (error) {
+      setError(error.response?.data?.detail || error.message);
+    }
+  };
+
+  const startJob = async (job_id) => {
+    try {
+      await axiosInstance.put(`/jobs/start/${job_id}`, {}, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      });
+      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'running' } : job));
+      handleMenuClose();
     } catch (error) {
       setError(error.response?.data?.detail || error.message);
     }
@@ -344,6 +347,11 @@ const Jobs = () => {
                     </MenuItem>
                   </>
                 )}
+                {job.status === 'ready' && (
+                  <MenuItem onClick={() => startJob(job.id)}>
+                    <PlayArrow sx={{ mr: 1 }} /> Start
+                  </MenuItem>
+                )}
                 {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
                   <MenuItem onClick={() => viewLogs(job.id, job.status)}>
                     <Visibility sx={{ mr: 1 }} /> Logs
@@ -352,7 +360,7 @@ const Jobs = () => {
                 <MenuItem onClick={() => openPlanFile(job.id)}>
                   <Description sx={{ mr: 1 }} /> Plan
                 </MenuItem>
-                {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'moderator') && (
+                {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
                   <MenuItem onClick={isPro ? () => rescheduleJob(job.id) : handleProFeature}>
                     <Autorenew sx={{ mr: 1 }} />
                     {isPro ? 'Retry' : renderProFeature('Retry')}

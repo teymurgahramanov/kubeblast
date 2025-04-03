@@ -11,7 +11,7 @@ build:
       docker:
         dockerfile: Dockerfile
         buildArgs:
-          EDITION_IS_PRO: "true"
+          EDITION_IS_PRO: "false"
 
 deploy:
   helm:

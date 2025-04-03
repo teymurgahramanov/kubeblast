@@ -55,8 +55,8 @@ const Menuselect = () => {
       >
         <Avatar
           sx={{
-            width: 32,
-            height: 32,
+            width: 38,
+            height: 38,
             bgcolor: 'var(--primary-color)',
             fontSize: '1rem',
             fontWeight: 600
