@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 from typing import Annotated, Literal, Optional, List
 from core import models, db
@@ -33,6 +33,11 @@ async def create_job(
     else:
         file_content = await file.read()
         return jobs.create_job(current_user, file_content, description, distributed)
+
+@router.put("/jobs/start/{job_id}", response_model=models.Job)
+async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
+    background_tasks.add_task(jobs.start_job, current_user, job_id)
+    return {"message": "Starting job"}
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):

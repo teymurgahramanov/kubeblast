@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import token, users, user_profile, jobs, jobs_extra, logs, files
+from routes import token, user_profile, jobs, logs, files
 from core.log import logger
 from config import config
 
@@ -40,5 +40,6 @@ app.include_router(logs.router,tags=["logs"])
 app.include_router(files.router,tags=["files"])
 
 if config.IS_PRO:
+    from routes import jobs_extra, users
     app.include_router(jobs_extra.router,tags=["jobs_extra"])
     app.include_router(users.router,tags=["users"])

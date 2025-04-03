@@ -1,0 +1,4 @@
+[submodule "pro"]
+  path = pro
+  branch = dev
+  url = https://github.com/teymurgahramanov/kubeblast-pro.git

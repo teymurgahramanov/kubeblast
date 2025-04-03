@@ -20,6 +20,10 @@ spec:
         {{ key }}: "{{ value }}"
         {% endfor %}
     spec:
+      imagePullSecrets:
+      {% for secret in image_pull_secrets %}
+      - name: {{ secret }}
+      {% endfor %}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}
@@ -38,6 +42,7 @@ spec:
       containers:
       - name: jmeter
         image: {{ image }}
+        imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
           - jmeter-server -Jserver.rmi.ssl.disable=true
@@ -52,3 +57,6 @@ spec:
           limits:
             {{ resources.limits | default('') }}
         {% endif %}
+        env:
+        - name: JVM_ARGS
+          value: {{ jvm_args }}

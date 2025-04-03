@@ -103,6 +103,9 @@ const Login = () => {
             onChange={handleInputChange}
             required
             margin="normal"
+            InputLabelProps={{
+              required: false
+            }}
           />
           <TextField
             fullWidth
@@ -113,6 +116,9 @@ const Login = () => {
             onChange={handleInputChange}
             required
             margin="normal"
+            InputLabelProps={{
+              required: false
+            }}
           />
           <Button
             type="submit"

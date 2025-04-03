@@ -19,9 +19,14 @@ spec:
         {{ key }}: "{{ value }}"
         {% endfor %}
     spec:
+      imagePullSecrets:
+      {% for secret in image_pull_secrets %}
+      - name: {{ secret }}
+      {% endfor %}
       initContainers:
       - name: jmeter
         image: {{ image }}
+        imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
           - |
@@ -36,9 +41,13 @@ spec:
           subPath: plan.jmx
         - name: shared-volume
           mountPath: /shared
+        env:
+        - name: JVM_ARGS
+          value: {{ jvm_args }}
       containers:
       - name: minio
         image: minio/mc:RELEASE.2025-03-12T17-29-24Z-cpuv1
+        imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
           - |

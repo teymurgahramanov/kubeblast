@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from typing import Annotated
 from core import models
 from services import auth, jobs_extra
@@ -16,6 +16,8 @@ async def approve_job(
 @router.put("/jobs/retry/{job_id}", response_model=models.Job)
 async def retry_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
-    job_id: str
+    job_id: str,
+    background_tasks: BackgroundTasks
     ):
-    return jobs_extra.retry_job(current_user, job_id)
+    background_tasks.add_task(jobs_extra.retry_job, current_user, job_id)
+    return {"message": "Retrying job"}

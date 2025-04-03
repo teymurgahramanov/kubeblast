@@ -1,4 +1,5 @@
-from kubernetes import client, config as k8s_config
+from core import k8s
+from kubernetes import client
 from config import config
 from services import files
 from jinja2 import Template
@@ -8,16 +9,15 @@ import os
 from core.log import logger
 import time
 
-k8s_config.load_incluster_config()
-
-def get_current_namespace():
+def get_namespace():
     try:
         with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         return "Namespace file not found"
 
-current_namespace = get_current_namespace()
+def gen_resource_name(job_id):
+    return f"kubeblast-{job_id}" 
 
 def gen_labels(job_id,job_component):
     return {"kubeblast/job-id": job_id, "kubeblast/job-component": job_component}
@@ -26,12 +26,12 @@ def gen_label_selector(job_id,job_component):
     return f"kubeblast/job-id={job_id},kubeblast/job-component={job_component}"
 
 def stream_pod_logs(job_id, job_status):
+    namespace = get_namespace()
+    label_selector = gen_label_selector(job_id,"master")
     try:
-        label_selector = gen_label_selector(job_id,"master")
-
         logger.info(f"Looking for Pods with label selector: {label_selector}")
         pod_list = client.CoreV1Api().list_namespaced_pod(
-            namespace=current_namespace,
+            namespace=namespace,
             label_selector=label_selector
         )
 
@@ -48,7 +48,7 @@ def stream_pod_logs(job_id, job_status):
 
         logs = client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
-            namespace=current_namespace,
+            namespace=namespace,
             container="jmeter",
             follow=should_follow,
             _preload_content=False,  # Don't preload content for better streaming
@@ -66,87 +66,46 @@ def stream_pod_logs(job_id, job_status):
         return
 
 def schedule_workload(job_id,distributed):
-    k8s_object_name = f"kubeblast-{job_id}"
-    k8s_object_namespace = current_namespace
+    name = gen_resource_name(job_id)
+    namespace = get_namespace()
+    labels = gen_labels(job_id,"master")
+    label_selector = gen_label_selector(job_id,"master")
     file_name = f"{job_id}/plan.jmx"
     file_content = files.read_file(file_name)
     slaves=[]
 
     job_template_path = os.path.join(os.path.dirname(__file__), "../job/job.yaml.j2")
-    daemonset_template_path = os.path.join(os.path.dirname(__file__), "../job/ds.yaml.j2")
 
     try:
         # Create ConfigMap and DaemonSet in parallel
         configmap_manifest = client.V1ConfigMap(
-            metadata=client.V1ObjectMeta(name=k8s_object_name, labels=gen_labels(job_id,"master")),
+            metadata=client.V1ObjectMeta(name=name, labels=labels),
             data={"plan.jmx": file_content}
         )
 
-        client.CoreV1Api().create_namespaced_config_map(namespace=k8s_object_namespace, body=configmap_manifest)
+        client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap_manifest)
         logger.info(f"Created ConfigMap for job {job_id}")
         
         if distributed:
-            logger.info(f"Creating DaemonSet for job {job_id}")
-            with open(daemonset_template_path, 'r') as file:
-                daemonset_template_content = file.read()
-
-            rendered_daemonset = Template(daemonset_template_content).render(
-                name=k8s_object_name,
-                namespace=k8s_object_namespace,
-                labels = gen_labels(job_id,"slave"),
-                image=config.K8S_JOB_IMAGE,
-                resources=config.K8S_JOB_SLAVE_RESOURCES,
-                nodeSelector=config.K8S_JOB_NODE_SELECTOR,
-                tolerations=config.K8S_JOB_TOLERATIONS,
-            )
-
-            daemonset_manifest = yaml.safe_load(rendered_daemonset)
-            
-            client.AppsV1Api().create_namespaced_daemon_set(namespace=current_namespace, body=daemonset_manifest)
-            
-            logger.info(f"Created DaemonSet for job {job_id}")
-
-            max_retries = 5
-            retry_interval = 10
-            retry_count = 0
-            slaves = []
-            
-            while retry_count < max_retries:
-                ds = client.AppsV1Api().read_namespaced_daemon_set(
-                    name=k8s_object_name,
-                    namespace=current_namespace
-                )
-                
-                if ds.status.number_ready == ds.status.desired_number_scheduled:
-                    label_selector = gen_label_selector(job_id,"slave")
-                    pod_list = client.CoreV1Api().list_namespaced_pod(
-                        namespace=current_namespace,
-                        label_selector=label_selector
-                    )
-                    
-                    slaves = [pod.status.pod_ip for pod in pod_list.items if pod.status.pod_ip]
-                    
-                    if slaves and len(slaves) == ds.status.number_ready:
-                        logger.info(f"DaemonSet ready with {len(slaves)} pods having IPs")
-                        break
-                
-                logger.info(f"Waiting for DaemonSet and pod IPs... Attempt {retry_count + 1}/{max_retries}")
-                time.sleep(retry_interval)
-                retry_count += 1
-                
-            if not slaves:
-                raise Exception("Timeout waiting for DaemonSet and pod IPs")
+            try:
+                from services import k8s_extra
+                slaves = k8s_extra.create_slaves(job_id)
+            except Exception as e:
+                logger.error(f"Failed to create slaves for job {job_id}: {e}")
+                slaves = []
 
         # Create Job
         with open(job_template_path, 'r') as file:
             job_template_content = file.read()
 
         rendered_job = Template(job_template_content).render(
-            name=k8s_object_name,
-            namespace=k8s_object_namespace,
-            labels = gen_labels(job_id,"master"),
+            name=name,
+            namespace=namespace,
+            labels = labels,
             job_id=job_id,
             image=config.K8S_JOB_IMAGE,
+            image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
+            image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
             slaves=slaves,
             resources=config.K8S_JOB_MASTER_RESOURCES,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
@@ -154,11 +113,12 @@ def schedule_workload(job_id,distributed):
             s3_url=config.S3_URL,
             s3_access_key=config.S3_ACCESS_KEY,
             s3_secret_key=config.S3_SECRET_KEY,
-            s3_bucket=config.S3_BUCKET
+            s3_bucket=config.S3_BUCKET,
+            jvm_args=config.K8S_JOB_JMETER_JVM_ARGS 
         )
 
         job_manifest = yaml.safe_load(rendered_job)
-        client.BatchV1Api().create_namespaced_job(namespace=k8s_object_namespace, body=job_manifest)
+        client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
         logger.info(f"Created Kubernetes Job: {job_id}")
 
     except Exception as e:
@@ -167,13 +127,13 @@ def schedule_workload(job_id,distributed):
         raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
     
 def delete_workload(job_id):
+    namespace = get_namespace()
+    label_selector = f"kubeblast/job-id={job_id}"
     try:
-        label_selector = f"kubeblast/job-id={job_id}"
-
         logger.info(f"Deleting Workload with label selector: {label_selector}")
 
         jobs = client.BatchV1Api().list_namespaced_job(
-            namespace=current_namespace,
+            namespace=namespace,
             label_selector=label_selector
         )
         
@@ -181,7 +141,7 @@ def delete_workload(job_id):
         for job_item in jobs.items:
             job_name = job_item.metadata.name
             client.BatchV1Api().delete_namespaced_job(
-                namespace=current_namespace,
+                namespace=namespace,
                 name=job_name,
                 propagation_policy='Foreground',
                 grace_period_seconds = 0
@@ -190,7 +150,7 @@ def delete_workload(job_id):
 
         logger.info(f"Deleting DaemonSet with label selector: {label_selector}")
         daemonset = client.AppsV1Api().list_namespaced_daemon_set(
-            namespace=current_namespace,
+            namespace=namespace,
             label_selector=label_selector
         )
         
@@ -198,14 +158,14 @@ def delete_workload(job_id):
         for ds in daemonset.items:
             ds_name = ds.metadata.name
             client.AppsV1Api().delete_namespaced_daemon_set(
-                namespace=current_namespace,
+                namespace=namespace,
                 name=ds_name
             )
             logger.info(f"DaemonSet {ds_name} deleted")
 
         logger.info(f"Deleting ConfigMaps with label selector: {label_selector}")
         config_maps = client.CoreV1Api().list_namespaced_config_map(
-            namespace=current_namespace,
+            namespace=namespace,
             label_selector=label_selector
         )
 
@@ -213,14 +173,14 @@ def delete_workload(job_id):
         for cm in config_maps.items:
             cm_name = cm.metadata.name
             client.CoreV1Api().delete_namespaced_config_map(
-                namespace=current_namespace,
+                namespace=namespace,
                 name=cm_name
             )
             logger.info(f"ConfigMap {cm_name} deleted")
 
         logger.info(f"Deleting Pods with label selector: {label_selector}")
         pods = client.CoreV1Api().list_namespaced_pod(
-            namespace=current_namespace,
+            namespace=namespace,
             label_selector=label_selector
         )
         
@@ -230,7 +190,7 @@ def delete_workload(job_id):
             logger.info(f"Deleting Pod: {pod_name}")
             client.CoreV1Api().delete_namespaced_pod(
                 name=pod_name,
-                namespace=current_namespace,
+                namespace=namespace,
                 body=client.V1DeleteOptions(),
                 grace_period_seconds=0
             )

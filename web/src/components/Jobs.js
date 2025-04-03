@@ -334,7 +334,7 @@ const Jobs = () => {
                 open={Boolean(anchorEl) && selectedJobId === job.id}
                 onClose={handleMenuClose}
               >
-                {job.status === 'pending' && userRole === 'admin' && isPro && (
+                {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
                   <>
                     <MenuItem onClick={() => approveJob(job.id)}>
                       <CheckCircle sx={{ mr: 1 }} /> Approve

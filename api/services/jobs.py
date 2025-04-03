@@ -56,42 +56,49 @@ def create_job(current_user, file_content, description, distributed):
             detail=f"Job with the same plan file already exists: {job_name}"
         )
     
+    if not config.IS_PRO:
+        job_status = "approved"
+    else:
+        job_status = "pending"
+
     job = models.Job(
         name=job_name,
         owner=current_user.username,
         description=description,
         distributed=distributed,
-        status="pending",
+        status=job_status,
         created_at=datetime.now(),
     )
 
     try:
         result = db.mongo.jobs.insert_one(job.dict())
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail="Failed to create job")
-
-    try:
         file_name = f"{str(result.inserted_id)}/plan.jmx"
         files.create_file(file_content,file_name)
+        return get_job(current_user, str(result.inserted_id))
     except Exception as e:
         logger.error(e)
-        db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(result.inserted_id)})
+        delete_job(current_user, str(result.inserted_id))
         raise HTTPException(status_code=500, detail="Failed to create job")
 
-    if not config.IS_PRO:
-        try:    
-            k8s.schedule_workload(str(result.inserted_id),distributed)
-            return get_job(current_user, str(result.inserted_id))
-        except Exception as e:
-            db.mongo.jobs.update_one(
-                {"_id": bson.objectid.ObjectId(str(result.inserted_id))},
-                {"$set": {"status": "failed"}}
-            )
-            logger.error(e)
-            raise HTTPException(status_code=500, detail="Failed to schedule workload")
-    else:
-        return get_job(current_user, str(result.inserted_id))
+
+def start_job(current_user, job_id):
+    job = get_job(current_user, job_id)
+    if job.status != "approved":
+        raise HTTPException(status_code=400, detail="Cannot start job that is not approved")
+    try:
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "running"}}
+        )
+        k8s.schedule_workload(job_id, job.distributed)
+        return job
+    except Exception as e:
+        logger.error(f"Failed to schedule workload for job {job_id}: {e}")
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=500, detail="Failed to schedule workload")
 
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()

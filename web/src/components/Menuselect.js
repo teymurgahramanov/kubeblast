@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box } from '@mui/material';
+import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
 import { AccountCircle, Logout, People, Settings, Star, Person } from '@mui/icons-material';
 
 const Menuselect = () => {
@@ -9,6 +9,8 @@ const Menuselect = () => {
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
+  const username = sessionStorage.getItem('username');
+  const firstLetter = username ? username.charAt(0).toUpperCase() : '';
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -43,14 +45,25 @@ const Menuselect = () => {
     <div>
       <Button
         onClick={handleClick}
-        startIcon={<AccountCircle />}
         sx={{
           color: 'var(--text-primary)',
           textTransform: 'none',
+          minWidth: 'auto',
+          padding: '4px',
           '&:hover': { backgroundColor: 'var(--background-light)' }
         }}
       >
-        {sessionStorage.getItem('username')}
+        <Avatar
+          sx={{
+            width: 32,
+            height: 32,
+            bgcolor: 'var(--primary-color)',
+            fontSize: '1rem',
+            fontWeight: 600
+          }}
+        >
+          {firstLetter}
+        </Avatar>
       </Button>
       <Menu
         anchorEl={anchorEl}
@@ -66,6 +79,19 @@ const Menuselect = () => {
           }
         }}
       >
+        <MenuItem sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'flex-start',
+          py: 2,
+          cursor: 'default',
+          '&:hover': { backgroundColor: 'transparent' }
+        }}>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+            @{username}
+          </Typography>
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={() => handleNavigation('/profile')}>
           <ListItemIcon>
             <Person fontSize="small" />

@@ -32,8 +32,18 @@ class Config:
     
     # Load Kubernetes NodeSelector from JSON or parse key-value pairs
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
+    K8S_JOB_IMAGE_PULL_POLICY: str = os.getenv("K8S_JOB_IMAGE_PULL_POLICY", "IfNotPresent")
     K8S_JOB_JMETER_JVM_ARGS: str = os.getenv("K8S_JOB_JMETER_JVM_ARGS", "")
-    
+
+    K8S_JOB_IMAGE_PULL_SECRETS: list = []
+    # Load Kubernetes Image Pull Secrets from JSON format
+    image_pull_secrets_env = os.getenv("K8S_JOB_IMAGE_PULL_SECRETS")
+    if image_pull_secrets_env:
+        try:
+            K8S_JOB_IMAGE_PULL_SECRETS = json.loads(image_pull_secrets_env)
+        except json.JSONDecodeError:
+            K8S_JOB_IMAGE_PULL_SECRETS = None
+
     K8S_JOB_SLAVE_RESOURCES: dict = {}
     # Load Kubernetes Slave Resources from JSON format
     slave_resources_env = os.getenv("K8S_JOB_SLAVE_RESOURCES")
@@ -42,7 +52,6 @@ class Config:
             K8S_JOB_SLAVE_RESOURCES = json.loads(slave_resources_env)
         except json.JSONDecodeError:
             K8S_JOB_SLAVE_RESOURCES = None
-    
     
     K8S_JOB_MASTER_RESOURCES: dict = {}
     # Load Kubernetes Master Resources from JSON format
@@ -61,7 +70,6 @@ class Config:
             K8S_JOB_NODE_SELECTOR = json.loads(job_node_selector_env)
         except json.JSONDecodeError:
             K8S_JOB_NODE_SELECTOR = None
-
     
     K8S_JOB_TOLERATIONS: list = []
     # Load Kubernetes Tolerations from JSON format
