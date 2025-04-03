@@ -12,17 +12,6 @@ COPY web/public/ public/
 COPY web/src/ src/
 RUN npm run build
 
-# Main stage that combines all services
-FROM alpine/git:2.47.2 AS submodules
-ARG EDITION_IS_PRO="false"
-ENV IS_PRO=${EDITION_IS_PRO}
-
-RUN if [ "$IS_PRO" = "true" ]; then \
-    git submodule update --init --recursive \
-    else \
-    mkdir -p /app/api/pro; \
-    fi
-
 FROM alpine:3.19 AS base
 ARG EDITION_IS_PRO="false"
 
@@ -51,6 +40,13 @@ RUN pip install --no-cache-dir -r /app/api/requirements.txt && pip install --no-
 
 # Copy application code
 COPY api/ /app/api/
+COPY pro/ /app/pro/
+RUN if [ "$IS_PRO" = "true" ]; then \
+    cp -pr /app/pro/* /app/ && \
+    rm -rf /app/pro; \
+    else \
+    rm -rf /app/pro; \
+    fi
 COPY worker/ /app/worker/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=web-build /app/build /usr/share/nginx/html
