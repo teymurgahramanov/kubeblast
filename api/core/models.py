@@ -82,5 +82,5 @@ class Job(BaseModel):
     owner: str
     distributed: Optional[bool] = False
     description: Optional[str] = None
-    status: Literal["pending", "approved", "declined", "running", "completed", "failed"]
+    status: Literal["pending", "approved", "declined", "retrying", "running", "completed", "failed"]
     created_at: Optional[datetime] = None
