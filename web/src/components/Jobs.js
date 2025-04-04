@@ -266,7 +266,9 @@ const Jobs = () => {
   const columns = useMemo(() => {
     console.log('Current user role:', userRole); // Debug log
     return [
-      { field: "id", headerName: "ID", width: 100, flex: 0.5 },
+      ...(userRole === 'admin' || userRole === 'moderator' ? [
+        { field: "id", headerName: "ID", width: 100, flex: 0.5 }
+      ] : []),
       { field: "job_name", headerName: "Job Name", width: 180, flex: 1 },
       ...(userRole === 'admin' || userRole === 'moderator' ? [
         { field: "owner", headerName: "Owner", width: 150, flex: 1 }
@@ -361,9 +363,8 @@ const Jobs = () => {
                   <Description sx={{ mr: 1 }} /> Plan
                 </MenuItem>
                 {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
-                  <MenuItem onClick={isPro ? () => rescheduleJob(job.id) : handleProFeature}>
-                    <Autorenew sx={{ mr: 1 }} />
-                    {isPro ? 'Retry' : renderProFeature('Retry')}
+                  <MenuItem onClick={() => rescheduleJob(job.id)}>
+                    <Autorenew sx={{ mr: 1 }} /> Retry
                   </MenuItem>
                 )}
                 {job.status === 'completed' && (

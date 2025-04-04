@@ -100,6 +100,28 @@ def start_job(current_user, job_id):
         )
         raise HTTPException(status_code=500, detail="Failed to schedule workload")
 
+def retry_job(current_user, job_id):
+    job = get_job(current_user, job_id).dict()
+
+    if job["status"] in ["pending","declined"]:
+        raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
+
+    try:
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "retrying"}}
+        )
+        k8s.delete_workload(job_id)
+        sleep(10)
+        k8s.schedule_workload(job_id,job["distributed"])
+        return {"message": f"Job {job_id} retried"}
+    except Exception as e:
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=500, detail="Failed to retry job")
+
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()
 

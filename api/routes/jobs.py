@@ -39,6 +39,15 @@ async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user
     background_tasks.add_task(jobs.start_job, current_user, job_id)
     return {"message": "Starting job"}
 
+@router.put("/jobs/retry/{job_id}")
+async def retry_job(
+    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
+    job_id: str,
+    background_tasks: BackgroundTasks
+    ):
+    background_tasks.add_task(jobs.retry_job, current_user, job_id)
+    return {"message": "Retrying job"}
+
 @router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
     return jobs.delete_job(current_user, job_id)

@@ -51,8 +51,8 @@ def stream_pod_logs(job_id, job_status):
             namespace=namespace,
             container="jmeter",
             follow=should_follow,
-            _preload_content=False,  # Don't preload content for better streaming
-            tail_lines=1000 if not should_follow else None  # Limit lines for completed jobs
+            _preload_content=False,
+            tail_lines=1000 if not should_follow else None
         )
 
         for line in logs:
