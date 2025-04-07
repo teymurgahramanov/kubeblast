@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, WorkOutline } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -216,7 +216,7 @@ const Jobs = () => {
       const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = `${job_id}_report.zip`;
+      link.download = `kubeblast_${jobs.find(job => job.id === job_id)?.name}.zip`;
       link.click();
       handleMenuClose();
     } catch (error) {
@@ -266,14 +266,6 @@ const Jobs = () => {
   const columns = useMemo(() => {
     console.log('Current user role:', userRole); // Debug log
     return [
-      ...(userRole === 'admin' || userRole === 'moderator' ? [
-        { field: "id", headerName: "ID", width: 100, flex: 0.5 }
-      ] : []),
-      { field: "job_name", headerName: "Job Name", width: 180, flex: 1 },
-      ...(userRole === 'admin' || userRole === 'moderator' ? [
-        { field: "owner", headerName: "Owner", width: 150, flex: 1 }
-      ] : []),
-      { field: "description", headerName: "Description", width: 250, flex: 2 },
       { 
         field: "status", 
         headerName: "Status", 
@@ -283,19 +275,19 @@ const Jobs = () => {
           const getStatusColor = (status) => {
             switch (status.toLowerCase()) {
               case 'pending':
-                return { bg: '#FEF3C7', text: '#92400E' };
+                return { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' };
               case 'running':
-                return { bg: '#DBEAFE', text: '#1E40AF' };
+                return { bg: '#EFF6FF', text: '#1E40AF', border: '#93C5FD' };
               case 'completed':
-                return { bg: '#D1FAE5', text: '#065F46' };
+                return { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' };
               case 'failed':
-                return { bg: '#FEE2E2', text: '#991B1B' };
+                return { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
               case 'declined':
-                return { bg: '#F3F4F6', text: '#1F2937' };
+                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
               case 'retrying':
-                return { bg: '#FEF3C7', text: '#92400E' };
+                return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
               default:
-                return { bg: '#F3F4F6', text: '#1F2937' };
+                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
             }
           };
 
@@ -304,22 +296,39 @@ const Jobs = () => {
             <Box sx={{
               backgroundColor: statusColors.bg,
               color: statusColors.text,
-              height: '100%',
-              width: '100%',
+              border: `1px solid ${statusColors.border}`,
+              borderRadius: '6px',
+              px: 2,
+              py: 1,
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              width: 'fit-content',
+              minWidth: '90px',
+              textAlign: 'center',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              '&:hover': {
-                backgroundColor: statusColors.bg,
-              }
+              gap: 1,
             }}>
+              <Box sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: statusColors.text
+              }} />
               {params.value.charAt(0).toUpperCase() + params.value.slice(1)}
             </Box>
           );
         }
       },
+      ...(userRole === 'admin' || userRole === 'moderator' ? [
+        { field: "id", headerName: "ID", width: 100, flex: 0.5 }
+      ] : []),
+      { field: "job_name", headerName: "Job Name", width: 180, flex: 1 },
+      ...(userRole === 'admin' || userRole === 'moderator' ? [
+        { field: "owner", headerName: "Owner", width: 150, flex: 1 }
+      ] : []),
+      { field: "description", headerName: "Description", width: 250, flex: 2 },
       {
         field: 'actions',
         headerName: 'Actions',
@@ -394,6 +403,41 @@ const Jobs = () => {
     };
   }), [jobs]);
 
+  const EmptyState = () => (
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      py: 8,
+      px: 2,
+      textAlign: 'center',
+    }}>
+      <WorkOutline sx={{ 
+        fontSize: 64,
+        color: 'var(--text-secondary)',
+        mb: 2,
+        opacity: 0.5
+      }} />
+      <Typography variant="h6" sx={{ 
+        color: 'var(--text-primary)',
+        mb: 1,
+        fontWeight: 600
+      }}>
+        No Jobs Found
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        color: 'var(--text-secondary)',
+        maxWidth: 400,
+        mx: 'auto'
+      }}>
+        {userRole === 'admin' || userRole === 'user' 
+          ? "Get started by adding your first job using the 'Add' button above."
+          : "There are currently no jobs to display."}
+      </Typography>
+    </Box>
+  );
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -452,28 +496,67 @@ const Jobs = () => {
         <ErrorMessage message={error} />
 
         <Box sx={{ 
-          height: 'calc(100vh - 280px)', // Adjusted for header
+          height: 'calc(100vh - 280px)',
           width: '100%',
-          '& .status-cell': {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start'
-          }
-        }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            hideFooter
-            disableSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-cell:focus': {
-                outline: 'none'
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+          overflow: 'hidden',
+          '& .MuiDataGrid-root': {
+            border: 'none',
+            '& .MuiDataGrid-cell': {
+              borderBottom: '1px solid var(--border-color)',
+              '&:focus': {
+                outline: 'none',
               },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: 'var(--background-light)'
-              }
-            }}
-          />
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: '#F8FAFC',
+              borderBottom: '2px solid var(--border-color)',
+              '& .MuiDataGrid-columnHeader': {
+                '&:focus': {
+                  outline: 'none',
+                },
+                '&:focus-within': {
+                  outline: 'none',
+                },
+              },
+            },
+            '& .MuiDataGrid-row': {
+              '&:hover': {
+                backgroundColor: '#F8FAFC',
+              },
+              '&:nth-of-type(even)': {
+                backgroundColor: '#FAFAFA',
+              },
+            },
+            '& .MuiDataGrid-overlay': {
+              background: 'transparent',
+            },
+          },
+        }}>
+          {jobs.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              hideFooter
+              disableSelectionOnClick
+              disableColumnMenu
+              autoHeight
+              getRowHeight={() => 'auto'}
+              sx={{
+                '& .MuiDataGrid-cell': {
+                  py: 2,
+                },
+                '& .MuiDataGrid-columnHeader': {
+                  py: 2,
+                  fontWeight: 600,
+                },
+              }}
+            />
+          )}
         </Box>
 
         <Modal

@@ -49,7 +49,7 @@ def create_job(current_user, file_content, description, distributed):
             detail=f"Too many current jobs ({current_jobs_count}, limit is {config.CURRENT_JOBS_LIMIT})"
         )
 
-    job = db.mongo.jobs.find_one({"name": job_name})
+    job = db.mongo.jobs.find_one({"name": job_name, "owner": current_user.username})
     if job:
         raise HTTPException(
             status_code=409,
@@ -57,6 +57,8 @@ def create_job(current_user, file_content, description, distributed):
         )
     
     if not config.IS_PRO:
+        job_status = "ready"
+    elif current_user.auto_approve:
         job_status = "ready"
     else:
         job_status = "pending"

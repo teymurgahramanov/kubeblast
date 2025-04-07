@@ -49,7 +49,7 @@ def read_file(file_name):
     return file_content
 
 def download_file(current_user, job_id, type):
-    jobs.get_job(current_user, job_id).dict()
+    job = jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
             file_name = f"{job_id}/plan.jmx"
@@ -91,7 +91,7 @@ def download_file(current_user, job_id, type):
                     content=zip_buffer.getvalue(),
                     media_type="application/zip",
                     headers={
-                        "Content-Disposition": f'attachment; filename="{job_id}_report.zip"'
+                        "Content-Disposition": f'attachment; filename="kubeblast_{job["name"]}_report.zip"'
                     }
                 )
             except HTTPException as e:

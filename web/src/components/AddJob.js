@@ -90,6 +90,7 @@ const AddJob = ({ onClose }) => {
             fullWidth
             label="Description (Optional)"
             name="description"
+            maxLength={20}
             value={jobData.description}
             onChange={handleInputChange}
             multiline

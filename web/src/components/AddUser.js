@@ -1,54 +1,52 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Checkbox } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import ErrorMessage from './ErrorMessage';
 
 const AddUser = ({ onClose }) => {
-  const [userData, setUserData] = useState({
+  const [formData, setFormData] = useState({
     username: '',
     full_name: '',
-    role: '',
+    email: '',
     password: '',
     confirmPassword: '',
-    enabled: true
+    role: 'user',
+    enabled: true,
+    auto_approve: false
   });
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setUserData(prev => ({
+    const { name, value, checked } = e.target;
+    setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: e.target.type === 'checkbox' ? checked : value
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (userData.password !== userData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
     try {
-      const formData = new URLSearchParams();
-      formData.append('username', userData.username);
-      if (userData.full_name) {
-        formData.append('full_name', userData.full_name);
-      }
-      formData.append('role', userData.role);
-      formData.append('password', userData.password);
-      formData.append('enabled', userData.enabled);
-
-      await axiosInstance.post('/users', formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+      const { confirmPassword, ...userData } = formData;
+      const formDataToSend = new URLSearchParams();
+      Object.entries(userData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formDataToSend.append(key, value);
         }
       });
-      
+
+      await axiosInstance.post('/users', formDataToSend, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`
+        }
+      });
       onClose();
-      window.location.reload(); // Refresh to show the new user
     } catch (error) {
       setError(error.response?.data?.detail || error.message);
     }
@@ -81,11 +79,11 @@ const AddUser = ({ onClose }) => {
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <TextField
-            required
             fullWidth
+            required
             label="Username"
             name="username"
-            value={userData.username}
+            value={formData.username}
             onChange={handleInputChange}
             variant="outlined"
             sx={{
@@ -105,9 +103,80 @@ const AddUser = ({ onClose }) => {
 
           <TextField
             fullWidth
-            label="Full Name (Optional)"
+            label="Full Name"
             name="full_name"
-            value={userData.full_name}
+            value={formData.full_name}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            required
+            label="Password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--primary-color)',
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: 'var(--primary-color)',
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            required
+            label="Confirm Password"
+            name="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
             onChange={handleInputChange}
             variant="outlined"
             sx={{
@@ -137,7 +206,7 @@ const AddUser = ({ onClose }) => {
               labelId="role-label"
               label="Role"
               name="role"
-              value={userData.role}
+              value={formData.role}
               onChange={handleInputChange}
               required
               sx={{
@@ -157,78 +226,55 @@ const AddUser = ({ onClose }) => {
             </Select>
           </FormControl>
 
-          <TextField
-            required
-            fullWidth
-            label="Password"
-            name="password"
-            type="password"
-            value={userData.password}
-            onChange={handleInputChange}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': {
-                  borderColor: 'var(--primary-color)',
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.enabled}
+                  onChange={handleInputChange}
+                  name="enabled"
+                  sx={{
+                    color: 'var(--text-secondary)',
+                    '&.Mui-checked': {
+                      color: 'var(--primary-color)',
+                    },
+                  }}
+                />
+              }
+              label="Enabled"
+              sx={{
+                color: 'var(--text-secondary)',
+                '& .MuiTypography-root': {
+                  color: 'var(--text-secondary)',
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'var(--primary-color)',
-                },
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: 'var(--primary-color)',
-              },
-            }}
-          />
+              }}
+            />
 
-          <TextField
-            required
-            fullWidth
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            value={userData.confirmPassword}
-            onChange={handleInputChange}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': {
-                  borderColor: 'var(--primary-color)',
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.auto_approve}
+                  onChange={handleInputChange}
+                  name="auto_approve"
+                  sx={{
+                    color: 'var(--text-secondary)',
+                    '&.Mui-checked': {
+                      color: 'var(--primary-color)',
+                    },
+                  }}
+                />
+              }
+              label="Auto-approve Jobs"
+              sx={{
+                color: 'var(--text-secondary)',
+                '& .MuiTypography-root': {
+                  color: 'var(--text-secondary)',
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'var(--primary-color)',
-                },
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: 'var(--primary-color)',
-              },
-            }}
-          />
+              }}
+            />
+          </Box>
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={userData.enabled}
-                onChange={(e) => setUserData(prev => ({
-                  ...prev,
-                  enabled: e.target.checked
-                }))}
-                color="primary"
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': {
-                    color: 'var(--primary-color)',
-                  },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    backgroundColor: 'var(--primary-color)',
-                  },
-                }}
-              />
-            }
-            label={userData.enabled ? 'Enabled' : 'Disabled'}
-            sx={{ mb: 1 }}
-          />
-
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button
               onClick={onClose}
               variant="outlined"

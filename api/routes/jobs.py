@@ -23,7 +23,7 @@ async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth
 @router.post("/jobs", response_model=models.Job)
 async def create_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
-    description: Annotated[Optional[str], Form(max_length=60)] = None,
+    description: Annotated[Optional[str], Form(max_length=20)] = None,
     file: UploadFile = File(...),
     distributed: Annotated[Optional[bool], Form()] = False,
     ):

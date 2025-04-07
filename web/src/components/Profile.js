@@ -161,6 +161,7 @@ const Profile = () => {
           <TextField
             fullWidth
             label="Email"
+            type="email"
             value={profile.email}
             onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
             margin="normal"

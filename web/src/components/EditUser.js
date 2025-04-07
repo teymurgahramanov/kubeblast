@@ -1,6 +1,6 @@
 // components/FormEditUser.js
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Select, MenuItem, FormControl, InputLabel, FormControlLabel, Switch, Checkbox } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
@@ -12,16 +12,17 @@ const EditUser = ({ user, onClose, onUpdate }) => {
     full_name: user.full_name || '',
     role: user.role,
     enabled: user.enabled,
+    auto_approve: user.auto_approve || false,
     password: '',
     confirmPassword: ''
   });
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, checked } = e.target;
     setUserData(prev => ({
       ...prev,
-      [name]: value
+      [name]: e.target.type === 'checkbox' ? checked : value
     }));
   };
 
@@ -37,7 +38,8 @@ const EditUser = ({ user, onClose, onUpdate }) => {
       const dataToUpdate = {
         full_name: userData.full_name,
         role: userData.role,
-        enabled: userData.enabled
+        enabled: userData.enabled,
+        auto_approve: userData.auto_approve
       };
 
       // Only include email if it's not empty
@@ -245,28 +247,53 @@ const EditUser = ({ user, onClose, onUpdate }) => {
             />
           )}
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={userData.enabled}
-                onChange={(e) => setUserData(prev => ({
-                  ...prev,
-                  enabled: e.target.checked
-                }))}
-                color="primary"
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': {
-                    color: 'var(--primary-color)',
-                  },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    backgroundColor: 'var(--primary-color)',
-                  },
-                }}
-              />
-            }
-            label={userData.enabled ? 'Enabled' : 'Disabled'}
-            sx={{ mb: 1 }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={userData.enabled}
+                  onChange={handleInputChange}
+                  name="enabled"
+                  sx={{
+                    color: 'var(--text-secondary)',
+                    '&.Mui-checked': {
+                      color: 'var(--primary-color)',
+                    },
+                  }}
+                />
+              }
+              label="Enabled"
+              sx={{
+                color: 'var(--text-secondary)',
+                '& .MuiTypography-root': {
+                  color: 'var(--text-secondary)',
+                },
+              }}
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={userData.auto_approve}
+                  onChange={handleInputChange}
+                  name="auto_approve"
+                  sx={{
+                    color: 'var(--text-secondary)',
+                    '&.Mui-checked': {
+                      color: 'var(--primary-color)',
+                    },
+                  }}
+                />
+              }
+              label="Auto-approve Jobs"
+              sx={{
+                color: 'var(--text-secondary)',
+                '& .MuiTypography-root': {
+                  color: 'var(--text-secondary)',
+                },
+              }}
+            />
+          </Box>
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
             <Button
