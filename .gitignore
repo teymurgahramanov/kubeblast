@@ -5,4 +5,3 @@ node_modules
 __pycache__
 .env
 openapi.json
-pro/
