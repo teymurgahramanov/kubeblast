@@ -90,11 +90,12 @@ const AddJob = ({ onClose }) => {
             fullWidth
             label="Description (Optional)"
             name="description"
-            maxLength={20}
             value={jobData.description}
             onChange={handleInputChange}
             multiline
             rows={4}
+            inputProps={{ maxLength: 20 }}
+            helperText={`${jobData.description.length}/20 characters`}
             variant="outlined"
             sx={{
               '& .MuiOutlinedInput-root': {

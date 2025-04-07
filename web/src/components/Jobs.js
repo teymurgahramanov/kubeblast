@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, WorkOutline } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -321,11 +321,11 @@ const Jobs = () => {
           );
         }
       },
-      ...(userRole === 'admin' || userRole === 'moderator' ? [
+      ...(isPro && (userRole === 'admin' || userRole === 'moderator') ? [
         { field: "id", headerName: "ID", width: 100, flex: 0.5 }
       ] : []),
       { field: "job_name", headerName: "Job Name", width: 180, flex: 1 },
-      ...(userRole === 'admin' || userRole === 'moderator' ? [
+      ...(isPro && (userRole === 'admin' || userRole === 'moderator') ? [
         { field: "owner", headerName: "Owner", width: 150, flex: 1 }
       ] : []),
       { field: "description", headerName: "Description", width: 250, flex: 2 },
@@ -413,7 +413,7 @@ const Jobs = () => {
       px: 2,
       textAlign: 'center',
     }}>
-      <WorkOutline sx={{ 
+      <ListAlt sx={{ 
         fontSize: 64,
         color: 'var(--text-secondary)',
         mb: 2,
@@ -421,19 +421,9 @@ const Jobs = () => {
       }} />
       <Typography variant="h6" sx={{ 
         color: 'var(--text-primary)',
-        mb: 1,
         fontWeight: 600
       }}>
         No Jobs Found
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        color: 'var(--text-secondary)',
-        maxWidth: 400,
-        mx: 'auto'
-      }}>
-        {userRole === 'admin' || userRole === 'user' 
-          ? "Get started by adding your first job using the 'Add' button above."
-          : "There are currently no jobs to display."}
       </Typography>
     </Box>
   );

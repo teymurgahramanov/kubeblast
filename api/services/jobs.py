@@ -90,7 +90,7 @@ def start_job(current_user, job_id):
     try:
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
-            {"$set": {"status": "running"}}
+            {"$set": {"status": "starting"}}
         )
         k8s.schedule_workload(job_id, job.distributed)
         return {"message": f"Job {job_id} started"}

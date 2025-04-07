@@ -60,9 +60,9 @@ def stream_pod_logs(job_id, job_status):
                 line = line.decode('utf-8')
             yield f"data: {line}\n\n"  # SSE format
 
-    except client.exceptions.ApiException as e:
-        logger.error(f"Kubernetes API error: {e}")
-        yield f"data: Error: {e.reason}\n\n"
+    except Exception as e:
+        logger.error(e)
+        yield f"data: Waiting for logs ...\n\n"
         return
 
 def schedule_workload(job_id,distributed):
