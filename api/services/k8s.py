@@ -86,7 +86,7 @@ def schedule_workload(job_id,distributed):
         client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap_manifest)
         logger.info(f"Created ConfigMap for job {job_id}")
         
-        if distributed:
+        if config.IS_PRO and distributed:
             try:
                 from services import k8s_extra
                 slaves = k8s_extra.create_slaves(job_id)

@@ -268,9 +268,10 @@ const Jobs = () => {
     return [
       { 
         field: "status", 
-        headerName: "Status", 
-        width: 130,
-        flex: 0.8,
+        headerName: "Status",
+        headerAlign: 'center',
+        width: 100,
+        flex: 0.6,
         renderCell: (params) => {
           const getStatusColor = (status) => {
             switch (status.toLowerCase()) {
@@ -308,31 +309,27 @@ const Jobs = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 1,
+              margin: '0 auto',
             }}>
-              <Box sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: statusColors.text
-              }} />
               {params.value.charAt(0).toUpperCase() + params.value.slice(1)}
             </Box>
           );
         }
       },
-      ...(isPro && (userRole === 'admin' || userRole === 'moderator') ? [
-        { field: "id", headerName: "ID", width: 100, flex: 0.5 }
+      ...(userRole === 'admin' || userRole === 'moderator' ? [
+        { field: "id", headerName: "ID", width: 200, flex: 1 }
       ] : []),
-      { field: "job_name", headerName: "Job Name", width: 180, flex: 1 },
-      ...(isPro && (userRole === 'admin' || userRole === 'moderator') ? [
+      { field: "job_name", headerName: "Job Name", width: 120, flex: 0.8 },
+      ...( isPro && (userRole === 'admin' || userRole === 'moderator') ? [
         { field: "owner", headerName: "Owner", width: 150, flex: 1 }
       ] : []),
-      { field: "description", headerName: "Description", width: 250, flex: 2 },
+      { field: "description", headerName: "Description", width: 200, flex: 1.5 },
       {
         field: 'actions',
-        headerName: 'Actions',
-        width: 120,
+        headerName: '',
+        sortable: false,
+        width: 80,
+        flex: 0.3,
         renderCell: (params) => {
           const job = params.row;
           return (
@@ -509,6 +506,12 @@ const Jobs = () => {
                 },
                 '&:focus-within': {
                   outline: 'none',
+                },
+                '&:not(:last-child)': {
+                  borderRight: 'none',
+                },
+                '& .MuiDataGrid-columnSeparator': {
+                  display: 'none',
                 },
               },
             },
