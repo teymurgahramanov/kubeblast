@@ -423,7 +423,7 @@ const Jobs = () => {
         color: 'var(--text-primary)',
         fontWeight: 600
       }}>
-        No Jobs Found
+        There's nothing here yet
       </Typography>
     </Box>
   );
