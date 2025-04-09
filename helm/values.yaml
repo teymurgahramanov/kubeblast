@@ -11,7 +11,7 @@ envFromSecret: ""
 podAnnotations: {}
 podLabels: {}
 image:
-  repository: kubeblast
+  repository: teymurgahramanov/kubeblast
   tag: ""
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
