@@ -6,7 +6,7 @@ on:
 
 env:
   IMAGE_NAME: ${{ github.repository }}
-  PRO_IMAGE_NAME: ${{ env.IMAGE_NAME }}-pro
+  PRO_IMAGE_NAME: ${{ github.repository }}-pro
   HELM_REPO_NAME: charts
   HELM_REPO_OWNER: ${{ github.actor }}
   HELM_REPO_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
