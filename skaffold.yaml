@@ -46,8 +46,6 @@ deploy:
               value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
             - name: S3_BUCKET
               value: "kubeblast"
-            - name: K8S_NAMESPACE
-              value: "kubeblast"
           ingress.enabled: true
           ingress.host: "kubeblast.local"
           ingress.className: "nginx"

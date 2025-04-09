@@ -12,7 +12,7 @@ podAnnotations: {}
 podLabels: {}
 image:
   repository: kubeblast
-  tag: latest
+  tag: ""
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
 service:

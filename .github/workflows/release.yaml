@@ -10,7 +10,7 @@ env:
   HELM_REPO_NAME: charts
   HELM_REPO_OWNER: ${{ github.actor }}
   HELM_REPO_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
-  RELEASE_NAME: ${{ github.event.release.name }}
+  RELEASE_VERSION: ${{ github.event.release.tag_name }}
 
 jobs:
   release:
@@ -38,7 +38,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_NAME }}, ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}:latest
 
       - name: Build and push Pro image
         uses: docker/build-push-action@v5
@@ -47,7 +47,7 @@ jobs:
           file: ./Dockerfile
           build-args: --build-arg EDITION_IS_PRO="true"
           push: true
-          tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_NAME }}, ${{ env.IMAGE_NAME }}-pro:latest
+          tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}-pro:latest
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
@@ -56,12 +56,10 @@ jobs:
 
       - name: Update Chart.yaml and package
         run: |
-          RAW_TAG="${{ github.event.release.tag_name }}"
-          VERSION="${RAW_TAG#v}"
           CHART_FILE="helm/Chart.yaml"
-          echo "Updating $CHART_FILE with version=$VERSION and appVersion=$VERSION"
-          sed -i "s/^version:.*/version: $VERSION/" $CHART_FILE
-          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" $CHART_FILE
+          echo "Updating $CHART_FILE with version=$RELEASE_VERSION and appVersion=$RELEASE_VERSION"
+          sed -i "s/^version:.*/version: $RELEASE_VERSION/" $CHART_FILE
+          sed -i "s/^appVersion:.*/appVersion: \"$RELEASE_VERSION\"/" $CHART_FILE
           mkdir -p packaged
           helm package helm/ --destination packaged
 
