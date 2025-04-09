@@ -1,8 +1,12 @@
 name: Create and publish a Docker image
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      release-name:
+        type: string
+        description: Release name
+        required: true
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -13,7 +17,7 @@ env:
   RELEASE_NAME: ${{ github.event.release.name }}
 
 jobs:
-  build-and-push-image:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -45,7 +49,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          args: --build-arg EDITION_IS_PRO="true"
+          build-args: --build-arg EDITION_IS_PRO="true"
           push: true
           tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_NAME }}, ${{ env.IMAGE_NAME }}-pro:latest
 
