@@ -19,10 +19,12 @@ spec:
         {{ key }}: "{{ value }}"
         {% endfor %}
     spec:
+      {% if image_pull_secrets %}
       imagePullSecrets:
       {% for secret in image_pull_secrets %}
       - name: {{ secret }}
       {% endfor %}
+      {% endif %}
       initContainers:
       - name: jmeter
         image: {{ image }}

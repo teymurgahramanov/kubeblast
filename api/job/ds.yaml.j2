@@ -20,10 +20,12 @@ spec:
         {{ key }}: "{{ value }}"
         {% endfor %}
     spec:
+      {% if image_pull_secrets %}
       imagePullSecrets:
       {% for secret in image_pull_secrets %}
       - name: {{ secret }}
       {% endfor %}
+      {% endif %}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

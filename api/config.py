@@ -60,6 +60,4 @@ class Config:
             K8S_JOB_TOLERATIONS = json.loads(job_tolerations_env)
         except json.JSONDecodeError:
             K8S_JOB_TOLERATIONS = None
-
-    K8S_JOB_JMETER_JVM_ARGS: str = os.getenv("K8S_JOB_JMETER_JVM_ARGS", "")
 config = Config()
