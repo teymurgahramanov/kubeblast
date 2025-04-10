@@ -108,14 +108,12 @@ def schedule_workload(job_id,distributed):
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
             image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
             slaves=slaves,
-            resources=config.K8S_JOB_MASTER_RESOURCES,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
             s3_url=config.S3_URL,
             s3_access_key=config.S3_ACCESS_KEY,
             s3_secret_key=config.S3_SECRET_KEY,
-            s3_bucket=config.S3_BUCKET,
-            jvm_args=config.K8S_JOB_JMETER_JVM_ARGS 
+            s3_bucket=config.S3_BUCKET
         )
 
         job_manifest = yaml.safe_load(rendered_job)

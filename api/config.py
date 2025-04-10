@@ -12,7 +12,7 @@ class Config:
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    CURRENT_JOBS_LIMIT: int = int(os.getenv("CURRENT_JOBS_LIMIT", 3))
+    PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
@@ -33,7 +33,6 @@ class Config:
     # Load Kubernetes NodeSelector from JSON or parse key-value pairs
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
     K8S_JOB_IMAGE_PULL_POLICY: str = os.getenv("K8S_JOB_IMAGE_PULL_POLICY", "IfNotPresent")
-    K8S_JOB_JMETER_JVM_ARGS: str = os.getenv("K8S_JOB_JMETER_JVM_ARGS", "")
 
     K8S_JOB_IMAGE_PULL_SECRETS: list = []
     # Load Kubernetes Image Pull Secrets from JSON format
@@ -43,24 +42,6 @@ class Config:
             K8S_JOB_IMAGE_PULL_SECRETS = json.loads(image_pull_secrets_env)
         except json.JSONDecodeError:
             K8S_JOB_IMAGE_PULL_SECRETS = None
-
-    K8S_JOB_SLAVE_RESOURCES: dict = {}
-    # Load Kubernetes Slave Resources from JSON format
-    slave_resources_env = os.getenv("K8S_JOB_SLAVE_RESOURCES")
-    if slave_resources_env:
-        try:
-            K8S_JOB_SLAVE_RESOURCES = json.loads(slave_resources_env)
-        except json.JSONDecodeError:
-            K8S_JOB_SLAVE_RESOURCES = None
-    
-    K8S_JOB_MASTER_RESOURCES: dict = {}
-    # Load Kubernetes Master Resources from JSON format
-    master_resources_env = os.getenv("K8S_JOB_MASTER_RESOURCES")
-    if master_resources_env:
-        try:
-            K8S_JOB_MASTER_RESOURCES = json.loads(master_resources_env)
-        except json.JSONDecodeError:
-            K8S_JOB_MASTER_RESOURCES = None
     
     K8S_JOB_NODE_SELECTOR: dict = {}
     # Load Kubernetes NodeSelector from JSON format
@@ -80,4 +61,5 @@ class Config:
         except json.JSONDecodeError:
             K8S_JOB_TOLERATIONS = None
 
+    K8S_JOB_JMETER_JVM_ARGS: str = os.getenv("K8S_JOB_JMETER_JVM_ARGS", "")
 config = Config()

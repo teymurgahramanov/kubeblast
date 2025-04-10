@@ -50,13 +50,3 @@ spec:
           - name: jmeter
             containerPort: 1099
             protocol: TCP
-        {% if resources %}
-        resources:
-          requests:
-            {{ resources.requests | default('') }}
-          limits:
-            {{ resources.limits | default('') }}
-        {% endif %}
-        env:
-        - name: JVM_ARGS
-          value: {{ jvm_args }}

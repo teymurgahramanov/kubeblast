@@ -1,0 +1,14 @@
+{{- if .Values.quotas.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: kubeblast-quota
+  namespace: {{ .Release.Namespace }}
+spec:
+  hard:
+    pods: "{{ .Values.quotas.pods }}"
+    requests.cpu: "{{ .Values.quotas.requestsCpu }}"
+    requests.memory: "{{ .Values.quotas.requestsMemory }}"
+    limits.cpu: "{{ .Values.quotas.limitsCpu }}"
+    limits.memory: "{{ .Values.quotas.limitsMemory }}"
+{{- end }}

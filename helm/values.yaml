@@ -1,27 +1,224 @@
+# Override the name of the chart
+# Example: nameOverride: "kubeblast"
 nameOverride: ""
+
+# Override the full name of the chart
+# Example: fullnameOverride: "kubeblast-prod"
 fullnameOverride: ""
+
+# Pod security context configuration
+# Example:
+# podSecurityContext:
+#   runAsUser: 1000
+#   runAsGroup: 1000
+#   fsGroup: 1000
 podSecurityContext: {}
+
+# Container security context configuration
+# Example:
+# securityContext:
+#   allowPrivilegeEscalation: false
+#   readOnlyRootFilesystem: true
+#   capabilities:
+#     drop:
+#       - ALL
 securityContext: {}
+
+# Node selector for pod scheduling
+# Example:
+# nodeSelector:
+#   kubernetes.io/os: linux
 nodeSelector: {}
+
+# Tolerations for pod scheduling
+# Example:
+# tolerations:
+#   - key: "node-role.kubernetes.io/master"
+#     operator: "Exists"
+#     effect: "NoSchedule"
 tolerations: []
+
+# Affinity rules for pod scheduling
+# Example:
+# affinity:
+#   podAntiAffinity:
+#     preferredDuringSchedulingIgnoredDuringExecution:
+#       - weight: 100
+#         podAffinityTerm:
+#           labelSelector:
+#             matchExpressions:
+#               - key: app
+#                 operator: In
+#                 values:
+#                   - kubeblast
+#           topologyKey: kubernetes.io/hostname
 affinity: {}
 
+# Environment variables for the application
+# Available environment variables from config.py:
+# - IS_PRO: boolean flag for pro version (default: false)
+# - LOG_LEVEL: logging level (default: "INFO")
+# - CURRENT_JOBS_LIMIT: maximum number of concurrent jobs (default: 3)
+# - SECRET_KEY: secret key for JWT tokens
+# - ACCESS_TOKEN_EXPIRE_MINUTES: JWT token expiration time in minutes (default: 30)
+# - MONGO_HOST: MongoDB host (default: "localhost")
+# - MONGO_PORT: MongoDB port (default: 27017)
+# - MONGO_DB_USER: MongoDB username (default: "kubeblast")
+# - MONGO_DB_PASS: MongoDB password (default: "kubeblast")
+# - MONGO_DB_NAME: MongoDB database name (default: "kubeblast")
+# - S3_URL: S3 storage URL
+# - S3_ACCESS_KEY: S3 access key
+# - S3_SECRET_KEY: S3 secret key
+# - S3_REGION: S3 region (default: "us-east-1")
+# - S3_BUCKET: S3 bucket name
+# - K8S_JOB_IMAGE: Kubernetes job container image (default: "alpine/jmeter:5.6")
+# - K8S_JOB_IMAGE_PULL_POLICY: Image pull policy (default: "IfNotPresent")
+# - K8S_JOB_JMETER_JVM_ARGS: JVM arguments for JMeter
+# - K8S_JOB_IMAGE_PULL_SECRETS: JSON array of image pull secrets
+# - K8S_JOB_SLAVE_RESOURCES: JSON object for slave pod resources
+# - K8S_JOB_MASTER_RESOURCES: JSON object for master pod resources
+# - K8S_JOB_NODE_SELECTOR: JSON object for node selector
+# - K8S_JOB_TOLERATIONS: JSON array of tolerations
+
+quotas:
+  enabled: false
+  pods: "10"
+  requestsCpu: "4"
+  requestsMemory: "8Gi"
+  limitsCpu: "6"
+  limitsMemory: "12Gi"
+
+# Example environment variable configurations:
+# env:
+#   # Basic string values
+#   - name: IS_PRO
+#     value: "true"
+#   - name: LOG_LEVEL
+#     value: "INFO"
+#   - name: CURRENT_JOBS_LIMIT
+#     value: "5"
+#   - name: MONGO_HOST
+#     value: "mongodb"
+#   - name: MONGO_PORT
+#     value: "27017"
+#   - name: MONGO_DB_USER
+#     value: "kubeblast"
+#   - name: MONGO_DB_NAME
+#     value: "kubeblast"
+#   - name: S3_REGION
+#     value: "us-east-1"
+#   - name: K8S_JOB_IMAGE
+#     value: "alpine/jmeter:5.6"
+#   - name: K8S_JOB_IMAGE_PULL_POLICY
+#     value: "IfNotPresent"
+#   - name: K8S_JOB_JMETER_JVM_ARGS
+#     value: "-Xms512m -Xmx1024m"
+#
+#   # Secret values from Kubernetes secrets
+#   - name: MONGO_DB_PASS
+#     valueFrom:
+#       secretKeyRef:
+#         name: mongodb-secret
+#         key: password
+#   - name: S3_ACCESS_KEY
+#     valueFrom:
+#       secretKeyRef:
+#         name: s3-secret
+#         key: access-key
+#   - name: S3_SECRET_KEY
+#     valueFrom:
+#       secretKeyRef:
+#         name: s3-secret
+#         key: secret-key
+#   - name: SECRET_KEY
+#     valueFrom:
+#       secretKeyRef:
+#         name: app-secret
+#         key: jwt-secret
+#
+#   # Complex JSON configurations
+#   - name: K8S_JOB_IMAGE_PULL_SECRETS
+#     value: '[{"name": "docker-registry-secret"}]'
+#   - name: K8S_JOB_SLAVE_RESOURCES
+#     value: '{"requests": {"cpu": "100m", "memory": "256Mi"}, "limits": {"cpu": "500m", "memory": "1Gi"}}'
+#   - name: K8S_JOB_MASTER_RESOURCES
+#     value: '{"requests": {"cpu": "200m", "memory": "512Mi"}, "limits": {"cpu": "1000m", "memory": "2Gi"}}'
+#   - name: K8S_JOB_NODE_SELECTOR
+#     value: '{"kubernetes.io/os": "linux", "node-role.kubernetes.io/worker": "true"}'
+#   - name: K8S_JOB_TOLERATIONS
+#     value: '[{"key": "node-role.kubernetes.io/master", "operator": "Exists", "effect": "NoSchedule"}]'
+#
+#   # S3 configuration
+#   - name: S3_URL
+#     value: "https://s3.amazonaws.com"
+#   - name: S3_BUCKET
+#     value: "kubeblast-results"
 env: []
+
+# Name of the secret to load environment variables from
+# Example: envFromSecret: "app-secrets"
 envFromSecret: ""
+
+# Additional annotations for pods
+# Example:
+# podAnnotations:
+#   prometheus.io/scrape: "true"
+#   prometheus.io/port: "8000"
 podAnnotations: {}
+
+# Additional labels for pods
+# Example:
+# podLabels:
+#   app.kubernetes.io/component: "api"
+#   app.kubernetes.io/part-of: "kubeblast"
 podLabels: {}
+
+# Container image configuration
 image:
   repository: teymurgahramanov/kubeblast
   tag: ""
+# Image pull secrets
+# Example:
+# imagePullSecrets:
+#   - name: docker-registry-secret
 imagePullSecrets: []
+# Image pull policy
 imagePullPolicy: IfNotPresent
+
+# Service configuration
 service:
   port:
-    web: 80
-    api: 8000
+    web: 80    # Web interface port
+    api: 8000  # API port
+
+# Service account configuration
+# Example:
+# serviceAccount:
+#   annotations:
+#     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/kubeblast-role"
 serviceAccount:
   annotations: {}
+
+# Resource limits and requests
+# Example:
+# resources:
+#   requests:
+#     cpu: "100m"
+#     memory: "256Mi"
+#   limits:
+#     cpu: "500m"
+#     memory: "1Gi"
 resources: {}
+
+# Ingress configuration
+# Example:
+# ingress:
+#   enabled: true
+#   annotations:
+#     kubernetes.io/ingress.class: "nginx"
+#     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+#   className: "nginx"
+#   host: "kubeblast.example.com"
 ingress:
   enabled: false
   annotations: {}

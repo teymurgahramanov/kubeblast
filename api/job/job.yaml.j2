@@ -41,9 +41,6 @@ spec:
           subPath: plan.jmx
         - name: shared-volume
           mountPath: /shared
-        env:
-        - name: JVM_ARGS
-          value: {{ jvm_args }}
       containers:
       - name: minio
         image: minio/mc:RELEASE.2025-03-12T17-29-24Z-cpuv1
@@ -67,13 +64,6 @@ spec:
           name: {{ name }}
       - name: shared-volume
         emptyDir: {}
-      {% if resources %}
-      resources:
-        requests:
-          {{ resources.requests | default('') }}
-        limits:
-          {{ resources.limits | default('') }}
-      {% endif %}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

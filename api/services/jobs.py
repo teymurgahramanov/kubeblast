@@ -43,10 +43,10 @@ def create_job(current_user, file_content, description, distributed):
         "owner": current_user.username
     })
     
-    if current_jobs_count >= config.CURRENT_JOBS_LIMIT:
+    if current_jobs_count >= config.PER_USER_CURRENT_JOBS_LIMIT:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many current jobs ({current_jobs_count}, limit is {config.CURRENT_JOBS_LIMIT})"
+            detail=f"Jobs limit exceeded ({current_jobs_count}, limit is {config.PER_USER_CURRENT_JOBS_LIMIT})"
         )
 
     job = db.mongo.jobs.find_one({"name": job_name, "owner": current_user.username})
