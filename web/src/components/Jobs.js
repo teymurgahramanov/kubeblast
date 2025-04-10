@@ -417,7 +417,7 @@ const Jobs = () => {
         opacity: 0.5
       }} />
       <Typography variant="h6" sx={{ 
-        color: 'var(--text-primary)',
+        color: 'var(--text-secondary)',
         fontWeight: 600
       }}>
         There's nothing here yet
