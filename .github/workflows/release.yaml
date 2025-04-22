@@ -23,7 +23,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          submodules: recursive
+          submodules: 'true'
+          token: ${{ secrets.PAT }}
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
