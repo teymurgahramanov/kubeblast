@@ -1,8 +1,8 @@
 # Build stage for the web frontend
 FROM node:18-alpine AS web-build
 
-ARG EDITION_IS_PRO="false"
-ENV REACT_APP_IS_PRO=${EDITION_IS_PRO}
+ARG EDITION_IS_PRO=false
+ENV REACT_APP_IS_PRO="${EDITION_IS_PRO}"
 ENV REACT_APP_PRO_REDIRECT_URL=https://kubeblast.io
 
 WORKDIR /app
@@ -31,7 +31,7 @@ RUN apk add --no-cache \
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_BREAK_SYSTEM_PACKAGES=1 \
-    IS_PRO=${EDITION_IS_PRO}
+    IS_PRO="${EDITION_IS_PRO}"
 
 # Copy and install API dependencies
 COPY api/requirements.txt /app/api/
