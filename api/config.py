@@ -60,4 +60,18 @@ class Config:
             K8S_JOB_TOLERATIONS = json.loads(job_tolerations_env)
         except json.JSONDecodeError:
             K8S_JOB_TOLERATIONS = None
+
+    # LDAP Configuration
+    LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "false").lower() == "true"
+    LDAP_SERVER: str = os.getenv("LDAP_SERVER", "ldap://localhost:389")
+    LDAP_BASE_DN: str = os.getenv("LDAP_BASE_DN", "dc=example,dc=com")
+    LDAP_USER_DN: str = os.getenv("LDAP_USER_DN", "ou=users")
+    LDAP_GROUP_DN: str = os.getenv("LDAP_GROUP_DN", "ou=groups")
+    LDAP_BIND_DN: str = os.getenv("LDAP_BIND_DN", "cn=admin,dc=example,dc=com")
+    LDAP_BIND_PASSWORD: str = os.getenv("LDAP_BIND_PASSWORD", "")
+    LDAP_USER_SEARCH_FILTER: str = os.getenv("LDAP_USER_SEARCH_FILTER", "(uid={})")
+    LDAP_GROUP_SEARCH_FILTER: str = os.getenv("LDAP_GROUP_SEARCH_FILTER", "(member={})")
+    LDAP_USER_ATTRIBUTES: list = ["uid", "cn", "mail", "memberOf"]
+    LDAP_GROUP_ATTRIBUTES: list = ["cn", "member"]
+
 config = Config()
