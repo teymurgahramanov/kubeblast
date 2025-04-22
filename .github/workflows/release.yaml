@@ -46,7 +46,7 @@ jobs:
           context: .
           file: ./Dockerfile
           build-args: |
-            EDITION_IS_PRO="true"
+            EDITION_IS_PRO=true
           push: true
           tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}-pro:latest
 
