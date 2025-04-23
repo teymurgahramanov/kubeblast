@@ -35,14 +35,14 @@ def authenticate_user(username: str, plain_password: str):
             from .ldap_auth import LDAPAuth
             ldap_auth = LDAPAuth()
             ldap_user = ldap_auth.authenticate(username, plain_password)
+            print("debug ldap_user")
+            print(ldap_user)
             if ldap_user:
                 user = get_user(username)
                 if not user:
                     user = ldap_auth.map_ldap_user_to_db_user(ldap_user)
                     db.mongo.users.insert_one(user.dict())
-                return user
-            else:
-                return False
+                    return user
     user = get_user(username)
     if not user:
         return False

@@ -22,6 +22,9 @@ RUN apk add --no-cache \
     supervisor \
     python3 \
     py3-pip \
+    openldap-dev \
+    python3-dev \
+    gcc musl-dev \
     && ln -sf python3 /usr/bin/python && \
     mkdir -p /app/api && \
     mkdir -p /app/worker && \

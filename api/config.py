@@ -71,7 +71,7 @@ class Config:
     LDAP_BIND_PASSWORD: str = os.getenv("LDAP_BIND_PASSWORD", "")
     LDAP_USER_SEARCH_FILTER: str = os.getenv("LDAP_USER_SEARCH_FILTER", "(uid={})")
     LDAP_GROUP_SEARCH_FILTER: str = os.getenv("LDAP_GROUP_SEARCH_FILTER", "(member={})")
-    LDAP_USER_ATTRIBUTES: list = ["uid", "cn", "mail", "memberOf"]
+    LDAP_USER_ATTRIBUTES: list = ["uid", "sAMAccountName", "cn", "mail", "memberOf"]
     LDAP_GROUP_ATTRIBUTES: list = ["cn", "member"]
 
 config = Config()
