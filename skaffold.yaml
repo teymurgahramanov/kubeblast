@@ -51,21 +51,19 @@ deploy:
             - name: LDAP_ENABLED
               value: "true"
             - name: LDAP_SERVER
-              value: "ldap://ldap.cbar.az:389"
-            - name: LDAP_BASE_DN
-              value: "dc=cbar,dc=az"
+              value: "ldap://ldap.cbar.az"
             - name: LDAP_USER_DN
-              value: "OU=Administration"
+              value: OU=Administration\,DC=cbar\,DC=az
             - name: LDAP_GROUP_DN
-              value: "OU=Administration"
+              value: OU=Administration\,DC=cbar\,DC=az
             - name: LDAP_BIND_DN
-              value: "CN=Grafana Ldap,OU=Administration,DC=cbar,DC=az"
+              value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
             - name: LDAP_BIND_PASSWORD
               value: "Gr@fAn@2#24"
-            - name: LDAP_USER_SEARCH_FILTER
-              value: "(&(objectCategory=user)(sAMAccountName=%s))"
-            - name: LDAP_GROUP_SEARCH_FILTER
-              value: "(&(objectClass=group)(member=%d))"
+            #- name: LDAP_USER_SEARCH_FILTER
+            #  value: "(&(objectCategory=user)(sAMAccountName=%s))"
+            #- name: LDAP_GROUP_SEARCH_FILTER
+            #  value: "(&(objectClass=group)(member=%d))"
 
               
           ingress.enabled: true
