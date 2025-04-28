@@ -37,11 +37,13 @@ def authenticate_user(username: str, plain_password: str):
             ldap_user = ldap_auth.authenticate(username, plain_password)
             if ldap_user:
                 user = get_user(username)
-                print("debug ldap_user")
-                print(user)
                 if not user:
                     user = ldap_auth.map_ldap_user_to_db_user(ldap_user)
                     db.mongo.users.insert_one(user.dict())
+                    return user
+                else:
+                    user.hashed_password = ""
+                    db.mongo.users.update_one({"username": username}, {"$set": {"hashed_password": user.hashed_password}})
                     return user
     user = get_user(username)
     if not user:

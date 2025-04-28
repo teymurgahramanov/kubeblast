@@ -79,7 +79,7 @@ class UserUpdate(User):
         )
 
 class UserInDB(User):
-    hashed_password: str
+    hashed_password: Optional[str] = None
 
 class Job(BaseModel):
     id: Optional[str] = None
