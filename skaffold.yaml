@@ -52,9 +52,7 @@ deploy:
               value: "true"
             - name: LDAP_SERVER
               value: "ldap://ldap.cbar.az"
-            - name: LDAP_USER_DN
-              value: OU=Administration\,DC=cbar\,DC=az
-            - name: LDAP_GROUP_DN
+            - name: LDAP_BASE_DN
               value: OU=Administration\,DC=cbar\,DC=az
             - name: LDAP_BIND_DN
               value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
