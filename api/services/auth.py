@@ -32,9 +32,13 @@ def get_user(username: str):
 def authenticate_user(username: str, plain_password: str):
     if config.IS_PRO:
         if config.LDAP_ENABLED :
-            from .ldap_auth import LDAPAuth
+            from .ldap_auth import LDAPAuth, LDAPAuthError
             ldap_auth = LDAPAuth()
-            ldap_user = ldap_auth.authenticate(username, plain_password)
+            try:
+                ldap_user = ldap_auth.authenticate(username, plain_password)
+            except LDAPAuthError as e:
+                print(e)
+                return False
             if ldap_user:
                 user = get_user(username)
                 if not user:
