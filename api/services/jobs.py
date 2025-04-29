@@ -84,15 +84,15 @@ def create_job(current_user, file_content, description, distributed):
 
 
 def start_job(current_user, job_id):
-    job = get_job(current_user, job_id)
-    if job.status != "ready":
+    job = get_job(current_user, job_id).dict()
+    if job["status"] != "ready":
         raise HTTPException(status_code=400, detail="Cannot start job that is not ready")
     try:
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "starting"}}
         )
-        k8s.schedule_workload(job_id, job.distributed)
+        k8s.schedule_workload(job_id, job["distributed"])
         return {"message": f"Job {job_id} started"}
     except Exception as e:
         logger.error(f"Failed to schedule workload for job {job_id}: {e}")

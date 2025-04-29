@@ -26,7 +26,7 @@ async def initialize():
         admin = models.UserInDB(
             username="admin", 
             hashed_password=auth.hash_password("admin"),
-            role="admin"
+            role="admin",
         )
         db.mongo.users.insert_one(admin.dict())
   except Exception as e:

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, List
 from passlib.context import CryptContext
+from core.log import logger
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -29,32 +30,35 @@ def get_user(username: str):
     else:
         return None
 
-def authenticate_user(username: str, plain_password: str):
-    if config.IS_PRO:
-        if config.LDAP_ENABLED :
-            from .ldap_auth import LDAPAuth, LDAPAuthError
-            ldap_auth = LDAPAuth()
-            try:
-                ldap_user = ldap_auth.authenticate(username, plain_password)
-            except LDAPAuthError as e:
-                print(e)
+def authenticate_user(username: str, plain_password: str, method: str):
+    match method:
+        case "local":
+            user = get_user(username)
+            if not user:
                 return False
-            if ldap_user:
-                user = get_user(username)
-                if not user:
-                    user = ldap_auth.map_ldap_user_to_db_user(ldap_user)
-                    db.mongo.users.insert_one(user.dict())
+            if not verify_password(plain_password, user.hashed_password):
+                return False
+            return user
+        case "ldap":
+            if config.IS_PRO and config.LDAP_ENABLED:
+                from .ldap_auth import LDAPAuth
+                ldap_auth = LDAPAuth()
+                try:
+                    ldap_user = ldap_auth.authenticate(username, plain_password)
+                except Exception as e:
+                    logger.error(f"LDAP authentication failed for user {username}: {e}")
+                    return False
+                if ldap_user:
+                    user = get_user(username)
+                    if not user:
+                        user = ldap_auth.map_ldap_user_to_db_user(ldap_user)
+                        db.mongo.users.insert_one(user.dict())
+                        return user
                     return user
-                else:
-                    user.hashed_password = ""
-                    db.mongo.users.update_one({"username": username}, {"$set": {"hashed_password": user.hashed_password}})
-                    return user
-    user = get_user(username)
-    if not user:
-        return False
-    if not verify_password(plain_password, user.hashed_password):
-        return False
-    return user
+            else:
+                return False
+        case _:
+            return False
 
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
@@ -98,8 +102,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def login(form_data) -> models.Token:
-    user = authenticate_user(form_data.username, form_data.password)
+def login(form_data, method) -> models.Token:
+    user = authenticate_user(form_data.username, form_data.password, method)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

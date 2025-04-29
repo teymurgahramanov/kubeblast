@@ -14,6 +14,7 @@ class User(BaseModel):
     email: Optional[str] = None
     enabled: bool = True
     auto_approve: bool = False
+    method: Literal["local", "ldap"] = "local"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -79,7 +80,7 @@ class UserUpdate(User):
         )
 
 class UserInDB(User):
-    hashed_password: Optional[str] = None
+    hashed_password: str
 
 class Job(BaseModel):
     id: Optional[str] = None

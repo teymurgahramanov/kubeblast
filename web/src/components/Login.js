@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, Button } from '@mui/material';
+import { Box, Typography, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Login as LoginIcon } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
@@ -10,8 +10,10 @@ const Login = () => {
     username: '',
     password: ''
   });
+  const [authMethod, setAuthMethod] = useState('local');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const isPro = process.env.REACT_APP_IS_PRO === 'true';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -21,10 +23,14 @@ const Login = () => {
     }));
   };
 
+  const handleAuthMethodChange = (e) => {
+    setAuthMethod(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.post('/token', {
+      const response = await axiosInstance.post(`/token?method=${authMethod.toLowerCase()}`, {
         username: credentials.username,
         password: credentials.password
       }, {
@@ -95,6 +101,22 @@ const Login = () => {
         <ErrorMessage message={error} />
 
         <Box component="form" onSubmit={handleSubmit}>
+          {isPro && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="auth-method-label">Authentication Method</InputLabel>
+              <Select
+                labelId="auth-method-label"
+                id="auth-method"
+                value={authMethod}
+                label="Authentication Method"
+                onChange={handleAuthMethodChange}
+              >
+                <MenuItem value="local">Local</MenuItem>
+                <MenuItem value="ldap">LDAP</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+
           <TextField
             fullWidth
             label="Username"
