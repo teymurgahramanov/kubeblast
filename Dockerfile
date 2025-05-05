@@ -27,7 +27,6 @@ RUN apk add --no-cache \
     gcc musl-dev \
     && ln -sf python3 /usr/bin/python && \
     mkdir -p /app/api && \
-    mkdir -p /app/worker && \
     mkdir -p /var/log/supervisor
 
 # Set environment variables
@@ -38,8 +37,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Copy and install API dependencies
 COPY api/requirements.txt /app/api/
-COPY worker/requirements.txt /app/worker/
-RUN pip install --no-cache-dir -r /app/api/requirements.txt && pip install --no-cache-dir -r /app/worker/requirements.txt
+RUN pip install --no-cache-dir -r /app/api/requirements.txt
 
 # Copy application code
 COPY api/ /app/api/
@@ -50,7 +48,6 @@ RUN if [ "$IS_PRO" = "true" ]; then \
     else \
     rm -rf /app/pro; \
     fi
-COPY worker/ /app/worker/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=web-build /app/build /usr/share/nginx/html
 COPY web/nginx.conf /etc/nginx/http.d/default.conf

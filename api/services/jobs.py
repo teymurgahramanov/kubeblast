@@ -25,7 +25,8 @@ def get_jobs(current_user, status: str = None, owner: str = None, name: str = No
     jobs = list(db.mongo.jobs.find(query))
     for job in jobs:
         job["id"] = str(job["_id"])
-    return [models.Job(**job) for job in jobs]
+    jobs = [models.Job(**job) for job in jobs]
+    return jobs
 
 def get_job(current_user, job_id):
     job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
@@ -34,7 +35,8 @@ def get_job(current_user, job_id):
     if current_user.role not in ["admin", "moderator"] and job["owner"] != current_user.username:
         raise HTTPException(status_code=403, detail="Insufficent permissions")
     job["id"] = str(job["_id"])
-    return models.Job(**job)
+    job = models.Job(**job)
+    return job
 
 def create_job(current_user, file_content, description, distributed):
     job_name = f"{hashlib.sha256(file_content).hexdigest()[:6]}"

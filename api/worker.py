@@ -1,24 +1,18 @@
 import os
 import bson
 import logging
-from time import sleep
-from kubernetes import client, config as k8s_config
+from core.log import logger
+from core import k8s
+from kubernetes import client
 from pymongo import MongoClient
-from config import config as app_config
-
-# Logging Configuration
-logging.basicConfig(level=app_config.LOG_LEVEL, 
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    format="%(asctime)s - WORKER - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+from config import config
+from time import sleep
 
 # MongoDB Configuration
-MONGO_URI = app_config.MONGO_URI
-DB_NAME = app_config.MONGO_DB_NAME
+MONGO_URI = config.MONGO_URI
+DB_NAME = config.MONGO_DB_NAME
 COLLECTION_NAME = "jobs"
-WORKER_WATCH_INTERVAL = app_config.WORKER_WATCH_INTERVAL
-
-k8s_config.load_incluster_config()
+WORKER_WATCH_INTERVAL = config.WORKER_WATCH_INTERVAL
 
 def get_current_namespace():
     try:

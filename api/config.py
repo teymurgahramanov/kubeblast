@@ -16,6 +16,8 @@ class Config:
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key") # openssl rand -hex 32
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+    
+    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", 3))
 
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
     MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
