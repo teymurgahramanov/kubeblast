@@ -405,7 +405,6 @@ const Jobs = () => {
   }, [anchorEl, selectedJobId, userRole, isPro]);
 
   const rows = useMemo(() => jobs.map((job) => {
-    console.log('Mapping job:', job); // Debug log
     return {
       id: job.id,
       job_name: job.name,
@@ -604,7 +603,7 @@ const Jobs = () => {
             overflow: 'auto'
           }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Job Logs</span>
+              <span>Logs</span>
               <Button 
                 onClick={() => setLogs(null)}
                 variant="outlined"
@@ -640,121 +639,63 @@ const Jobs = () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 600,
+            width: '80%',
+            maxWidth: 800,
+            maxHeight: '80vh',
             bgcolor: 'background.paper',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            boxShadow: 24,
             p: 4,
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)'
+            borderRadius: 2,
+            overflow: 'auto'
           }}>
-            <Typography variant="h6" component="h2" sx={{ 
-              mb: 3, 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              color: 'var(--text-primary)',
-              fontWeight: 600,
-              fontSize: '1.25rem'
-            }}>
-              <span>Job Details</span>
+            <Typography variant="h6" component="h2" sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Details</span>
               <Button 
                 onClick={() => setOpenDetails(false)}
                 variant="outlined"
                 size="small"
-                sx={{
-                  borderColor: 'var(--border-color)',
-                  color: 'var(--text-primary)',
-                  '&:hover': {
-                    borderColor: 'var(--primary-color)',
-                    backgroundColor: 'var(--primary-light)'
-                  }
-                }}
               >
                 Close
               </Button>
             </Typography>
             {selectedJobDetails && (
               <Box sx={{ 
-                '& .MuiTable-root': {
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                },
-                '& .MuiTableCell-root': {
-                  borderBottom: '1px solid var(--border-color)',
-                  py: 2,
-                  fontSize: '0.875rem',
-                },
-                '& .MuiTableCell-head': {
-                  fontWeight: 600,
-                  backgroundColor: '#F8FAFC',
-                  width: '40%',
-                  color: 'var(--text-secondary)',
-                },
-                '& .MuiTableCell-body': {
-                  color: 'var(--text-primary)',
-                  backgroundColor: 'white',
-                },
-                '& tr:last-child td': {
-                  borderBottom: 'none'
-                }
+                whiteSpace: 'pre-wrap',
+                backgroundColor: '#f8f9fa',
+                padding: '1rem',
+                borderRadius: '4px',
+                border: '1px solid var(--border-color)',
+                maxHeight: 'calc(80vh - 120px)',
+                overflow: 'auto',
+                fontFamily: 'monospace',
+                fontSize: '0.875rem',
+                lineHeight: 1.5
               }}>
-                <table>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <tbody>
                     <tr>
-                      <td>Job Name</td>
-                      <td>{selectedJobDetails.name}</td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Job Name</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.job_name}</td>
                     </tr>
                     <tr>
-                      <td>Status</td>
-                      <td>
-                        <Box sx={{
-                          display: 'inline-block',
-                          backgroundColor: selectedJobDetails.status === 'completed' ? '#F0FDF4' : 
-                                          selectedJobDetails.status === 'running' ? '#EFF6FF' :
-                                          selectedJobDetails.status === 'failed' ? '#FEF2F2' :
-                                          selectedJobDetails.status === 'pending' ? '#FFF7ED' :
-                                          selectedJobDetails.status === 'declined' ? '#F9FAFB' :
-                                          selectedJobDetails.status === 'retrying' ? '#FFFBEB' : '#F9FAFB',
-                          color: selectedJobDetails.status === 'completed' ? '#166534' :
-                                selectedJobDetails.status === 'running' ? '#1E40AF' :
-                                selectedJobDetails.status === 'failed' ? '#991B1B' :
-                                selectedJobDetails.status === 'pending' ? '#9A3412' :
-                                selectedJobDetails.status === 'declined' ? '#374151' :
-                                selectedJobDetails.status === 'retrying' ? '#B45309' : '#374151',
-                          border: `1px solid ${
-                            selectedJobDetails.status === 'completed' ? '#86EFAC' :
-                            selectedJobDetails.status === 'running' ? '#93C5FD' :
-                            selectedJobDetails.status === 'failed' ? '#FCA5A5' :
-                            selectedJobDetails.status === 'pending' ? '#FDBA74' :
-                            selectedJobDetails.status === 'declined' ? '#D1D5DB' :
-                            selectedJobDetails.status === 'retrying' ? '#FCD34D' : '#D1D5DB'
-                          }`,
-                          borderRadius: '6px',
-                          px: 2,
-                          py: 0.5,
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                        }}>
-                          {selectedJobDetails.status.charAt(0).toUpperCase() + selectedJobDetails.status.slice(1)}
-                        </Box>
-                      </td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Status</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.status.charAt(0).toUpperCase() + selectedJobDetails.status.slice(1)}</td>
                     </tr>
                     <tr>
-                      <td>Owner</td>
-                      <td>{selectedJobDetails.owner}</td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Owner</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.owner}</td>
                     </tr>
                     <tr>
-                      <td>Description</td>
-                      <td>{selectedJobDetails.description || 'N/A'}</td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Description</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.description || 'N/A'}</td>
                     </tr>
                     <tr>
-                      <td>Created At</td>
-                      <td>{formatDate(selectedJobDetails.created_at)}</td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Created At</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{formatDate(selectedJobDetails.created_at)}</td>
                     </tr>
                     <tr>
-                      <td>ID</td>
-                      <td style={{ fontFamily: 'monospace' }}>{selectedJobDetails.id}</td>
+                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>ID</td>
+                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)', fontFamily: 'monospace' }}>{selectedJobDetails.id}</td>
                     </tr>
                   </tbody>
                 </table>
