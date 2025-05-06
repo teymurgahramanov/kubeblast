@@ -8,12 +8,8 @@ def get_profile(username: str):
 
 def update_profile(username: str, user_data: dict):
     user = get_profile(username).dict()
-    print("user")
-    print(user)
     if user["method"] == "local":
       user_data = {key: value for key, value in user_data.items() if value not in [None, "", [], {}, ()]}
-      print("user_data")
-      print(user_data)
       if "password" in user_data:
           user_data["hashed_password"] = auth.hash_password(user_data.pop("password"))
       db.mongo.users.update_one({"username": username}, {"$set": user_data})

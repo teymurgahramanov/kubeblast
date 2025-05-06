@@ -23,13 +23,12 @@ def get_current_namespace():
 
 current_namespace = get_current_namespace()
 
-# Initialize MongoDB Client
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 jobs_collection = db[COLLECTION_NAME]
 
 def process_job_update():
-    """Continuously sync job statuses between Kubernetes and MongoDB."""
+    # Continuously sync job statuses between Kubernetes and MongoDB
     batch_v1 = client.BatchV1Api()
     logger.info("Starting Kubernetes Job Updater...")
     

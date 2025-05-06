@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import token, user_profile, jobs, logs, files
 from core.log import logger
 from config import config
+import uvicorn
 
 app = FastAPI()
 
@@ -20,7 +21,6 @@ async def initialize():
     from core import models, db
     from services import auth
 
-    # Create admin user
     admin = auth.get_user("admin")
     if not admin:
         admin = models.UserInDB(
@@ -43,3 +43,11 @@ if config.IS_PRO:
     from routes import jobs_extra, users
     app.include_router(jobs_extra.router,tags=["jobs_extra"])
     app.include_router(users.router,tags=["users"])
+
+uvicorn.run(
+    app,
+    host="0.0.0.0",
+    port=8000,
+    log_config=None,
+    access_log=False
+)
