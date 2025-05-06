@@ -16,6 +16,8 @@ const Jobs = () => {
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [logs, setLogs] = useState(null);
   const [openAddJob, setOpenAddJob] = useState(false);
+  const [openDetails, setOpenDetails] = useState(false);
+  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
@@ -263,6 +265,12 @@ const Jobs = () => {
     }
   };
 
+  const handleDetailsClick = (job) => {
+    setSelectedJobDetails(job);
+    setOpenDetails(true);
+    handleMenuClose();
+  };
+
   const columns = useMemo(() => {
     console.log('Current user role:', userRole); // Debug log
     return [
@@ -316,14 +324,18 @@ const Jobs = () => {
           );
         }
       },
-      ...(userRole === 'admin' || userRole === 'moderator' ? [
-        { field: "id", headerName: "ID", width: 200, flex: 1 }
-      ] : []),
       { field: "job_name", headerName: "Job Name", width: 120, flex: 0.8 },
       ...( isPro && (userRole === 'admin' || userRole === 'moderator') ? [
         { field: "owner", headerName: "Owner", width: 150, flex: 1 }
       ] : []),
       { field: "description", headerName: "Description", width: 200, flex: 1.5 },
+      { 
+        field: "created_at", 
+        headerName: "Created At", 
+        width: 180, 
+        flex: 1,
+        renderCell: (params) => formatDate(params.value)
+      },
       {
         field: 'actions',
         headerName: '',
@@ -360,6 +372,9 @@ const Jobs = () => {
                     <PlayArrow sx={{ mr: 1 }} /> Start
                   </MenuItem>
                 )}
+                <MenuItem onClick={() => handleDetailsClick(job)}>
+                  <ListAlt sx={{ mr: 1 }} /> Details
+                </MenuItem>
                 {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
                   <MenuItem onClick={() => viewLogs(job.id, job.status)}>
                     <Visibility sx={{ mr: 1 }} /> Logs
@@ -397,8 +412,25 @@ const Jobs = () => {
       owner: job.owner,
       description: job.description || '',
       status: job.status,
+      created_at: job.created_at
     };
   }), [jobs]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: userTimeZone
+    });
+  };
 
   const EmptyState = () => (
     <Box sx={{
@@ -595,6 +627,139 @@ const Jobs = () => {
             }}>
               {logs}
             </Box>
+          </Box>
+        </Modal>
+
+        <Modal
+          open={openDetails}
+          onClose={() => setOpenDetails(false)}
+          aria-labelledby="job-details-modal"
+        >
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: 600,
+            bgcolor: 'background.paper',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            p: 4,
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <Typography variant="h6" component="h2" sx={{ 
+              mb: 3, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              color: 'var(--text-primary)',
+              fontWeight: 600,
+              fontSize: '1.25rem'
+            }}>
+              <span>Job Details</span>
+              <Button 
+                onClick={() => setOpenDetails(false)}
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                  '&:hover': {
+                    borderColor: 'var(--primary-color)',
+                    backgroundColor: 'var(--primary-light)'
+                  }
+                }}
+              >
+                Close
+              </Button>
+            </Typography>
+            {selectedJobDetails && (
+              <Box sx={{ 
+                '& .MuiTable-root': {
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                },
+                '& .MuiTableCell-root': {
+                  borderBottom: '1px solid var(--border-color)',
+                  py: 2,
+                  fontSize: '0.875rem',
+                },
+                '& .MuiTableCell-head': {
+                  fontWeight: 600,
+                  backgroundColor: '#F8FAFC',
+                  width: '40%',
+                  color: 'var(--text-secondary)',
+                },
+                '& .MuiTableCell-body': {
+                  color: 'var(--text-primary)',
+                  backgroundColor: 'white',
+                },
+                '& tr:last-child td': {
+                  borderBottom: 'none'
+                }
+              }}>
+                <table>
+                  <tbody>
+                    <tr>
+                      <td>Job Name</td>
+                      <td>{selectedJobDetails.name}</td>
+                    </tr>
+                    <tr>
+                      <td>Status</td>
+                      <td>
+                        <Box sx={{
+                          display: 'inline-block',
+                          backgroundColor: selectedJobDetails.status === 'completed' ? '#F0FDF4' : 
+                                          selectedJobDetails.status === 'running' ? '#EFF6FF' :
+                                          selectedJobDetails.status === 'failed' ? '#FEF2F2' :
+                                          selectedJobDetails.status === 'pending' ? '#FFF7ED' :
+                                          selectedJobDetails.status === 'declined' ? '#F9FAFB' :
+                                          selectedJobDetails.status === 'retrying' ? '#FFFBEB' : '#F9FAFB',
+                          color: selectedJobDetails.status === 'completed' ? '#166534' :
+                                selectedJobDetails.status === 'running' ? '#1E40AF' :
+                                selectedJobDetails.status === 'failed' ? '#991B1B' :
+                                selectedJobDetails.status === 'pending' ? '#9A3412' :
+                                selectedJobDetails.status === 'declined' ? '#374151' :
+                                selectedJobDetails.status === 'retrying' ? '#B45309' : '#374151',
+                          border: `1px solid ${
+                            selectedJobDetails.status === 'completed' ? '#86EFAC' :
+                            selectedJobDetails.status === 'running' ? '#93C5FD' :
+                            selectedJobDetails.status === 'failed' ? '#FCA5A5' :
+                            selectedJobDetails.status === 'pending' ? '#FDBA74' :
+                            selectedJobDetails.status === 'declined' ? '#D1D5DB' :
+                            selectedJobDetails.status === 'retrying' ? '#FCD34D' : '#D1D5DB'
+                          }`,
+                          borderRadius: '6px',
+                          px: 2,
+                          py: 0.5,
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                        }}>
+                          {selectedJobDetails.status.charAt(0).toUpperCase() + selectedJobDetails.status.slice(1)}
+                        </Box>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Owner</td>
+                      <td>{selectedJobDetails.owner}</td>
+                    </tr>
+                    <tr>
+                      <td>Description</td>
+                      <td>{selectedJobDetails.description || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td>Created At</td>
+                      <td>{formatDate(selectedJobDetails.created_at)}</td>
+                    </tr>
+                    <tr>
+                      <td>ID</td>
+                      <td style={{ fontFamily: 'monospace' }}>{selectedJobDetails.id}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </Box>
+            )}
           </Box>
         </Modal>
 
