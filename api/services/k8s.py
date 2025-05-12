@@ -1,13 +1,16 @@
 from core import k8s
 from kubernetes import client
 from config import config
-from services import files
 from jinja2 import Template
 from fastapi import HTTPException
 import yaml
 import os
 from core.log import logger
-import time
+
+if config.STORAGE_BACKEND == "fs":
+    from services import files_fs as files
+elif config.STORAGE_BACKEND == "s3":
+    from services import files_s3 as files
 
 def get_namespace():
     try:
