@@ -5,6 +5,7 @@
     Kubernetes-native load testing platform
 </p>
 
+## About
 Kubeblast makes running __JMeter__ load tests simple and efficient. No scripting, no setup — just run your tests and get results!
 
 ## ⭐ Features
