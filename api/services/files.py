@@ -12,7 +12,7 @@ s3_client = boto3.client(
     endpoint_url=config.S3_URL,
     aws_access_key_id=config.S3_ACCESS_KEY,
     aws_secret_access_key=config.S3_SECRET_KEY,
-    region_name=config.S3_REGION,  # MinIO does not use regions, but boto3 requires this
+    region_name=config.S3_REGION,
 )
 
 def create_file(file_content, file_name):
@@ -35,8 +35,8 @@ def delete_file(job_id):
             logger.warning(f"No files found with prefix '{job_id}' in bucket '{config.S3_BUCKET}'")
 
     except Exception as e:
-        logger.error(f"Failed to delete files from MinIO: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete files from MinIO: {str(e)}")
+        logger.error(f"Failed to delete files from Object Storage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete files from Object Storage: {str(e)}")
 
 def read_file(file_name):
     try:

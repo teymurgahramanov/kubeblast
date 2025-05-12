@@ -17,7 +17,7 @@ def get_namespace():
         return "Namespace file not found"
 
 def gen_resource_name(job_id):
-    return f"kubeblast-{job_id}" 
+    return f"kb-{job_id}" 
 
 def gen_labels(job_id,job_component):
     return {"kubeblast/job-id": job_id, "kubeblast/job-component": job_component}
@@ -74,7 +74,7 @@ def schedule_workload(job_id,distributed):
     file_content = files.read_file(file_name)
     slaves=[]
 
-    job_template_path = os.path.join(os.path.dirname(__file__), "../job/job.yaml.j2")
+    job_template_path = os.path.join(os.path.dirname(__file__), "../templates/job.yaml.j2")
 
     try:
         # Create ConfigMap and DaemonSet in parallel

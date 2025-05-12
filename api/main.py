@@ -4,6 +4,7 @@ from routes import token, user_profile, jobs, logs, files
 from core.log import logger
 from config import config
 import uvicorn
+import os
 
 app = FastAPI()
 
@@ -15,8 +16,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(token.router,tags=["token"])
+app.include_router(user_profile.router,tags=["profile"])
+app.include_router(jobs.router,tags=["jobs"])
+app.include_router(logs.router,tags=["logs"])
+app.include_router(files.router,tags=["files"])
+
 @app.on_event("startup")
 async def initialize():
+
+  if "PRO_LICENSE_KEY" in os.environ and "PRO_LICENSE_ID" in os.environ:
+      from license_check import check_license
+      if not check_license(os.environ["PRO_LICENSE_ID"], os.environ["PRO_LICENSE_KEY"]):
+          logger.error("Invalid license key. Continuing in community mode.")
+          config.IS_PRO = False
+      else:
+          logger.info("License key is valid. Pro features enabled.")
+          config.IS_PRO = True
+  else:
+      logger.info("License or account id not provided. Continuing in community mode.")
+  
   try:
     from core import models, db
     from services import auth
@@ -30,24 +49,20 @@ async def initialize():
         )
         db.mongo.users.insert_one(admin.dict())
   except Exception as e:
-     logger.error(e)
-     exit(1)
+    logger.error(e)
+    raise e
 
-app.include_router(token.router,tags=["token"])
-app.include_router(user_profile.router,tags=["profile"])
-app.include_router(jobs.router,tags=["jobs"])
-app.include_router(logs.router,tags=["logs"])
-app.include_router(files.router,tags=["files"])
-
-if config.IS_PRO:
+@app.on_event("startup")
+async def load_pro_routes():
+  if config.IS_PRO:
     from routes import jobs_extra, users
-    app.include_router(jobs_extra.router,tags=["jobs_extra"])
-    app.include_router(users.router,tags=["users"])
+    app.include_router(jobs_extra.router, tags=["jobs_extra"])
+    app.include_router(users.router, tags=["users"])
 
 uvicorn.run(
-    app,
-    host="0.0.0.0",
-    port=8000,
-    log_config=None,
-    access_log=False
+  app,
+  host="0.0.0.0",
+  port=8000,
+  log_config=None,
+  access_log=False
 )

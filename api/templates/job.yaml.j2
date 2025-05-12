@@ -44,15 +44,14 @@ spec:
         - name: shared-volume
           mountPath: /shared
       containers:
-      - name: minio
-        image: minio/mc:RELEASE.2025-03-12T17-29-24Z-cpuv1
+      - name: uploader
+        image: amazon/aws-cli:2.27.12
         imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
           - |
-            mc alias set minio {{ s3_url }} {{ s3_access_key }} {{ s3_secret_key }}
-            mc cp /shared/result.jtl minio/{{ s3_bucket }}/{{ job_id }}
-            mc cp --recursive /shared/report minio/{{ s3_bucket }}/{{ job_id }}        
+            aws --endpoint-url {{ s3_url }} s3 cp /shared/result.jtl s3://{{ s3_bucket }}/{{ job_id }}
+            aws --endpoint-url {{ s3_url }} s3 cp --recursive /shared/report s3://{{ s3_bucket }}/{{ job_id }}           
         volumeMounts:
         - name: jmeter-plan
           mountPath: /tmp/plan.jmx
