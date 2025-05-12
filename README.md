@@ -10,7 +10,7 @@ Kubeblast makes running __JMeter__ load tests simple and efficient. No scripting
 
 ## ⭐ Features
 - __Intuitive UI__ – Manage jobs, view logs, and monitor execution in real-time.
-- __Simplicity First__ – Just upload your JMX file and run it. That’s it.
+- __Simplicity First__ – Just upload your JMX file and click *Start*. That’s it.
 - __Placement Control__ – Define which Kubernetes nodes to run workloads.
 - __Storage Backends__ – Support for S3 (AWS, MinIO) and PVC-based file storages.
 - __Distributed Workloads__ – Automatic deployment of JMeter slaves across the desired nodes for massive parallelism.
