@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="logo.svg" style="width: 70%; height: auto;" />
+    <img src="assets/logo.svg" style="width: 70%; height: auto;" />
 </p>
 <p align="center">
     Kubernetes-native load testing platform
