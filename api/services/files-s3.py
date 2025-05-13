@@ -15,9 +15,9 @@ s3_client = boto3.client(
     region_name=config.S3_REGION,
 )
 
-def create_file(file_content, file_name):
+def create_file(job_id, file_content, file_name):
     try:
-        s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, file_name)
+        s3_client.upload_fileobj(io.BytesIO(file_content), config.S3_BUCKET, f"{job_id}/{file_name}")
     except Exception as e:
         logger.error(f"Failed to upload file to S3: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to upload file to S3: {str(e)}")
@@ -38,9 +38,9 @@ def delete_file(job_id):
         logger.error(f"Failed to delete files from Object Storage: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete files from Object Storage: {str(e)}")
 
-def read_file(file_name):
+def read_file(job_id, file_name):
     try:
-        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=file_name)
+        response = s3_client.get_object(Bucket=config.S3_BUCKET, Key=f"{job_id}/{file_name}")
         file_content = response["Body"].read().decode()
         logger.info(f"Read file from S3: {file_name}")
     except Exception as e:
@@ -91,7 +91,7 @@ def download_file(current_user, job_id, type):
                     content=zip_buffer.getvalue(),
                     media_type="application/zip",
                     headers={
-                        "Content-Disposition": f'attachment; filename="kubeblast_{job["name"]}_report.zip"'
+                        "Content-Disposition": f'attachment; filename="{job["name"]}.zip"'
                     }
                 )
             except HTTPException as e:

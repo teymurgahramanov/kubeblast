@@ -7,9 +7,9 @@ from core.log import logger
 from config import config
 from services import jobs
 
-def create_file(file_content, file_name):
+def create_file(job_id, file_content, file_name):
     try:
-        file_path = config.STORAGE_DIR / file_name
+        file_path = config.STORAGE_DIR / job_id / file_name
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, 'wb') as f:
             f.write(file_content)
@@ -36,9 +36,9 @@ def delete_file(job_id):
         logger.error(f"Failed to delete files from filesystem: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete files from filesystem: {str(e)}")
 
-def read_file(file_name):
+def read_file(job_id, file_name):
     try:
-        file_path = config.STORAGE_DIR / file_name
+        file_path = config.STORAGE_DIR / job_id / file_name
         with open(file_path, 'r') as f:
             file_content = f.read()
         logger.info(f"Read file from filesystem: {file_name}")
@@ -82,7 +82,7 @@ def download_file(current_user, job_id, type):
                     content=zip_buffer.getvalue(),
                     media_type="application/zip",
                     headers={
-                        "Content-Disposition": f'attachment; filename="kubeblast_{job["name"]}_report.zip"'
+                        "Content-Disposition": f'attachment; filename="{job["name"]}.zip"'
                     }
                 )
             except HTTPException as e:

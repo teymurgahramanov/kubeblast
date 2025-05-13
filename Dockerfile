@@ -1,4 +1,3 @@
-# Build stage for the web frontend
 FROM node:18-alpine AS web-build
 
 ARG EDITION_IS_PRO=false

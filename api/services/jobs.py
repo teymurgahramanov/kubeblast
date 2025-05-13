@@ -80,12 +80,13 @@ def create_job(current_user, file_content, description, distributed):
 
     try:
         result = db.mongo.jobs.insert_one(job.dict())
-        file_name = f"{str(result.inserted_id)}/plan.jmx"
-        files.create_file(file_content,file_name)
-        return get_job(current_user, str(result.inserted_id))
+        job_id = str(result.inserted_id)
+        file_name = "plan.jmx"
+        files.create_file(job_id, file_content, file_name)
+        return get_job(current_user, job_id)
     except Exception as e:
         logger.error(e)
-        delete_job(current_user, str(result.inserted_id))
+        delete_job(current_user, job_id)
         raise HTTPException(status_code=500, detail="Failed to create job")
 
 
