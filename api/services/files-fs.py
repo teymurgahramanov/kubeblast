@@ -1,6 +1,6 @@
 import io
-import os
 import zipfile
+import shutil
 from pathlib import Path
 from fastapi import HTTPException, Response
 from core.log import logger
@@ -20,18 +20,8 @@ def create_file(job_id, file_content, file_name):
 def delete_file(job_id):
     try:
         job_dir = config.STORAGE_DIR / job_id
-        if job_dir.exists():
-            for file_path in job_dir.rglob('*'):
-                if file_path.is_file():
-                    file_path.unlink()
-                    logger.info(f"Deleted file: {file_path}")
-            for dir_path in reversed(list(job_dir.rglob('*'))):
-                if dir_path.is_dir():
-                    dir_path.rmdir()
-            job_dir.rmdir()
-        else:
-            logger.warning(f"No directory found for job '{job_id}' in storage directory")
-
+        shutil.rmtree(job_dir, ignore_errors=True)
+        logger.info(f"Deleted job directory: {job_dir}")
     except Exception as e:
         logger.error(f"Failed to delete files from filesystem: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete files from filesystem: {str(e)}")
