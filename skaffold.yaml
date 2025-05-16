@@ -24,10 +24,8 @@ deploy:
           image.repository: "{{ .IMAGE_REPO_kubeblast }}"
           image.tag: "{{ .IMAGE_TAG_kubeblast }}"
           env:
-            - name: PRO_LICENSE_ID
-              value: "b07409b5-9f0f-4c3d-837e-5844276f4aa5"
-            - name: PRO_LICENSE_KEY
-              value: "a6BCA0-215D72-254CFE-906DAF-14DA1E-V3"
+            - name: STORAGE_BACKEND
+              value: "s3"
             - name: LOG_LEVEL
               value: "ERROR"
             - name: MONGO_HOST

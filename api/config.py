@@ -25,7 +25,7 @@ class Config:
     MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "kubeblast")
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
-    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "fs")
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "fs") # fs, s3
     STORAGE_DIR: str = os.getenv("STORAGE_DIR", "/data")
     S3_URL: str = os.getenv("S3_URL")
     S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
