@@ -73,7 +73,7 @@ def schedule_workload(job_id,distributed):
     namespace = get_namespace()
     labels = gen_labels(job_id,"master")
     label_selector = gen_label_selector(job_id,"master")
-    file_name = f"{job_id}/plan.jmx"
+    file_name = "plan.jmx"
     file_content = files.read_file(job_id, file_name)
     slaves=[]
 

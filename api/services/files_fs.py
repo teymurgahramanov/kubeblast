@@ -7,9 +7,12 @@ from core.log import logger
 from config import config
 from services import jobs
 
+# Convert STORAGE_DIR to Path object
+STORAGE_DIR = Path(config.STORAGE_DIR)
+
 def create_file(job_id, file_content, file_name):
     try:
-        file_path = config.STORAGE_DIR / job_id / file_name
+        file_path = STORAGE_DIR / job_id / file_name
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, 'wb') as f:
             f.write(file_content)
@@ -19,7 +22,7 @@ def create_file(job_id, file_content, file_name):
 
 def delete_file(job_id):
     try:
-        job_dir = config.STORAGE_DIR / job_id
+        job_dir = STORAGE_DIR / job_id
         shutil.rmtree(job_dir, ignore_errors=True)
         logger.info(f"Deleted job directory: {job_dir}")
     except Exception as e:
@@ -28,7 +31,7 @@ def delete_file(job_id):
 
 def read_file(job_id, file_name):
     try:
-        file_path = config.STORAGE_DIR / job_id / file_name
+        file_path = STORAGE_DIR / job_id / file_name
         with open(file_path, 'r') as f:
             file_content = f.read()
         logger.info(f"Read file from filesystem: {file_name}")
@@ -41,7 +44,7 @@ def download_file(current_user, job_id, type):
     job = jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
-            file_path = config.STORAGE_DIR / job_id / "plan.jmx"
+            file_path = STORAGE_DIR / job_id / "plan.jmx"
             try:
                 with open(file_path, 'r') as f:
                     content = f.read()
@@ -57,7 +60,7 @@ def download_file(current_user, job_id, type):
                 raise HTTPException(status_code=404, detail="Plan file not found.")
         case "report":
             try:
-                report_dir = config.STORAGE_DIR / job_id / "report"
+                report_dir = STORAGE_DIR / job_id / "report"
                 if not report_dir.exists():
                     raise HTTPException(status_code=404, detail="No report files found")
 

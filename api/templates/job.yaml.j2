@@ -50,12 +50,13 @@ spec:
         command: ["sh", "-c"]
         args:
           - |
-            aws --endpoint-url {{ s3_url }} s3 cp /shared/result.jtl s3://{{ s3_bucket }}/{{ job_id }}
-            aws --endpoint-url {{ s3_url }} s3 cp --recursive /shared/report s3://{{ s3_bucket }}/{{ job_id }}           
+            aws --endpoint-url {{ s3_url }} s3 cp --recursive /shared s3://{{ s3_bucket }}/{{ job_id }}/
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ s3_access_key }}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: {{ s3_secret_key }}         
         volumeMounts:
-        - name: jmeter-plan
-          mountPath: /tmp/plan.jmx
-          subPath: plan.jmx
         - name: shared-volume
           mountPath: /shared
       restartPolicy: Never
