@@ -130,6 +130,23 @@ env: []
 # Example: envFromSecret: "app-secrets"
 envFromSecret: ""
 
+mongo:
+  enabled: true
+  host: "mongo"
+  port: 27017
+  user: "kubeblast"
+  password: "kubeblast"
+  database: "kubeblast"
+
+storageBackend: "fs"
+
+pvc:
+  storageClassName: ""
+  size: "10Gi"
+  accessMode: "ReadWriteMany"
+  annotations: {}
+  labels: {}
+
 # Additional annotations for pods
 # Example:
 # podAnnotations:

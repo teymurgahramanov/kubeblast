@@ -113,6 +113,8 @@ def schedule_workload(job_id,distributed):
             slaves=slaves,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
+            storage_backend=config.STORAGE_BACKEND,
+            storage_pvc_name=config.STORAGE_PVC_NAME,
             s3_url=config.S3_URL,
             s3_access_key=config.S3_ACCESS_KEY,
             s3_secret_key=config.S3_SECRET_KEY,

@@ -44,6 +44,7 @@ spec:
         - name: shared-volume
           mountPath: /shared
       containers:
+      {% if storage_backend | eq "s3" %}
       - name: uploader
         image: amazon/aws-cli:2.27.12
         imagePullPolicy: {{ image_pull_policy }}
@@ -59,6 +60,21 @@ spec:
         volumeMounts:
         - name: shared-volume
           mountPath: /shared
+      {% endif %}
+      {% if storage_backend | eq "fs" %}
+      - name: uploader
+        image: alpine:3.17
+        imagePullPolicy: {{ image_pull_policy }}
+        command: ["sh", "-c"]
+        args:
+          - |
+            cp -r /shared/* /data/{{ job_id }}
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /shared
+        - name: storage-pvc
+          mountPath: /data
+      {% endif %}
       restartPolicy: Never
       volumes:
       - name: jmeter-plan
@@ -66,6 +82,11 @@ spec:
           name: {{ name }}
       - name: shared-volume
         emptyDir: {}
+      {% if storage_backend | eq "fs" %}
+      - name: storage-pvc
+        persistentVolumeClaim:
+          claimName: {{ storage_pvc_name }}
+      {% endif %}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

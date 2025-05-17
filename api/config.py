@@ -10,13 +10,11 @@ class Config:
     IS_PRO = False
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
-
-    PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
-
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", 3))
+    PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
+    WORKER_WATCH_INTERVAL: int = 3
 
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
     MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
@@ -26,7 +24,9 @@ class Config:
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
     STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "fs") # fs, s3
-    STORAGE_DIR: str = os.getenv("STORAGE_DIR", "/data")
+    STORAGE_DIR: str = "/data"
+    STORAGE_PVC_NAME: str = os.getenv("STORAGE_PVC_NAME", "kubeblast-pvc")
+    
     S3_URL: str = os.getenv("S3_URL")
     S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
     S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY")
@@ -53,7 +53,7 @@ class Config:
             K8S_JOB_NODE_SELECTOR = json.loads(job_node_selector_env)
         except json.JSONDecodeError:
             K8S_JOB_NODE_SELECTOR = None
-    
+
     # Load Kubernetes Tolerations from JSON format
     K8S_JOB_TOLERATIONS: list = []
     job_tolerations_env = os.getenv("K8S_JOB_TOLERATIONS")

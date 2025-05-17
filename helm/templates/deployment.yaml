@@ -39,6 +39,24 @@ spec:
               containerPort: {{ .Values.service.port.api }}
               protocol: TCP
           env:
+            - name: STORAGE_BACKEND
+              value: {{ .Values.storageBackend }}
+            {{- if .Values.mongo.enabled }}
+            - name: MONGO_HOST
+              value: {{ .Values.mongo.host }}
+            - name: MONGO_PORT
+              value: {{ .Values.mongo.port }}
+            - name: MONGO_USER
+              value: {{ .Values.mongo.user }}
+            - name: MONGO_PASSWORD
+              value: {{ .Values.mongo.password }}
+            - name: MONGO_DATABASE
+              value: {{ .Values.mongo.database }}
+            {{- end }}
+            {{- if .Values.storageBackend | eq "fs" }}
+            - name: STORAGE_PVC_NAME
+              value: {{ include "kubeblast.fullname" . }}
+            {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
@@ -50,6 +68,17 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.storageBackend | eq "fs" }}
+          volumeMounts:
+            - name: {{ include "kubeblast.fullname" . }}
+              mountPath: /data
+          {{- end }}
+      {{- if .Values.storageBackend | eq "fs" }}
+      volumes:
+        - name: {{ include "kubeblast.fullname" . }}
+          persistentVolumeClaim:
+            claimName: {{ include "kubeblast.fullname" . }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
