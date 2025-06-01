@@ -76,18 +76,13 @@ affinity: {}
 # - K8S_JOB_NODE_SELECTOR: JSON object for node selector
 # - K8S_JOB_TOLERATIONS: JSON array of tolerations
 
-quotas:
-  enabled: false
-  pods: "10"
-  requestsCpu: "4"
-  requestsMemory: "8Gi"
-  limitsCpu: "6"
-  limitsMemory: "12Gi"
-
-limits:
-  enabled: false
-  defaultCpu: "500m"
-  defaultMemory: "1Gi"
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
 
 # Example environment variable configurations:
 # env:
@@ -130,13 +125,20 @@ env: []
 # Example: envFromSecret: "app-secrets"
 envFromSecret: ""
 
-mongo:
+mongodb:
   enabled: true
-  host: "mongo"
-  port: 27017
-  user: "kubeblast"
-  password: "kubeblast"
-  database: "kubeblast"
+  architecture: standalone
+  auth:
+    enabled: true
+    rootPassword: "kubeblast"
+    username: "kubeblast"
+    password: "kubeblast"
+    database: "kubeblast"
+  persistence:
+    enabled: true
+    size: 5Gi
+  service:
+    nameOverride: mongo
 
 storageBackend: "fs"
 
@@ -182,17 +184,6 @@ service:
 serviceAccount:
   annotations: {}
 
-# Resource limits and requests for KubeBlast pod
-# Example:
-# resources:
-#   requests:
-#     cpu: "100m"
-#     memory: "256Mi"
-#   limits:
-#     cpu: "500m"
-#     memory: "1Gi"
-resources: {}
-
 # Ingress configuration
 # Example:
 # ingress:
@@ -207,3 +198,7 @@ ingress:
   annotations: {}
   className: ""
   host: ""
+  tls:
+    enabled: false
+    secretName: ""
+    host: ""

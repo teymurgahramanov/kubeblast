@@ -5,10 +5,6 @@ metadata:
   name: {{ include "kubeblast.fullname" . }}
   labels:
     {{- include "kubeblast.labels" . | nindent 4 }}
-    {{ .Values.pvc.labels | toYaml }}
-  annotations:
-    {{- include "kubeblast.annotations" . | nindent 4 }}
-    {{ .Values.pvc.annotations | toYaml }}
 spec:
   storageClassName: {{ .Values.pvc.storageClassName }}
   accessModes:

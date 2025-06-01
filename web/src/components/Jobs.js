@@ -272,7 +272,6 @@ const Jobs = () => {
   };
 
   const columns = useMemo(() => {
-    console.log('Current user role:', userRole); // Debug log
     return [
       { 
         field: "status", 

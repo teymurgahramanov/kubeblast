@@ -72,7 +72,6 @@ def schedule_workload(job_id,distributed):
     name = gen_resource_name(job_id)
     namespace = get_namespace()
     labels = gen_labels(job_id,"master")
-    label_selector = gen_label_selector(job_id,"master")
     file_name = "plan.jmx"
     file_content = files.read_file(job_id, file_name)
     slaves=[]
@@ -80,7 +79,6 @@ def schedule_workload(job_id,distributed):
     job_template_path = os.path.join(os.path.dirname(__file__), "../templates/job.yaml.j2")
 
     try:
-        # Create ConfigMap and DaemonSet in parallel
         configmap_manifest = client.V1ConfigMap(
             metadata=client.V1ObjectMeta(name=name, labels=labels),
             data={"plan.jmx": file_content}
@@ -89,14 +87,14 @@ def schedule_workload(job_id,distributed):
         client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap_manifest)
         logger.info(f"Created ConfigMap for job {job_id}")
         
-        if config.IS_PRO and distributed:
-            try:
-                from services import k8s_extra
-                slaves = k8s_extra.create_slaves(job_id)
-            except Exception as e:
-                logger.error(f"Failed to create slaves for job {job_id}: {e}")
-                delete_workload(job_id)
-                raise HTTPException(status_code=500, detail=f"Error creating slaves: {str(e)}")
+        #if config.IS_PRO and distributed:
+        #    try:
+        #        from services import k8s_extra
+        #         slaves = k8s_extra.create_slaves(job_id)
+        #    except Exception as e:
+        #        logger.error(f"Failed to create slaves for job {job_id}: {e}")
+        #        delete_workload(job_id)
+        #        raise HTTPException(status_code=500, detail=f"Error creating slaves: {str(e)}")
 
         # Create Job
         with open(job_template_path, 'r') as file:
@@ -107,18 +105,21 @@ def schedule_workload(job_id,distributed):
             namespace=namespace,
             labels = labels,
             job_id=job_id,
-            image=config.K8S_JOB_IMAGE,
+            image_job=config.K8S_JOB_IMAGE,
+            image_helper=config.K8S_JOB_HELPER_IMAGE,
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
             image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
             slaves=slaves,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
+            resources=config.K8S_JOB_RESOURCES,
             storage_backend=config.STORAGE_BACKEND,
             storage_pvc_name=config.STORAGE_PVC_NAME,
             s3_url=config.S3_URL,
             s3_access_key=config.S3_ACCESS_KEY,
             s3_secret_key=config.S3_SECRET_KEY,
-            s3_bucket=config.S3_BUCKET
+            s3_bucket=config.S3_BUCKET,
+            s3_region=config.S3_REGION
         )
 
         job_manifest = yaml.safe_load(rendered_job)

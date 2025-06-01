@@ -100,17 +100,6 @@ const Menuselect = () => {
         </MenuItem>
 
         {userRole === 'admin' && (
-          <MenuItem onClick={isPro ? () => handleNavigation('/settings') : handleProFeature}>
-            <ListItemIcon>
-              <Settings fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>
-              {isPro ? 'Settings' : renderProFeature('Settings')}
-            </ListItemText>
-          </MenuItem>
-        )}
-
-        {userRole === 'admin' && (
           <MenuItem onClick={isPro ? () => handleNavigation('/users') : handleProFeature}>
             <ListItemIcon>
               <People fontSize="small" />

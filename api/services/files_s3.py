@@ -70,7 +70,6 @@ def download_file(current_user, job_id, type):
             try:
                 # List all objects with the report prefix
                 response = s3_client.list_objects_v2(Bucket=config.S3_BUCKET, Prefix=f"{job_id}/report")
-                
                 if 'Contents' not in response:
                     raise HTTPException(status_code=404, detail="No report files found")
                     

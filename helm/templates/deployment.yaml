@@ -41,21 +41,19 @@ spec:
           env:
             - name: STORAGE_BACKEND
               value: {{ .Values.storageBackend }}
-            {{- if .Values.mongo.enabled }}
-            - name: MONGO_HOST
-              value: {{ .Values.mongo.host }}
-            - name: MONGO_PORT
-              value: {{ .Values.mongo.port }}
-            - name: MONGO_USER
-              value: {{ .Values.mongo.user }}
-            - name: MONGO_PASSWORD
-              value: {{ .Values.mongo.password }}
-            - name: MONGO_DATABASE
-              value: {{ .Values.mongo.database }}
-            {{- end }}
-            {{- if .Values.storageBackend | eq "fs" }}
             - name: STORAGE_PVC_NAME
               value: {{ include "kubeblast.fullname" . }}
+            {{- if .Values.mongodb.enabled }}
+            - name: MONGO_HOST
+              value: "{{ .Values.mongodb.service.nameOverride }}"
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_USER
+              value: {{ .Values.mongodb.auth.username }}
+            - name: MONGO_PASSWORD
+              value: {{ .Values.mongodb.auth.password }}
+            - name: MONGO_DATABASE
+              value: {{ .Values.mongodb.auth.database }}
             {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}

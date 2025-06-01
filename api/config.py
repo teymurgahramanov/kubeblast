@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
     IS_PRO = False
 
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "ERROR")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
@@ -25,15 +25,21 @@ class Config:
 
     STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "fs") # fs, s3
     STORAGE_DIR: str = "/data"
-    STORAGE_PVC_NAME: str = os.getenv("STORAGE_PVC_NAME", "kubeblast-pvc")
+    STORAGE_PVC_NAME: str = os.getenv("STORAGE_PVC_NAME")
     
-    S3_URL: str = os.getenv("S3_URL")
+    S3_URL: str = os.getenv("S3_URL",None)
     S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
     S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY")
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
+    K8S_JOB_HELPER_IMAGE_S3: str = os.getenv("K8S_JOB_HELPER_IMAGE_S3", "amazon/aws-cli:2.27.12")
+    K8S_JOB_HELPER_IMAGE_FS: str = os.getenv("K8S_JOB_HELPER_IMAGE_FS", "alpine:3.18")
+    if STORAGE_BACKEND == "s3":
+        K8S_JOB_HELPER_IMAGE = K8S_JOB_HELPER_IMAGE_S3
+    else:
+        K8S_JOB_HELPER_IMAGE = K8S_JOB_HELPER_IMAGE_FS
     K8S_JOB_IMAGE_PULL_POLICY: str = os.getenv("K8S_JOB_IMAGE_PULL_POLICY", "IfNotPresent")
 
     # Load Kubernetes Image Pull Secrets from JSON format
@@ -63,11 +69,20 @@ class Config:
         except json.JSONDecodeError:
             K8S_JOB_TOLERATIONS = None
 
+    # Load Kubernetes Resources from JSON format
+    K8S_JOB_RESOURCES: dict = {}
+    job_resources_env = os.getenv("K8S_JOB_RESOURCES", None)
+    if job_resources_env:
+        try:
+            K8S_JOB_RESOURCES = json.loads(job_resources_env)
+        except json.JSONDecodeError:
+            K8S_JOB_RESOURCES = None
+
     # LDAP Configuration
     LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "false")
-    LDAP_SERVER: str = os.getenv("LDAP_SERVER", "ldap://localhost:389")
-    LDAP_BASE_DN: str = os.getenv("LDAP_BASE_DN", "ou=users,dc=example,dc=com")
-    LDAP_BIND_DN: str = os.getenv("LDAP_BIND_DN", "cn=admin,dc=example,dc=com")
+    LDAP_SERVER: str = os.getenv("LDAP_SERVER")
+    LDAP_BASE_DN: str = os.getenv("LDAP_BASE_DN")
+    LDAP_BIND_DN: str = os.getenv("LDAP_BIND_DN")
     LDAP_BIND_PASSWORD: str = os.getenv("LDAP_BIND_PASSWORD", "")
     LDAP_USER_SEARCH_FILTER: str = os.getenv("LDAP_USER_SEARCH_FILTER", "(&(objectClass=person)(sAMAccountName={username}))")
     LDAP_GROUP_SEARCH_FILTER: str = os.getenv("LDAP_GROUP_SEARCH_FILTER", "(&(objectClass=group)(member={dn}))")

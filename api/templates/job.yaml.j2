@@ -27,7 +27,7 @@ spec:
       {% endif %}
       initContainers:
       - name: jmeter
-        image: {{ image }}
+        image: {{ image_job }}
         imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
@@ -43,27 +43,40 @@ spec:
           subPath: plan.jmx
         - name: shared-volume
           mountPath: /shared
+        {% if resources %}
+        resources:
+          {% for key, value in resources.items() %}
+          {{ key }}:
+            {{ value }}
+          {% endfor %}
+        {% endif %}
       containers:
-      {% if storage_backend | eq "s3" %}
+      {% if storage_backend == "s3" %}
       - name: uploader
-        image: amazon/aws-cli:2.27.12
+        image: {{ image_helper }}
         imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
           - |
+            {% if s3_url %}
             aws --endpoint-url {{ s3_url }} s3 cp --recursive /shared s3://{{ s3_bucket }}/{{ job_id }}/
+            {% else %}
+            aws s3 cp --recursive /shared s3://{{ s3_bucket }}/{{ job_id }}/
+            {% endif %}
         env:
         - name: AWS_ACCESS_KEY_ID
           value: {{ s3_access_key }}
         - name: AWS_SECRET_ACCESS_KEY
-          value: {{ s3_secret_key }}         
+          value: {{ s3_secret_key }}
+        - name: AWS_DEFAULT_REGION
+          value: {{ s3_region }}
         volumeMounts:
         - name: shared-volume
           mountPath: /shared
       {% endif %}
-      {% if storage_backend | eq "fs" %}
+      {% if storage_backend == "fs" %}
       - name: uploader
-        image: alpine:3.17
+        image: {{ image_helper }}
         imagePullPolicy: {{ image_pull_policy }}
         command: ["sh", "-c"]
         args:
@@ -82,7 +95,7 @@ spec:
           name: {{ name }}
       - name: shared-volume
         emptyDir: {}
-      {% if storage_backend | eq "fs" %}
+      {% if storage_backend == "fs" %}
       - name: storage-pvc
         persistentVolumeClaim:
           claimName: {{ storage_pvc_name }}

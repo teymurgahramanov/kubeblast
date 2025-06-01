@@ -23,51 +23,48 @@ deploy:
         setValueTemplates:
           image.repository: "{{ .IMAGE_REPO_kubeblast }}"
           image.tag: "{{ .IMAGE_TAG_kubeblast }}"
-          env:
-            - name: STORAGE_BACKEND
-              value: "s3"
-            - name: LOG_LEVEL
-              value: "ERROR"
-            - name: MONGO_HOST
-              value: "mongodb.infra"
-            - name: MONGO_PORT
-              value: "27017"
-            - name: MONGO_DB_NAME
-              value: "kubeblast"
-            - name: MONGO_DB_USER
-              value: "kubeblast"
-            - name: MONGO_DB_PASS
-              value: "kubeblast"
-            - name: S3_URL
-              value: "http://minio.infra:9000"
-            - name: S3_ACCESS_KEY
-              value: "FBUuscAKjIhPoEHnkL1H" # Home
-              #value: "1MtdMlZehiTTeVqayB2T" # Office 
-            - name: S3_SECRET_KEY
-              value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq" # Home
-              #value: "1ELXLxJc6BMPSgdlC7d0F1ASXNIcOZO3zZa6hEYy" # Office
-            - name: S3_BUCKET
-              value: "kubeblast"
-            - name: LDAP_ENABLED
-              value: "true"
-            - name: LDAP_SERVER
-              value: "ldap://ldap.cbar.az"
-            - name: LDAP_BASE_DN
-              value: OU=Administration\,DC=cbar\,DC=az
-            - name: LDAP_BIND_DN
-              value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
-            - name: LDAP_BIND_PASSWORD
-              value: "Gr@fAn@2#24"
-            #- name: LDAP_USER_SEARCH_FILTER
-            #  value: "(&(objectCategory=user)(sAMAccountName=%s))"
-            #- name: LDAP_GROUP_SEARCH_FILTER
-            #  value: "(&(objectClass=group)(member=%d))"
-
-              
           ingress.enabled: true
           ingress.host: "kubeblast.local"
           ingress.className: "nginx"
-
+          env:
+          #  - name: LOG_LEVEL
+          #    value: "ERROR"
+          #  - name: MONGO_HOST
+            #  value: "mongodb.infra"
+            #- name: MONGO_PORT
+            #  value: "27017"
+            #- name: MONGO_DB_NAME
+            #  value: "kubeblast"
+            #- name: MONGO_DB_USER
+            #  value: "kubeblast"
+            #- name: MONGO_DB_PASS
+            #  value: "kubeblast"
+            #- name: S3_URL
+            #  value: "http://minio.infra:9000"
+            - name: S3_ACCESS_KEY
+              value: "AKIAWG74R6ROYZL77I3U"
+              #value: "FBUuscAKjIhPoEHnkL1H"
+            - name: S3_SECRET_KEY
+              value: "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"
+              #value: "Ym5F5ofXIr98xlO4N5NzhkyyfrdUEmONXedkrNSq"
+            - name: S3_BUCKET
+              value: "kubeblast-test"
+            - name: S3_REGION
+              value: "eu-west-1"
+          #  - name: LDAP_ENABLED
+          #    value: "true"
+          #  - name: LDAP_SERVER
+          #    value: "ldap://ldap.cbar.az"
+          #  - name: LDAP_BASE_DN
+          #    value: OU=Administration\,DC=cbar\,DC=az
+          #  - name: LDAP_BIND_DN
+          #    value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
+          #  - name: LDAP_BIND_PASSWORD
+          #    value: "Gr@fAn@2#24"
+          #- name: LDAP_USER_SEARCH_FILTER
+          #  value: "(&(objectCategory=user)(sAMAccountName=%s))"
+          #- name: LDAP_GROUP_SEARCH_FILTER
+          #  value: "(&(objectClass=group)(member=%d))"              
 portForward:
   - resourceType: deployment
     resourceName: kubeblast

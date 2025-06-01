@@ -1,29 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, FormControlLabel, Checkbox } from '@mui/material';
-import { Close, Star } from '@mui/icons-material';
+import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
 
 const AddJob = ({ onClose }) => {
   const [jobData, setJobData] = useState({
     description: '',
-    file: null,
-    distributed: false
+    file: null
   });
   const [error, setError] = useState('');
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
-  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
-
-  const handleProFeature = () => {
-    window.location.href = proRedirectUrl;
-  };
-
-  const renderProFeature = (text) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{text}</Typography>
-      <Star fontSize="small" sx={{ color: 'var(--warning-color)', fontSize: '0.8rem' }} />
-    </Box>
-  );
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,7 +31,6 @@ const AddJob = ({ onClose }) => {
     const formData = new FormData();
     formData.append('description', jobData.description);
     formData.append('file', jobData.file);
-    formData.append('distributed', jobData.distributed);
 
     try {
       await axiosInstance.post('/jobs', formData, {
@@ -136,31 +121,6 @@ const AddJob = ({ onClose }) => {
               </Typography>
             </label>
           </Box>
-
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={jobData.distributed}
-                onChange={isPro ? (e) => setJobData(prev => ({
-                  ...prev,
-                  distributed: e.target.checked
-                })) : handleProFeature}
-                sx={{
-                  color: 'var(--text-secondary)',
-                  '&.Mui-checked': {
-                    color: 'var(--primary-color)',
-                  },
-                }}
-              />
-            }
-            label={isPro ? "Distributed" : renderProFeature("Distributed")}
-            sx={{
-              color: 'var(--text-secondary)',
-              '& .MuiTypography-root': {
-                color: 'var(--text-secondary)',
-              },
-            }}
-          />
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
             <Button
