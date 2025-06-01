@@ -417,7 +417,6 @@ const Jobs = () => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -426,7 +425,6 @@ const Jobs = () => {
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-      timeZone: userTimeZone
     });
   };
 
