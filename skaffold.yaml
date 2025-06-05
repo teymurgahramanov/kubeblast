@@ -29,8 +29,8 @@ deploy:
           env:
             - name: PRO_LICENSE_KEY
               value: F6D4E8-7F5D6F-49BEBF-1DF116-20DA8C-V3
-            - name: PRO_LICENSE_USER_ID
-              value: 4088c388-c067-40ca-9804-2effbe23c98e
+            - name: PRO_LICENSE_ID
+              value: b07409b5-9f0f-4c3d-837e-5844276f4aa5
           #  - name: LOG_LEVEL
           #    value: "ERROR"
           #  - name: MONGO_HOST
