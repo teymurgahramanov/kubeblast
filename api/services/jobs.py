@@ -43,7 +43,7 @@ def get_job(current_user, job_id):
     return job
 
 def create_job(current_user, file_content, description, distributed):
-    job_name = f"{hashlib.sha256(file_content).hexdigest()[:6]}"
+    job_name = f"{hashlib.sha256(file_content).hexdigest()}"
 
     current_jobs_count = db.mongo.jobs.count_documents({
         "owner": current_user.username
