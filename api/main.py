@@ -25,9 +25,9 @@ app.include_router(files.router,tags=["files"])
 @app.on_event("startup")
 async def initialize():
 
-  if "PRO_LICENSE_KEY" in os.environ and "PRO_LICENSE_ID" in os.environ:
+  if "PRO_LICENSE_KEY" in os.environ and "PRO_LICENSE_USER_ID" in os.environ:
       from license_check import check_license
-      if not check_license(os.environ["PRO_LICENSE_ID"], os.environ["PRO_LICENSE_KEY"]):
+      if not check_license(os.environ["PRO_LICENSE_USER_ID"], os.environ["PRO_LICENSE_KEY"]):
           logger.error("Invalid license key. Continuing in community mode.")
           config.IS_PRO = False
       else:

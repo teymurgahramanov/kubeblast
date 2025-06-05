@@ -11,7 +11,7 @@ class Config:
     # General
     IS_PRO = False
 
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "ERROR")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     

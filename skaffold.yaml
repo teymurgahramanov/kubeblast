@@ -11,7 +11,7 @@ build:
       docker:
         dockerfile: Dockerfile
         buildArgs:
-          EDITION_IS_PRO: "false"
+          EDITION_IS_PRO: "true"
 
 deploy:
   helm:
@@ -27,6 +27,10 @@ deploy:
           ingress.host: "kubeblast.local"
           ingress.className: "nginx"
           env:
+            - name: PRO_LICENSE_KEY
+              value: F6D4E8-7F5D6F-49BEBF-1DF116-20DA8C-V3
+            - name: PRO_LICENSE_USER_ID
+              value: 4088c388-c067-40ca-9804-2effbe23c98e
           #  - name: LOG_LEVEL
           #    value: "ERROR"
           #  - name: MONGO_HOST
@@ -51,20 +55,20 @@ deploy:
               value: "kubeblast-test"
             - name: S3_REGION
               value: "eu-west-1"
-          #  - name: LDAP_ENABLED
-          #    value: "true"
-          #  - name: LDAP_SERVER
-          #    value: "ldap://ldap.cbar.az"
-          #  - name: LDAP_BASE_DN
-          #    value: OU=Administration\,DC=cbar\,DC=az
-          #  - name: LDAP_BIND_DN
-          #    value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
-          #  - name: LDAP_BIND_PASSWORD
-          #    value: "Gr@fAn@2#24"
-          #- name: LDAP_USER_SEARCH_FILTER
-          #  value: "(&(objectCategory=user)(sAMAccountName=%s))"
-          #- name: LDAP_GROUP_SEARCH_FILTER
-          #  value: "(&(objectClass=group)(member=%d))"              
+            - name: LDAP_ENABLED
+              value: "true"
+            - name: LDAP_SERVER
+              value: "ldap://ldap.cbar.az"
+            - name: LDAP_BASE_DN
+              value: OU=Administration\,DC=cbar\,DC=az
+            - name: LDAP_BIND_DN
+              value: CN=Grafana Ldap\,OU=Administration\,DC=cbar\,DC=az
+            - name: LDAP_BIND_PASSWORD
+              value: "Gr@fAn@2#24"
+            - name: LDAP_USER_SEARCH_FILTER
+              value: "(&(objectClass=person)(sAMAccountName={username}))"
+            - name: LDAP_GROUP_SEARCH_FILTER
+              value: "(&(objectClass=group)(member={dn}))"              
 portForward:
   - resourceType: deployment
     resourceName: kubeblast

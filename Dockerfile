@@ -2,7 +2,7 @@ FROM node:18-alpine AS web-build
 
 ARG EDITION_IS_PRO=false
 ENV REACT_APP_IS_PRO="${EDITION_IS_PRO}"
-ENV REACT_APP_PRO_REDIRECT_URL=https://kubeblast.io
+ENV REACT_APP_PRO_REDIRECT_URL=https://github.com/teymurgahramanov/kubeblast
 
 WORKDIR /app
 COPY web/package*.json ./
