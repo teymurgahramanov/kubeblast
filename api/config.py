@@ -10,6 +10,8 @@ class Config:
 
     # General
     IS_PRO = False
+    PRO_LICENSE_KEY: str = os.getenv("PRO_LICENSE_KEY")
+    PRO_LICENSE_ID: str = os.getenv("PRO_LICENSE_ID")
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
@@ -94,6 +96,6 @@ class Config:
     LDAP_USER_ATTRIBUTES: list = os.getenv("LDAP_USER_ATTRIBUTES", "uid,sAMAccountName,cn,mail,memberOf").split(",")
     LDAP_GROUP_ATTRIBUTES: list = os.getenv("LDAP_GROUP_ATTRIBUTES", "cn,member").split(",")
     LDAP_USE_TLS: bool = os.getenv("LDAP_USE_TLS", "false").lower() == "true"
-    LDAP_VERIFY_CERT: bool = os.getenv("LDAP_VERIFY_CERT", "true").lower() == "true"
+    LDAP_VERIFY_CERT: bool = os.getenv("LDAP_VERIFY_CERT", "false").lower() == "true"
 
 config = Config()

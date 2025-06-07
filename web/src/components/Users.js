@@ -78,6 +78,31 @@ const Users = ({ setAddUser }) => {
     enabled: user.enabled,
   }));
 
+  const EmptyState = () => (
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      py: 8,
+      px: 2,
+      textAlign: 'center',
+    }}>
+      <Person sx={{ 
+        fontSize: 64,
+        color: 'var(--text-secondary)',
+        mb: 2,
+        opacity: 0.5
+      }} />
+      <Typography variant="h6" sx={{ 
+        color: 'var(--text-secondary)',
+        fontWeight: 600
+      }}>
+        There's nothing here yet
+      </Typography>
+    </Box>
+  );
+
   const columns = [
     { field: 'username', headerName: 'Username', width: 180, flex: 1 },
     { field: 'full_name', headerName: 'Full Name', width: 200, flex: 1 },
@@ -117,13 +142,15 @@ const Users = ({ setAddUser }) => {
     },
     {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: '',
+      sortable: false,
       width: 100,
       flex: 0.5,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <IconButton
             onClick={(event) => handleMenuOpen(event, params.row.username)}
+            size="small"
             sx={{ 
               '&:hover': { 
                 backgroundColor: 'var(--background-light)',
@@ -218,6 +245,12 @@ const Users = ({ setAddUser }) => {
                 '&:focus-within': {
                   outline: 'none',
                 },
+                '&:not(:last-child)': {
+                  borderRight: 'none',
+                },
+                '& .MuiDataGrid-columnSeparator': {
+                  display: 'none',
+                },
               },
             },
             '& .MuiDataGrid-row': {
@@ -228,27 +261,34 @@ const Users = ({ setAddUser }) => {
                 backgroundColor: '#FAFAFA',
               },
             },
+            '& .MuiDataGrid-overlay': {
+              background: 'transparent',
+            },
           },
         }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            getRowId={(row) => row.username}
-            hideFooter
-            disableSelectionOnClick
-            disableColumnMenu
-            autoHeight
-            getRowHeight={() => 'auto'}
-            sx={{
-              '& .MuiDataGrid-cell': {
-                py: 2,
-              },
-              '& .MuiDataGrid-columnHeader': {
-                py: 2,
-                fontWeight: 600,
-              },
-            }}
-          />
+          {users.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              getRowId={(row) => row.username}
+              hideFooter
+              disableSelectionOnClick
+              disableColumnMenu
+              autoHeight
+              getRowHeight={() => 'auto'}
+              sx={{
+                '& .MuiDataGrid-cell': {
+                  py: 2,
+                },
+                '& .MuiDataGrid-columnHeader': {
+                  py: 2,
+                  fontWeight: 600,
+                },
+              }}
+            />
+          )}
         </Box>
 
         <Menu

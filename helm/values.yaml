@@ -1,81 +1,20 @@
-# Override the name of the chart
-# Example: nameOverride: "kubeblast"
 nameOverride: ""
 
-# Override the full name of the chart
-# Example: fullnameOverride: "kubeblast-prod"
 fullnameOverride: ""
 
 # Pod security context configuration
-# Example:
-# podSecurityContext:
-#   runAsUser: 1000
-#   runAsGroup: 1000
-#   fsGroup: 1000
 podSecurityContext: {}
 
-# Container security context configuration
-# Example:
-# securityContext:
-#   allowPrivilegeEscalation: false
-#   readOnlyRootFilesystem: true
-#   capabilities:
-#     drop:
-#       - ALL
-securityContext: {}
-
-# Node selector for pod scheduling
-# Example:
-# nodeSelector:
-#   kubernetes.io/os: linux
+# Node selector for Kubeblast pod scheduling
 nodeSelector: {}
 
-# Tolerations for pod scheduling
-# Example:
-# tolerations:
-#   - key: "node-role.kubernetes.io/master"
-#     operator: "Exists"
-#     effect: "NoSchedule"
+# Tolerations for Kubeblast pod scheduling
 tolerations: []
 
-# Affinity rules for pod scheduling
-# Example:
-# affinity:
-#   podAntiAffinity:
-#     preferredDuringSchedulingIgnoredDuringExecution:
-#       - weight: 100
-#         podAffinityTerm:
-#           labelSelector:
-#             matchExpressions:
-#               - key: app
-#                 operator: In
-#                 values:
-#                   - kubeblast
-#           topologyKey: kubernetes.io/hostname
+# Affinity rules for Kubeblast pod scheduling
 affinity: {}
 
-# Environment variables for the application
-# Available environment variables from config.py:
-# - LOG_LEVEL: logging level (default: "INFO")
-# - PER_USER_CURRENT_JOBS_LIMIT: maximum number of concurrent jobs per user (default: 3)
-# - SECRET_KEY: secret key for JWT tokens
-# - ACCESS_TOKEN_EXPIRE_MINUTES: JWT token expiration time in minutes (default: 30)
-# - MONGO_HOST: MongoDB host (default: "localhost")
-# - MONGO_PORT: MongoDB port (default: 27017)
-# - MONGO_DB_USER: MongoDB username (default: "kubeblast")
-# - MONGO_DB_PASS: MongoDB password (default: "kubeblast")
-# - MONGO_DB_NAME: MongoDB database name (default: "kubeblast")
-# - S3_URL: S3 storage URL
-# - S3_ACCESS_KEY: S3 access key
-# - S3_SECRET_KEY: S3 secret key
-# - S3_REGION: S3 region (default: "us-east-1")
-# - S3_BUCKET: S3 bucket name
-# - K8S_JOB_IMAGE: Kubernetes job container image (default: "alpine/jmeter:5.6")
-# - K8S_JOB_IMAGE_PULL_POLICY: Image pull policy (default: "IfNotPresent")
-# - K8S_JOB_IMAGE_PULL_SECRETS: JSON array of image pull secrets
-# - K8S_JOB_NODE_SELECTOR: JSON object for node selector
-# - K8S_JOB_TOLERATIONS: JSON array of tolerations
-
+# Resources configuration for Kubeblast container
 resources:
   requests:
     cpu: "500m"
@@ -84,47 +23,15 @@ resources:
     cpu: "1000m"
     memory: "2Gi"
 
-# Example environment variable configurations:
-# env:
-#   # Basic string values
-#   - name: LOG_LEVEL
-#     value: "INFO"
-#   - name: PER_USER_CURRENT_JOBS_LIMIT
-#     value: "5"
-#   - name: MONGO_HOST
-#     value: "mongodb"
-#   - name: MONGO_PORT
-#     value: "27017"
-#   - name: MONGO_DB_USER
-#     value: "kubeblast"
-#   - name: MONGO_DB_NAME
-#     value: "kubeblast"
-#   - name: S3_REGION
-#     value: "us-east-1"
-#   - name: K8S_JOB_IMAGE
-#     value: "alpine/jmeter:5.6"
-#   - name: K8S_JOB_IMAGE_PULL_POLICY
-#     value: "IfNotPresent"
-#
-#   # Complex JSON configurations
-#   - name: K8S_JOB_IMAGE_PULL_SECRETS
-#     value: '[{"name": "docker-registry-secret"}]'
-#   - name: K8S_JOB_NODE_SELECTOR
-#     value: '{"kubernetes.io/os": "linux", "node-role.kubernetes.io/worker": "true"}'
-#   - name: K8S_JOB_TOLERATIONS
-#     value: '[{"key": "node-role.kubernetes.io/master", "operator": "Exists", "effect": "NoSchedule"}]'
-#
-#   # S3 configuration
-#   - name: S3_URL
-#     value: "https://s3.amazonaws.com"
-#   - name: S3_BUCKET
-#     value: "kubeblast-results"
+# Environment variables for Kubeblast container. Refer to README.md for more details.
+# Use envFromSecret to load environment variables from a secret.
 env: []
 
-# Name of the secret to load environment variables from
-# Example: envFromSecret: "app-secrets"
+# Environment variables from secret. Refer to README.md for more details.
 envFromSecret: ""
 
+# MongoDB configuration
+# If you want to use external MongoDB, set "enabled" to false.
 mongodb:
   enabled: true
   architecture: standalone
@@ -136,63 +43,48 @@ mongodb:
     database: "kubeblast"
   persistence:
     enabled: true
-    size: 5Gi
+    size: 2Gi
   service:
     nameOverride: mongo
 
+# Storage backend configuration
+# "fs" - file system
+# "s3" - S3 storage (AWS, GCP, MinIO, etc.)
 storageBackend: "fs"
 
+# Storage PVC configuration
+# Used only if storageBackend is "fs"
 pvc:
   storageClassName: ""
-  size: "10Gi"
+  size: "2Gi"
   accessMode: "ReadWriteMany"
   annotations: {}
   labels: {}
 
-# Additional annotations for pods
-# Example:
-# podAnnotations:
-#   prometheus.io/scrape: "true"
-#   prometheus.io/port: "8000"
+# Additional annotations for Kubeblast pod
 podAnnotations: {}
 
-# Additional labels for pods
-# Example:
-# podLabels:
-#   app.kubernetes.io/component: "api"
-#   app.kubernetes.io/part-of: "kubeblast"
+# Additional labels for Kubeblast pod
 podLabels: {}
 
-# Container image configuration
+# Kubeblast container image configuration
 image:
   repository: teymurgahramanov/kubeblast
   tag: ""
-# Image pull secrets
-# Example:
-# imagePullSecrets:
-#   - name: docker-registry-secret
 imagePullSecrets: []
-# Image pull policy
 imagePullPolicy: IfNotPresent
 
-# Service configuration
+# Kubeblast service configuration
 service:
   port:
     web: 80    # Web interface port
     api: 8000  # API port
 
+# Kubeblast service account annotations
 serviceAccount:
   annotations: {}
 
-# Ingress configuration
-# Example:
-# ingress:
-#   enabled: true
-#   annotations:
-#     kubernetes.io/ingress.class: "nginx"
-#     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-#   className: "nginx"
-#   host: "kubeblast.example.com"
+# Kubeblast Ingress configuration
 ingress:
   enabled: false
   annotations: {}

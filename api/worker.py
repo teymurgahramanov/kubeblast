@@ -30,13 +30,13 @@ jobs_collection = db[COLLECTION_NAME]
 def process_job_update():
     # Continuously sync job statuses between Kubernetes and MongoDB
     batch_v1 = client.BatchV1Api()
-    logger.info("Starting Kubernetes Job Updater...")
+    logger.info("Starting worker")
     
     while True:
         try:
             jobs = batch_v1.list_namespaced_job(namespace=current_namespace).items
             if not jobs:
-                logger.info("No jobs found.")
+                logger.debug("No jobs found.")
             else:
                 for job in jobs:
                     job_id = job.metadata.labels.get("kubeblast/job-id")

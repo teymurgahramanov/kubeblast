@@ -46,7 +46,7 @@ router = APIRouter(prefix="/api")
     const eventSource = new EventSource(`/logs/${jobId}`);
 
     eventSource.onmessage = (event) => {
-        console.log(event.data);  // Process each log line
+                        // console.log(event.data);  // Process each log line
     };
 
     eventSource.onerror = () => {

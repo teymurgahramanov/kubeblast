@@ -59,7 +59,7 @@ def create_job(current_user, file_content, description, distributed):
     if job:
         raise HTTPException(
             status_code=409,
-            detail=f"Job with the same plan file already exists: {job_name}"
+            detail=f"The same job already exists: {job_name}"
         )
     
     if not config.IS_PRO:
