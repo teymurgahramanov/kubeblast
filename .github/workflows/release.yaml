@@ -64,7 +64,6 @@ jobs:
           sed -i "s/^version:.*/version: $RELEASE_VERSION/" $CHART_FILE
           sed -i "s/^appVersion:.*/appVersion: \"$RELEASE_VERSION\"/" $CHART_FILE
           mkdir -p packaged
-          helm dependency update helm/
           helm package helm/ --destination packaged
 
       - name: Push Helm chart
