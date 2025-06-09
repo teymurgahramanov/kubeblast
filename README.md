@@ -8,7 +8,7 @@
 # Kubeblast
 Kubeblast turns your Kubernetes cluster into a Load Testing platform, where running JMeter load tests is simple and efficient. No scripting, no setup — just run your tests and get results!
 
-## ⭐ Features
+## ✨ Features
 - __Simplicity First__ – Just upload your JMX file and click *Start*. That's it.
 - __Intuitive UI__ – Manage jobs, view logs, and monitor execution in real-time.
 - __Placement Control__ – Define which Kubernetes nodes to run workloads.
@@ -32,7 +32,7 @@ Kubeblast turns your Kubernetes cluster into a Load Testing platform, where runn
    kubectl -n kubeblast port-forward svc/kubeblast -n argocd 8080:80
    ```
 
-## 💲Pro Features
+## ⭐ Pro Features
 Kubeblast Pro unlocks advanced features, including __LDAP__ authentication and __role-based access control (RBAC)__ and Moderation Workflow.
 To request access to the Pro edition, contact me at teymur_gahramanov@outlook.com.
 
