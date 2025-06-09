@@ -25,16 +25,15 @@ Kubeblast turns your Kubernetes cluster into a Load Testing platform, where runn
    ```
 2. Install Helm chart
    ```
-   helm upgrade --install teymurgahramanov/kubeblast -f kubeblast.yaml --namespace kubeblast --create-namespace
+   helm upgrade --install teymurgahramanov/kubeblast--set mongodb.enabled=true --namespace kubeblast --create-namespace
    ```
 3. Access UI
    ```
    kubectl -n kubeblast port-forward svc/kubeblast -n argocd 8080:80
    ```
 
-
 ## 💲Pro Features
-Kubeblast Pro unlocks advanced features, including __LDAP__ authentication and __role-based access control (RBAC)__.
+Kubeblast Pro unlocks advanced features, including __LDAP__ authentication and __role-based access control (RBAC)__ and Moderation Workflow.
 To request access to the Pro edition, contact me at teymur_gahramanov@outlook.com.
 
 ## ⚙️ Configuration

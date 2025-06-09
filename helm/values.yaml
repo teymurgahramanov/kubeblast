@@ -31,9 +31,9 @@ env: []
 envFromSecret: ""
 
 # MongoDB configuration
-# If you want to use external MongoDB, set "enabled" to false.
+# If you want to use external MongoDB, set "enabled" to false and configure env variables.
 mongodb:
-  enabled: true
+  enabled: false
   architecture: standalone
   auth:
     enabled: true
