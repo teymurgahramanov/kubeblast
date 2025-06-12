@@ -25,11 +25,14 @@ Kubeblast turns your Kubernetes cluster into a Load Testing platform, where runn
    ```
 2. Install Helm chart
    ```
-   helm upgrade --install teymurgahramanov/kubeblast--set mongodb.enabled=true --namespace kubeblast --create-namespace
+   helm upgrade --install kubeblast teymurgahramanov/kubeblast \
+      --set mongodb.enabled=true \
+      --namespace kubeblast \
+      --create-namespace 
    ```
-3. Access UI
+3. Access UI on http://localhost:8080 using username `admin` and password `admin`
    ```
-   kubectl -n kubeblast port-forward svc/kubeblast -n argocd 8080:80
+   kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```
 
 ## ⭐ Pro Features

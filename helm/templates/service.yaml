@@ -11,9 +11,5 @@ spec:
       targetPort: web
       protocol: TCP
       name: web
-    - port: {{ .Values.service.port.api }}
-      targetPort: api
-      protocol: TCP
-      name: api
   selector:
     {{- include "kubeblast.selectorLabels" . | nindent 4 }}

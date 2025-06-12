@@ -23,13 +23,6 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "kubeblast.fullname" . }}
-                port:
-                  number: {{ .Values.service.port.api }}
           - path: /
             pathType: ImplementationSpecific
             backend:

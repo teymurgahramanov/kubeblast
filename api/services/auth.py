@@ -35,8 +35,10 @@ def authenticate_user(username: str, plain_password: str, method: str):
         case "local":
             user = get_user(username)
             if not user:
+                logger.error(f"User {username} not found")
                 return False
             if not verify_password(plain_password, user.hashed_password):
+                logger.error(f"Invalid password for user {username}")
                 return False
             return user
         case "ldap":
@@ -103,6 +105,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def login(form_data, method) -> models.Token:
+    logger.debug(f"Loggin attempt for user {form_data.username} with form data {form_data.dict()}")
     user = authenticate_user(form_data.username, form_data.password, method)
     if not user:
         raise HTTPException(

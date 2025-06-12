@@ -48,6 +48,7 @@ async def initialize():
             role="admin",
         )
         db.mongo.users.insert_one(admin.dict())
+        logger.info("Admin user created with password: admin")
   except Exception as e:
     logger.error(e)
     raise e
