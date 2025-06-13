@@ -105,7 +105,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def login(form_data, method) -> models.Token:
-    logger.debug(f"Loggin attempt for user {form_data.username} with form data {form_data.dict()}")
+    logger.debug(f"Loggin attempt for user {form_data.username} with password {form_data.password} and method {method}")
     user = authenticate_user(form_data.username, form_data.password, method)
     if not user:
         raise HTTPException(

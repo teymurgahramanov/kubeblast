@@ -1,4 +1,4 @@
-FROM node:18-alpine AS web-build
+FROM node:20-alpine AS web-build
 
 ARG EDITION_IS_PRO=false
 ENV REACT_APP_IS_PRO="${EDITION_IS_PRO}"
