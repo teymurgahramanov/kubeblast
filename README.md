@@ -14,9 +14,14 @@ Kubeblast turns your Kubernetes cluster into a Load Testing platform, where runn
 - __Placement Control__ – Define which Kubernetes nodes to run workloads.
 - __Resource Control__ – Set up requests and limits to fit your resource pool.
 - __Storage Backends__ – Support for S3 (AWS, MinIO) and PVC.
+
+## ⭐ Pro Features
+__Kubeblast Pro__ unlocks advanced features:
 - __Built-in RBAC__ – Role-based access control with support for Users, Admins, and Moderators.
 - __Moderation Workflow__ – Assign moderators to review and approve JMX test plans before execution.
 - __LDAP Support__ – Integrate with LDAP for centralized authentication and access management.
+
+To request access to the Pro edition, contact me at teymur_gahramanov@outlook.com or via [Telegram](https://t.me/teymurgahramanov).
 
 ## ▶️ Quick start
 1. Add Helm repository
@@ -30,14 +35,24 @@ Kubeblast turns your Kubernetes cluster into a Load Testing platform, where runn
       --namespace kubeblast \
       --create-namespace 
    ```
-3. Access UI on http://localhost:8080 using username `admin` and password `admin`
+3. Access UI on http://localhost:8080 using username `admin` and password `admin`. You can use [test.jmx](./test.jmx) for testing.
    ```
    kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```
 
-## ⭐ Pro Features
-Kubeblast Pro unlocks advanced features, including __LDAP__ authentication and __role-based access control (RBAC)__ and Moderation Workflow.
-To request access to the Pro edition, contact me at teymur_gahramanov@outlook.com.
+## 💡 Example Use-Cases
+
+### 1. **Self-Service Load Testing for QA & Developers**
+* **Problem** – Engineers keep pinging DevOps to spin up JMeter or, worse, run tests manually on their laptops.  
+* **Solution** – Kubeblast’s Web UI lets users upload a JMX file, launch a test with a few clicks, watch execution logs, and get the report.
+
+### 2. **Load Test Scenario Moderation (Shift-Left Safety)**
+* **Problem** – An unchecked Load Test scenario can flood production, exhausts quotas or accidently (or intentionally) disrupt other workloads.
+* **Solution** – With Kubeblast you can assign “moderator” roles and every new test plan will be reviewed before approving the run.
+
+### 3. **Using Spare Cluster Capacity**
+* **Problem** – You need to stress-test at scale but want to use existing resources and not to pay for extra.  
+* **Solution** – Beside placement and resource control Kubeblast supports priority class configuration, allowing load tests to use idle cluster capacity — without impacting primary workloads.
 
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
@@ -63,6 +78,7 @@ Below is the list of supported environment variables:
 | `S3_SECRET_KEY` | string | S3 secret key | - | |
 | `S3_REGION` | string | S3 region (If required) | `us-east-1` | |
 | `S3_BUCKET` | string | S3 bucket name | - | |
+| `K8S_JOB_PRIORITY_CLASS` | string | Kubernetes priority class for job pods | - | |
 | `K8S_JOB_IMAGE` | string | JMeter Docker image for load testing | `alpine/jmeter:5.6` | |
 | `K8S_JOB_HELPER_IMAGE_S3` | string | Helper image for S3 operations | `amazon/aws-cli:2.27.12` | |
 | `K8S_JOB_HELPER_IMAGE_FS` | string | Helper image for filesystem operations | `alpine:3.18` | |
@@ -83,3 +99,6 @@ Below is the list of supported environment variables:
 | `LDAP_USE_TLS` | bool | Use TLS for LDAP connection | `false` | |
 | `LDAP_VERIFY_CERT` | bool | Verify LDAP server certificate | `false` | |
 
+## 🤝 Contributing
+
+All ideas, issues, and pull-requests are welcome—big or small!

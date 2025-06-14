@@ -105,6 +105,7 @@ def schedule_workload(job_id,distributed):
             namespace=namespace,
             labels = labels,
             job_id=job_id,
+            priority_class=config.K8S_JOB_PRIORITY_CLASS,
             image_job=config.K8S_JOB_IMAGE,
             image_helper=config.K8S_JOB_HELPER_IMAGE,
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,

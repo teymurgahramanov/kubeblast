@@ -19,6 +19,9 @@ spec:
         {{ key }}: "{{ value }}"
         {% endfor %}
     spec:
+      {% if priority_class %}
+      priorityClassName: {{ priority_class }}
+      {% endif %}
       {% if image_pull_secrets %}
       imagePullSecrets:
       {% for secret in image_pull_secrets %}

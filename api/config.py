@@ -40,6 +40,7 @@ class Config:
     S3_BUCKET: str = os.getenv("S3_BUCKET")
     
     # Job
+    K8S_JOB_PRIORITY_CLASS: str = os.getenv("K8S_JOB_PRIORITY_CLASS", None)
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
     K8S_JOB_HELPER_IMAGE_S3: str = os.getenv("K8S_JOB_HELPER_IMAGE_S3", "amazon/aws-cli:2.27.12")
     K8S_JOB_HELPER_IMAGE_FS: str = os.getenv("K8S_JOB_HELPER_IMAGE_FS", "alpine:3.18")
