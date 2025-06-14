@@ -40,6 +40,10 @@ To request access to the Pro edition, contact me at teymur_gahramanov@outlook.co
    kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```
 
+## ❓ **Why Kubeblast?**  
+Unlike YAML-heavy or SaaS-oriented alternatives, Kubeblast delivers a click-and-run experience for existing **JMeter (.jmx)** scripts, adds RBAC with optional moderator review, is flexible, open-source, and has the lightest footprint.
+
+
 ## 💡 Example Use-Cases
 
 ### 1. **Self-Service Load Testing for QA & Developers**
