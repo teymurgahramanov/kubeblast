@@ -1,0 +1,203 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  background-color: #f5f7fa;
+  color: #2d3748;
+}
+
+/* Modern color palette */
+:root {
+  --primary-color: #326CE5;
+  --primary-dark: #2c5282;
+  --secondary-color: #38b2ac;
+  --background-light: #f5f7fa;
+  --background-dark: #1a202c;
+  --text-primary: #2d3748;
+  --text-secondary: #718096;
+  --success-color: #48bb78;
+  --warning-color: #ecc94b;
+  --danger-color: #e53e3e;
+  --border-color: #e2e8f0;
+}
+
+/* Login page styling */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.login-border {
+  background: white;
+  padding: 3rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+.login-border:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Common components styling */
+.page-container {
+  padding: 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Data grid customization */
+.MuiDataGrid-root {
+  border: none !important;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.MuiDataGrid-cell {
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.MuiDataGrid-columnHeaders {
+  background-color: var(--background-light);
+  border-bottom: 2px solid var(--border-color) !important;
+}
+
+/* Button styling */
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.button-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.button-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Status indicators */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: var(--warning-color);
+  color: #744210;
+}
+
+.status-approved {
+  background-color: var(--success-color);
+  color: #22543d;
+}
+
+.status-declined {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+/* Header styling */
+.app-header {
+  border-bottom: 1px solid var(--border-color);
+  background-color: white;
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
+.app-header a {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+.app-header a:hover {
+  color: var(--primary-dark);
+}
+
+/* Adjust DataGrid container height */
+.data-grid-container {
+  height: calc(100vh - 280px);
+  width: 100%;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* User menu styling */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-menu:hover {
+  background-color: var(--background-light);
+}
+
+.user-menu .MuiAvatar-root {
+  width: 32px;
+  height: 48px;
+  font-size: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .login-border {
+    padding: 2rem;
+    margin: 1rem;
+  }
+
+  .page-container {
+    padding: 1rem;
+  }
+  
+  .app-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .data-grid-container {
+    height: calc(100vh - 240px);
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+

@@ -1,0 +1,10 @@
+node_modules
+*.tgz
+*.lock
+.venv
+__pycache__
+.env
+openapi.json
+helm/charts/
+helm/Chart.lock
+skaffold.yaml

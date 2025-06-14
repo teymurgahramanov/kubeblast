@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubeblast.fullname" . }}
+  labels:
+    {{- include "kubeblast.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kubeblast.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubeblast.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kubeblast.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - name: web
+              containerPort: {{ .Values.service.port.web }}
+              protocol: TCP
+            - name: api
+              containerPort: {{ .Values.service.port.api }}
+              protocol: TCP
+          env:
+            - name: STORAGE_BACKEND
+              value: {{ .Values.storageBackend }}
+            - name: STORAGE_PVC_NAME
+              value: {{ include "kubeblast.fullname" . }}
+            {{- if .Values.mongodb.enabled }}
+            - name: MONGO_HOST
+              value: "{{ .Values.mongodb.service.nameOverride }}"
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_USER
+              value: {{ .Values.mongodb.auth.username }}
+            - name: MONGO_PASSWORD
+              value: {{ .Values.mongodb.auth.password }}
+            - name: MONGO_DATABASE
+              value: {{ .Values.mongodb.auth.database }}
+            {{- end }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- if .Values.envFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFromSecret }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.storageBackend | eq "fs" }}
+          volumeMounts:
+            - name: {{ include "kubeblast.fullname" . }}
+              mountPath: /data
+          {{- end }}
+      {{- if .Values.storageBackend | eq "fs" }}
+      volumes:
+        - name: {{ include "kubeblast.fullname" . }}
+          persistentVolumeClaim:
+            claimName: {{ include "kubeblast.fullname" . }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
