@@ -1,11 +1,15 @@
+# Kubeblast Helm chart values
+
+# Name override for the release
 nameOverride: ""
 
+# Full name override for the release
 fullnameOverride: ""
 
-# Pod security context configuration
+# Pod security context configuration for Kubeblast pod.
 podSecurityContext: {}
 
-# Node selector for Kubeblast pod scheduling
+# Node selector for Kubeblast pod scheduling.
 nodeSelector: {}
 
 # Tolerations for Kubeblast pod scheduling
