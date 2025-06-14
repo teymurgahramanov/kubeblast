@@ -1,0 +1,12 @@
+.gitignore
+.dockerignore
+.env
+.venv
+README.md
+node_modules
+.env
+.gitignore
+.dockerignore
+.env
+.venv
+README.md

@@ -1,0 +1,12 @@
+pyarmor==9.1.6
+boto3==1.38.10
+bcrypt==3.2.2
+passlib[bcrypt]==1.7.4
+requests==2.32.3
+fastapi[standard]==0.115.12
+pyjwt==2.10.1
+python-ldap==3.4.4
+python-dotenv==1.1.0
+kubernetes==32.0.1
+pymongo==4.12.1
+pyinstaller==6.13.0

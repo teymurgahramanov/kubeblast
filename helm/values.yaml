@@ -1,0 +1,100 @@
+# Kubeblast Helm chart values
+
+# Name override for the release
+nameOverride: ""
+
+# Full name override for the release
+fullnameOverride: ""
+
+# Pod security context configuration for Kubeblast pod.
+podSecurityContext: {}
+
+# Node selector for Kubeblast pod scheduling.
+nodeSelector: {}
+
+# Tolerations for Kubeblast pod scheduling
+tolerations: []
+
+# Affinity rules for Kubeblast pod scheduling
+affinity: {}
+
+# Resources configuration for Kubeblast container
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+
+# Environment variables for Kubeblast container. Refer to README.md for more details.
+# Use envFromSecret to load environment variables from a secret.
+env: []
+
+# Environment variables from secret. Refer to README.md for more details.
+envFromSecret: ""
+
+# MongoDB configuration
+# If you want to use external MongoDB, set "enabled" to false and configure env variables.
+mongodb:
+  enabled: false
+  architecture: standalone
+  auth:
+    enabled: true
+    rootPassword: "kubeblast"
+    username: "kubeblast"
+    password: "kubeblast"
+    database: "kubeblast"
+  persistence:
+    enabled: true
+    size: 2Gi
+  service:
+    nameOverride: mongo
+
+# Storage backend configuration
+# "fs" - file system
+# "s3" - S3 storage (AWS, GCP, MinIO, etc.)
+storageBackend: "fs"
+
+# Storage PVC configuration
+# Used only if storageBackend is "fs"
+pvc:
+  storageClassName: ""
+  size: "2Gi"
+  accessMode: "ReadWriteMany"
+  annotations: {}
+  labels: {}
+
+# Additional annotations for Kubeblast pod
+podAnnotations: {}
+
+# Additional labels for Kubeblast pod
+podLabels: {}
+
+# Kubeblast container image configuration
+image:
+  repository: teymurgahramanov/kubeblast
+  tag: ""
+imagePullSecrets: []
+imagePullPolicy: IfNotPresent
+
+# Kubeblast service configuration
+service:
+  port:
+    web: 80    # Web interface port
+    api: 8000  # API port
+
+# Kubeblast service account annotations
+serviceAccount:
+  annotations: {}
+
+# Kubeblast Ingress configuration
+ingress:
+  enabled: false
+  annotations: {}
+  className: ""
+  host: ""
+  tls:
+    enabled: false
+    secretName: ""
+    host: ""
