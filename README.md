@@ -101,4 +101,4 @@ Below is the list of supported environment variables:
 
 ## 🤝 Contributing
 
-All ideas, issues, and pull-requests are welcome—big or small!
+All ideas, issues, and pull requests are welcome!
