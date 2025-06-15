@@ -6,7 +6,9 @@
 </p>
 
 # Kubeblast
-Kubeblast turns your Kubernetes cluster into a Load Testing platform, where running JMeter load tests is simple and efficient. No scripting, no setup — just run your tests and get results!
+Kubeblast turns your Kubernetes cluster into a Load Testing platform, where running JMeter load tests is simple and efficient.
+
+No scripting, no setup — just run your tests and get results!
 
 ## ✨ Features
 - __Simplicity First__ – Just upload your JMX file and click *Start*. That's it.
