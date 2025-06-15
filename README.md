@@ -50,13 +50,17 @@ Unlike YAML-heavy or SaaS-oriented alternatives, Kubeblast delivers a click-and-
 * **Problem** – Engineers keep pinging DevOps to spin up JMeter or, worse, run tests manually on their laptops.  
 * **Solution** – Kubeblast’s Web UI lets users upload a JMX file, launch a test with a few clicks, watch execution logs, and get the report.
 
-### 2. **Load Test Scenario Moderation (Shift-Left Safety)**
-* **Problem** – An unchecked Load Test scenario can flood production, exhausts quotas or accidently (or intentionally) disrupt other workloads.
-* **Solution** – With Kubeblast you can assign “moderator” roles and every new test plan will be reviewed before approving the run.
+### 2. **Team-Wide Resource Sharing**
+* **Problem** – Classic load-testing setups spin up extra VM fleets—or overwork developers’ laptops. 
+* **Solution** – Kubeblast enables you to share your existing cluster resources with your team.
 
 ### 3. **Using Spare Cluster Capacity**
 * **Problem** – You need to stress-test at scale but want to use existing resources and not to pay for extra.  
 * **Solution** – Beside placement and resource control Kubeblast supports priority class configuration, allowing load tests to use idle cluster capacity — without impacting primary workloads.
+
+### 4. **Load Test Scenario Moderation**
+* **Problem** – An unchecked Load Test scenario can flood production, exhausts quotas or accidently (or intentionally) disrupt other workloads.
+* **Solution** – With Kubeblast you can assign “moderator” roles and every new test plan will be reviewed before approving the run.
 
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
