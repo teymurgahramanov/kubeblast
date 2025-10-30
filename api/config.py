@@ -29,25 +29,12 @@ class Config:
     MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
 
     # Storage
-    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "fs") # fs, s3
     STORAGE_DIR: str = "/data"
     STORAGE_PVC_NAME: str = os.getenv("STORAGE_PVC_NAME")
-    
-    S3_URL: str = os.getenv("S3_URL",None)
-    S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY")
-    S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY")
-    S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
-    S3_BUCKET: str = os.getenv("S3_BUCKET")
     
     # Job
     K8S_JOB_PRIORITY_CLASS: str = os.getenv("K8S_JOB_PRIORITY_CLASS", None)
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
-    K8S_JOB_HELPER_IMAGE_S3: str = os.getenv("K8S_JOB_HELPER_IMAGE_S3", "amazon/aws-cli:2.27.12")
-    K8S_JOB_HELPER_IMAGE_FS: str = os.getenv("K8S_JOB_HELPER_IMAGE_FS", "alpine:3.18")
-    if STORAGE_BACKEND == "s3":
-        K8S_JOB_HELPER_IMAGE = K8S_JOB_HELPER_IMAGE_S3
-    else:
-        K8S_JOB_HELPER_IMAGE = K8S_JOB_HELPER_IMAGE_FS
     K8S_JOB_IMAGE_PULL_POLICY: str = os.getenv("K8S_JOB_IMAGE_PULL_POLICY", "IfNotPresent")
 
     # Load Kubernetes Image Pull Secrets from JSON format

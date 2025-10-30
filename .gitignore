@@ -7,4 +7,4 @@ __pycache__
 openapi.json
 helm/charts/
 helm/Chart.lock
-skaffold.yaml
+dev-values.yaml

@@ -8,10 +8,7 @@ from datetime import datetime
 from core.log import logger
 from services import k8s
 
-if config.STORAGE_BACKEND == "fs":
-    from services import files_fs as files
-elif config.STORAGE_BACKEND == "s3":
-    from services import files_s3 as files
+from services import files_fs as files
 
 def get_jobs(current_user, status: str = None, owner: str = None, name: str = None):
     query = {}

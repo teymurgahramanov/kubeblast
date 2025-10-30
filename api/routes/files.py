@@ -5,10 +5,7 @@ from core import models
 from services import auth
 from config import config
 
-if config.STORAGE_BACKEND == "fs":
-    from services import files_fs as files
-elif config.STORAGE_BACKEND == "s3":
-    from services import files_s3 as files
+from services import files_fs as files
 
 router = APIRouter(prefix="/api")
 

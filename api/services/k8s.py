@@ -7,10 +7,7 @@ import yaml
 import os
 from core.log import logger
 
-if config.STORAGE_BACKEND == "fs":
-    from services import files_fs as files
-elif config.STORAGE_BACKEND == "s3":
-    from services import files_s3 as files
+from services import files_fs as files
 
 def get_namespace():
     try:
@@ -107,20 +104,13 @@ def schedule_workload(job_id,distributed):
             job_id=job_id,
             priority_class=config.K8S_JOB_PRIORITY_CLASS,
             image_job=config.K8S_JOB_IMAGE,
-            image_helper=config.K8S_JOB_HELPER_IMAGE,
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
             image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
             slaves=slaves,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
             resources=config.K8S_JOB_RESOURCES,
-            storage_backend=config.STORAGE_BACKEND,
-            storage_pvc_name=config.STORAGE_PVC_NAME,
-            s3_url=config.S3_URL,
-            s3_access_key=config.S3_ACCESS_KEY,
-            s3_secret_key=config.S3_SECRET_KEY,
-            s3_bucket=config.S3_BUCKET,
-            s3_region=config.S3_REGION
+            storage_pvc_name=config.STORAGE_PVC_NAME
         )
 
         job_manifest = yaml.safe_load(rendered_job)

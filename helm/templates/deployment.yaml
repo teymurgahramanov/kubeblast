@@ -37,10 +37,8 @@ spec:
               containerPort: {{ .Values.service.port.api }}
               protocol: TCP
           env:
-            - name: STORAGE_BACKEND
-              value: {{ .Values.storageBackend }}
             - name: STORAGE_PVC_NAME
-              value: {{ include "kubeblast.fullname" . }}
+              value: {{ include "kubeblast.pvcName" . }}
             {{- if .Values.mongodb.enabled }}
             - name: MONGO_HOST
               value: "{{ .Values.mongodb.service.nameOverride }}"
@@ -64,17 +62,13 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.storageBackend | eq "fs" }}
           volumeMounts:
-            - name: {{ include "kubeblast.fullname" . }}
+            - name: data
               mountPath: /data
-          {{- end }}
-      {{- if .Values.storageBackend | eq "fs" }}
       volumes:
-        - name: {{ include "kubeblast.fullname" . }}
+        - name: data
           persistentVolumeClaim:
-            claimName: {{ include "kubeblast.fullname" . }}
-      {{- end }}
+            claimName: {{ include "kubeblast.pvcName" . }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
