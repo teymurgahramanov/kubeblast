@@ -128,6 +128,32 @@ def retry_job(current_user, job_id):
         )
         raise HTTPException(status_code=500, detail="Failed to retry job")
 
+def stop_job(current_user, job_id):
+    job = get_job(current_user, job_id).dict()
+
+    if job["status"] != "running":
+        raise HTTPException(status_code=400, detail="Can only stop running jobs")
+
+    try:
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "stopping"}}
+        )
+        k8s.stop_workload(job_id)
+        logger.info(f"Job {job_id} stopped gracefully")
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "completed"}}
+        )
+        return {"message": f"Job {job_id} stopped"}
+    except Exception as e:
+        logger.error(f"Failed to stop job {job_id}: {e}")
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=500, detail="Failed to stop job")
+
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()
 

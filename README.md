@@ -77,11 +77,11 @@ Below is the list of supported environment variables:
 | `LOG_LEVEL` | string | Logging level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `SECRET_KEY` | string | Secret key for JWT tokens and encryption | Random string | `your-secret-key` |
 | `PER_USER_CURRENT_JOBS_LIMIT` | int | Maximum number of current jobs per user | `3` |  |
-| `MONGO_HOST` | string | MongoDB host address | `localhost` | |
-| `MONGO_PORT` | int | MongoDB port number | `27017` | |
-| `MONGO_DB_USER` | string | MongoDB username | `kubeblast` | |
-| `MONGO_DB_PASS` | string | MongoDB password | `kubeblast` | |
-| `MONGO_DB_NAME` | string | MongoDB database name | `kubeblast` | |
+| `MONGODB_HOST` | string | MongoDB host address | `localhost` | |
+| `MONGODB_PORT` | int | MongoDB port number | `27017` | |
+| `MONGODB_USER` | string | MongoDB username | `kubeblast` | |
+| `MONGODB_PASS` | string | MongoDB password | `kubeblast` | |
+| `MONGODB_NAME` | string | MongoDB database name | `kubeblast` | |
 | `STORAGE_BACKEND` | string | Storage backend type | `fs` | `fs`, `s3` |
 | `S3_URL` | string | Endpoint URL of S3 compatible storage | - | |
 | `S3_ACCESS_KEY` | string | S3 access key | - | |

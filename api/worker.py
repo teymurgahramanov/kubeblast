@@ -9,8 +9,8 @@ from config import config
 from time import sleep
 
 # MongoDB Configuration
-MONGO_URI = config.MONGO_URI
-DB_NAME = config.MONGO_DB_NAME
+MONGODB_URI = config.MONGODB_URI
+DB_NAME = config.MONGODB_NAME
 COLLECTION_NAME = "jobs"
 WORKER_WATCH_INTERVAL = config.WORKER_WATCH_INTERVAL
 
@@ -23,7 +23,7 @@ def get_current_namespace():
 
 current_namespace = get_current_namespace()
 
-mongo_client = MongoClient(MONGO_URI)
+mongo_client = MongoClient(MONGODB_URI)
 db = mongo_client[DB_NAME]
 jobs_collection = db[COLLECTION_NAME]
 

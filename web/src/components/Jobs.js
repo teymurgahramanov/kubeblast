@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -203,7 +203,7 @@ const Jobs = () => {
     }
   };
 
-  const downloadReport = async (job_id) => {
+  const downloadResult = async (job_id) => {
     try {
       if (!job_id) {
         setError("No job available.");
@@ -211,14 +211,14 @@ const Jobs = () => {
       }
       const response = await axiosInstance.get(`/files/${job_id}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-        params: { type: "report" },
+        params: { type: "result" },
         responseType: 'blob',
       });
-      const blob = new Blob([response.data], { type: 'application/zip' });
+      const blob = new Blob([response.data], { type: 'text/plain' });
       const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = `kubeblast_${jobs.find(job => job.id === job_id)?.name}.zip`;
+      link.download = `kubeblast_${jobs.find(job => job.id === job_id)?.name}.jtl`;
       link.click();
       handleMenuClose();
     } catch (error) {
@@ -265,6 +265,18 @@ const Jobs = () => {
     }
   };
 
+  const stopJob = async (job_id) => {
+    try {
+      await axiosInstance.put(`/jobs/stop/${job_id}`, {}, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      });
+      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'stopping' } : job));
+      handleMenuClose();
+    } catch (error) {
+      setError(error.response?.data?.detail || error.message);
+    }
+  };
+
   const handleDetailsClick = (job) => {
     setSelectedJobDetails(job);
     setOpenDetails(true);
@@ -294,6 +306,8 @@ const Jobs = () => {
                 return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
               case 'retrying':
                 return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
+              case 'stopping':
+                return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' };
               default:
                 return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
             }
@@ -371,6 +385,11 @@ const Jobs = () => {
                     <PlayArrow sx={{ mr: 1 }} /> Start
                   </MenuItem>
                 )}
+                {job.status === 'running' && (userRole === 'admin' || userRole === 'user') && (
+                  <MenuItem onClick={() => stopJob(job.id)}>
+                    <Stop sx={{ mr: 1 }} /> Stop
+                  </MenuItem>
+                )}
                 <MenuItem onClick={() => handleDetailsClick(job)}>
                   <ListAlt sx={{ mr: 1 }} /> Details
                 </MenuItem>
@@ -388,8 +407,8 @@ const Jobs = () => {
                   </MenuItem>
                 )}
                 {job.status === 'completed' && (
-                  <MenuItem onClick={() => downloadReport(job.id)}>
-                    <Download sx={{ mr: 1 }} /> Report
+                  <MenuItem onClick={() => downloadResult(job.id)}>
+                    <Download sx={{ mr: 1 }} /> Result
                   </MenuItem>
                 )}
                 <MenuItem onClick={() => deleteJob(job.id)}>

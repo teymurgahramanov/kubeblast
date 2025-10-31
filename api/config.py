@@ -21,12 +21,12 @@ class Config:
     WORKER_WATCH_INTERVAL: int = 3
 
     # Database
-    MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
-    MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
-    MONGO_DB_USER: str = os.getenv("MONGO_DB_USER", "kubeblast")
-    MONGO_DB_PASS: str = os.getenv("MONGO_DB_PASS", "kubeblast")
-    MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "kubeblast")
-    MONGO_URI: str = f"mongodb://{MONGO_DB_USER}:{MONGO_DB_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
+    MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
+    MONGODB_PORT: int = int(os.getenv("MONGODB_PORT", 27017))
+    MONGODB_USER: str = os.getenv("MONGODB_USER", "kubeblast")
+    MONGODB_PASS: str = os.getenv("MONGODB_PASS", "kubeblast")
+    MONGODB_NAME: str = os.getenv("MONGODB_NAME", "kubeblast")
+    MONGODB_URI: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASS}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}"
 
     # Storage
     STORAGE_DIR: str = "/data"

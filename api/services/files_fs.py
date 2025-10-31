@@ -1,5 +1,3 @@
-import io
-import zipfile
 import shutil
 from pathlib import Path
 from fastapi import HTTPException, Response
@@ -58,28 +56,18 @@ def download_file(current_user, job_id, type):
             except Exception as e:
                 logger.error(f"Failed to read plan from filesystem: {str(e)}")
                 raise HTTPException(status_code=404, detail="Plan file not found.")
-        case "report":
+        case "result":
+            file_path = STORAGE_DIR / job_id / "result.jtl"
             try:
-                report_dir = STORAGE_DIR / job_id / "report"
-                if not report_dir.exists():
-                    raise HTTPException(status_code=404, detail="No report files found")
-
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for file_path in report_dir.rglob('*'):
-                        if file_path.is_file():
-                            relative_path = file_path.relative_to(report_dir)
-                            zip_file.write(file_path, relative_path)
-
+                with open(file_path, 'rb') as f:
+                    content = f.read()
                 return Response(
-                    content=zip_buffer.getvalue(),
-                    media_type="application/zip",
+                    content=content,
+                    media_type="text/plain",
                     headers={
-                        "Content-Disposition": f'attachment; filename="{job["name"]}.zip"'
+                        "Content-Disposition": f'attachment; filename="{job["name"]}.jtl"'
                     }
                 )
-            except HTTPException as e:
-                raise e
             except Exception as e:
-                logger.error(f"Failed to create report zip: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Failed to create report zip: {str(e)}") 
+                logger.error(f"Failed to read result from filesystem: {str(e)}")
+                raise HTTPException(status_code=404, detail="Result file not found.") 

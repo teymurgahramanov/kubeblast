@@ -122,6 +122,37 @@ def schedule_workload(job_id,distributed):
         delete_workload(job_id)
         raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
     
+def stop_workload(job_id):
+    """Gracefully stop a running workload by deleting the Job with grace period"""
+    namespace = get_namespace()
+    label_selector = f"kubeblast/job-id={job_id}"
+    try:
+        logger.info(f"Gracefully stopping workload with label selector: {label_selector}")
+        
+        # Delete Job with grace period to allow JMeter to finish and save reports
+        jobs = client.BatchV1Api().list_namespaced_job(
+            namespace=namespace,
+            label_selector=label_selector
+        )
+        
+        logger.info(f"Found {len(jobs.items)} Jobs to stop gracefully")
+        for job_item in jobs.items:
+            job_name = job_item.metadata.name
+            logger.info(f"Stopping Job: {job_name}")
+            client.BatchV1Api().delete_namespaced_job(
+                name=job_name,
+                namespace=namespace,
+                body=client.V1DeleteOptions(
+                    propagation_policy='Foreground',
+                    grace_period_seconds=60  # Give JMeter 60 seconds to finish
+                )
+            )
+        
+        logger.info(f"Workload {job_id} stopped gracefully")
+    except Exception as e:
+        logger.error(f"Failed to stop workload {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error stopping workload")
+
 def delete_workload(job_id):
     namespace = get_namespace()
     label_selector = f"kubeblast/job-id={job_id}"

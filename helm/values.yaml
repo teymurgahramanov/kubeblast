@@ -49,7 +49,7 @@ mongodb:
     enabled: true
     size: 2Gi
   service:
-    nameOverride: mongo
+    nameOverride: mongodb
 
 # Storage PVC configuration
 pvc:
