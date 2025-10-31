@@ -50,28 +50,26 @@ def process_job_update():
                         k8s_status = "completed"
                     elif job.status.failed:
                         k8s_status = "failed"
+
                     else:
                         logger.warning(f"Unrecognized status for job {job_id}.")
                         continue  # Skip if status is not relevant
                     
-                    # Fetch the job from MongoDB
-                    mongo_job = jobs_collection.find_one({"_id": bson.ObjectId(job_id)})
-                    if not mongo_job:
-                        logger.warning(f"Job {job_id} not found in MongoDB.")
-                        continue
-                    
-                    # Compare and update status if different
-                    if mongo_job.get("status") != k8s_status:
+                    try:
                         update_result = jobs_collection.update_one(
                             {"_id": bson.ObjectId(job_id)},
                             {"$set": {"status": k8s_status}}
                         )
-                        
                         if update_result.modified_count > 0:
                             logger.info(f"Updated MongoDB: {job_id} -> status {k8s_status}")
                         else:
-                            logger.error(f"No changes made for job {job_id}.")
-        
+                            logger.debug(f"No update needed for job {job_id} (already has status {k8s_status})")
+                    except bson.errors.InvalidId as e:
+                        logger.error(f"Invalid job ID format {job_id}: {e}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Failed to update MongoDB for job {job_id}: {e}")
+                        continue
         except client.exceptions.ApiException as e:
             logger.error(f"Kubernetes API error: {e}")
         except Exception as e:

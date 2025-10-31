@@ -1,5 +1,5 @@
 from core import k8s
-from kubernetes import client
+from kubernetes import client, stream
 from config import config
 from jinja2 import Template
 from fastapi import HTTPException
@@ -123,32 +123,66 @@ def schedule_workload(job_id,distributed):
         raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
     
 def stop_workload(job_id):
-    """Gracefully stop a running workload by deleting the Job with grace period"""
+    """Gracefully stop a running workload by executing shutdown.sh in the pod"""
     namespace = get_namespace()
-    label_selector = f"kubeblast/job-id={job_id}"
+    label_selector = gen_label_selector(job_id, "master")
+    
     try:
         logger.info(f"Gracefully stopping workload with label selector: {label_selector}")
         
-        # Delete Job with grace period to allow JMeter to finish and save reports
-        jobs = client.BatchV1Api().list_namespaced_job(
+        # Get pod
+        pods = client.CoreV1Api().list_namespaced_pod(
             namespace=namespace,
             label_selector=label_selector
         )
         
-        logger.info(f"Found {len(jobs.items)} Jobs to stop gracefully")
-        for job_item in jobs.items:
-            job_name = job_item.metadata.name
-            logger.info(f"Stopping Job: {job_name}")
-            client.BatchV1Api().delete_namespaced_job(
-                name=job_name,
-                namespace=namespace,
-                body=client.V1DeleteOptions(
-                    propagation_policy='Foreground',
-                    grace_period_seconds=60  # Give JMeter 60 seconds to finish
-                )
-            )
+        if not pods.items:
+            logger.warning(f"No pods found for job {job_id}")
+            raise HTTPException(status_code=404, detail="No running pods found for this job")
         
-        logger.info(f"Workload {job_id} stopped gracefully")
+        pod = pods.items[0]
+        pod_name = pod.metadata.name
+        
+        # Execute shutdown.sh in the pod
+        try:
+            logger.info(f"Executing shutdown.sh in pod {pod_name}")
+            exec_command = ['/bin/sh', '-c', 'shutdown.sh']
+            
+            resp = stream.stream(
+                client.CoreV1Api().connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                container='jmeter',
+                command=exec_command,
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False
+            )
+            
+            # Read response
+            output = ""
+            while resp.is_open():
+                resp.update(timeout=1)
+                if resp.peek_stdout():
+                    output += resp.read_stdout()
+                if resp.peek_stderr():
+                    output += resp.read_stderr()
+            
+            resp.close()
+            
+            logger.info(f"Shutdown command executed successfully in pod {pod_name}")
+            logger.info(f"Output: {output}")
+            logger.info(f"JMeter will shutdown gracefully and Kubernetes will clean up the Job automatically")
+            
+        except Exception as e:
+            logger.error(f"Failed to execute shutdown command in pod: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to execute shutdown command: {str(e)}")
+        
+        logger.info(f"Workload {job_id} shutdown initiated")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to stop workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error stopping workload")
