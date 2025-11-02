@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routes import token, user_profile, jobs, logs, files
 from core.log import logger
 from config import config
@@ -15,6 +16,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/dashboards", StaticFiles(directory=config.STORAGE_DIR), name="dashboards")
 
 app.include_router(token.router,tags=["token"])
 app.include_router(user_profile.router,tags=["profile"])

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop } from '@mui/icons-material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
@@ -407,9 +407,17 @@ const Jobs = () => {
                   </MenuItem>
                 )}
                 {job.status === 'completed' && (
-                  <MenuItem onClick={() => downloadResult(job.id)}>
-                    <Download sx={{ mr: 1 }} /> Result
-                  </MenuItem>
+                  <>
+                    <MenuItem onClick={() => downloadResult(job.id)}>
+                      <Download sx={{ mr: 1 }} /> Result
+                    </MenuItem>
+                    <MenuItem onClick={() => {
+                      window.open(`/dashboards/${job.id}/dashboard/index.html`, '_blank');
+                      handleMenuClose();
+                    }}>
+                      <Dashboard sx={{ mr: 1 }} /> Dashboard
+                    </MenuItem>
+                  </>
                 )}
                 <MenuItem onClick={() => deleteJob(job.id)}>
                   <Delete sx={{ mr: 1 }} /> Delete
