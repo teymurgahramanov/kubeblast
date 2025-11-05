@@ -16,6 +16,7 @@ class Config:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
     WORKER_WATCH_INTERVAL: int = 3
@@ -85,5 +86,27 @@ class Config:
     LDAP_GROUP_ATTRIBUTES: list = os.getenv("LDAP_GROUP_ATTRIBUTES", "cn,member").split(",")
     LDAP_USE_TLS: bool = os.getenv("LDAP_USE_TLS", "false").lower() == "true"
     LDAP_VERIFY_CERT: bool = os.getenv("LDAP_VERIFY_CERT", "false").lower() == "true"
+
+    # OAuth Configuration
+    OAUTH_ENABLED: bool = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
+    OAUTH_CLIENT_ID: str = os.getenv("OAUTH_CLIENT_ID")
+    OAUTH_CLIENT_SECRET: str = os.getenv("OAUTH_CLIENT_SECRET")
+    OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:3000/login")
+    OAUTH_AUTH_URL: str = os.getenv("OAUTH_AUTH_URL")
+    OAUTH_TOKEN_URL: str = os.getenv("OAUTH_TOKEN_URL")
+    OAUTH_USERINFO_URL: str = os.getenv("OAUTH_USERINFO_URL")
+    OAUTH_SCOPES: list = os.getenv("OAUTH_SCOPES", "openid profile email").split()
+    
+    # OAuth Role Mapping (JSON format)
+    OAUTH_ROLE_MAPPING: dict = {}
+    oauth_role_mapping_env = os.getenv("OAUTH_ROLE_MAPPING")
+    if oauth_role_mapping_env:
+        try:
+            OAUTH_ROLE_MAPPING = json.loads(oauth_role_mapping_env)
+        except json.JSONDecodeError:
+            OAUTH_ROLE_MAPPING = {}
+    
+    OAUTH_DEFAULT_ROLE: str = os.getenv("OAUTH_DEFAULT_ROLE", "user")
+    OAUTH_AUTO_CREATE_USERS: bool = os.getenv("OAUTH_AUTO_CREATE_USERS", "true").lower() == "true"
 
 config = Config()

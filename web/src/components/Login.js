@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Box, Typography, TextField, Button, FormControl, InputLabel, Select, MenuItem, Divider } from '@mui/material';
 import { Login as LoginIcon } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
@@ -12,8 +12,59 @@ const Login = () => {
   });
   const [authMethod, setAuthMethod] = useState('local');
   const [error, setError] = useState('');
+  const [oauthEnabled, setOauthEnabled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
+
+  // Check OAuth configuration on mount
+  useEffect(() => {
+    const checkOAuthConfig = async () => {
+      try {
+        const response = await axiosInstance.get('/oauth/enabled');
+        setOauthEnabled(response.data.enabled);
+      } catch (error) {
+        console.error('Failed to check OAuth config:', error);
+      }
+    };
+    checkOAuthConfig();
+  }, []);
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
+
+      if (error) {
+        setError(`OAuth authentication failed: ${params.get('error_description') || error}`);
+        // Clean up URL
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      if (code && state) {
+        try {
+          const response = await axiosInstance.get(`/oauth/callback?code=${code}&state=${state}`);
+          
+          // Store the tokens
+          sessionStorage.setItem('access_token', response.data.access_token);
+          sessionStorage.setItem('refresh_token', response.data.refresh_token);
+          sessionStorage.setItem('username', response.data.username);
+          sessionStorage.setItem('user_role', response.data.role);
+
+          navigate('/jobs');
+        } catch (error) {
+          setError(error.response?.data?.detail || 'OAuth authentication failed');
+          navigate('/login', { replace: true });
+        }
+      }
+    };
+
+    handleOAuthCallback();
+  }, [location, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -39,9 +90,10 @@ const Login = () => {
         }
       });
       
-      // Store the token
+      // Store the tokens
       const token = response.data.access_token;
       sessionStorage.setItem('access_token', token);
+      sessionStorage.setItem('refresh_token', response.data.refresh_token);
       sessionStorage.setItem('username', credentials.username);
 
       // Decode the JWT token to get the role
@@ -65,6 +117,21 @@ const Login = () => {
       navigate('/jobs');
     } catch (error) {
       setError(error.response?.data?.detail || 'Invalid username or password');
+    }
+  };
+
+  const handleOAuthLogin = async () => {
+    try {
+      const response = await axiosInstance.get('/oauth/authorize');
+      const { authorization_url, state } = response.data;
+      
+      // Store state in sessionStorage for verification
+      sessionStorage.setItem('oauth_state', state);
+      
+      // Redirect to OAuth provider
+      window.location.href = authorization_url;
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to initiate OAuth login');
     }
   };
 
@@ -156,6 +223,33 @@ const Login = () => {
           >
             Login
           </Button>
+
+          {oauthEnabled && (
+            <>
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  OR
+                </Typography>
+              </Divider>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={handleOAuthLogin}
+                sx={{
+                  textTransform: 'none',
+                  borderColor: 'var(--primary-color)',
+                  color: 'var(--primary-color)',
+                  '&:hover': {
+                    borderColor: 'var(--primary-dark)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+              >
+                Login with SSO
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
     </Box>

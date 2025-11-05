@@ -6,6 +6,7 @@ from datetime import datetime
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: Optional[str] = None
 
 class User(BaseModel):
     username: str
@@ -14,7 +15,7 @@ class User(BaseModel):
     email: Optional[str] = None
     enabled: bool = True
     auto_approve: bool = False
-    method: Literal["local", "ldap"] = "local"
+    method: Literal["local", "ldap", "oauth"] = "local"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

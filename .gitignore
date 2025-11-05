@@ -8,3 +8,4 @@ openapi.json
 helm/charts/
 helm/Chart.lock
 dev-values.yaml
+k8s-job-buddy

@@ -15,7 +15,6 @@ No scripting, no setup — just run your tests and get results!
 - __Intuitive UI__ – Manage jobs, view logs, and monitor execution in real-time.
 - __Placement Control__ – Define which Kubernetes nodes to run workloads.
 - __Resource Control__ – Set up requests and limits to fit your resource pool.
-- __Storage Backends__ – Support for S3 (AWS, MinIO) and PVC.
 
 ## ⭐ Pro Features
 __Kubeblast Pro__ unlocks advanced features:
@@ -82,7 +81,6 @@ Below is the list of supported environment variables:
 | `MONGODB_USER` | string | MongoDB username | `kubeblast` | |
 | `MONGODB_PASS` | string | MongoDB password | `kubeblast` | |
 | `MONGODB_NAME` | string | MongoDB database name | `kubeblast` | |
-| `STORAGE_BACKEND` | string | Storage backend type | `fs` | `fs`, `s3` |
 | `S3_URL` | string | Endpoint URL of S3 compatible storage | - | |
 | `S3_ACCESS_KEY` | string | S3 access key | - | |
 | `S3_SECRET_KEY` | string | S3 secret key | - | |
