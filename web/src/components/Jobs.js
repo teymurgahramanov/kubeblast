@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
 import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
-import { DataGrid } from '@mui/x-data-grid';
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
@@ -18,6 +17,8 @@ const Jobs = () => {
   const [openAddJob, setOpenAddJob] = useState(false);
   const [openDetails, setOpenDetails] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState(null);
+  const [resources, setResources] = useState(null);
+  const [resourcesError, setResourcesError] = useState('');
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
@@ -63,6 +64,24 @@ const Jobs = () => {
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
+  }, []);
+
+  // Fetch cluster resources (capacity dashboard)
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await axiosInstance.get('/resources');
+        setResources(response.data);
+        setResourcesError('');
+      } catch (err) {
+        setResources(null);
+        setResourcesError(err.response?.data?.detail || err.message || 'Failed to load cluster resources');
+      }
+    };
+
+    fetchResources();
+    const interval = setInterval(fetchResources, 30000); // refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const handleMenuOpen = (event, job_id) => {
@@ -283,152 +302,26 @@ const Jobs = () => {
     handleMenuClose();
   };
 
-  const columns = useMemo(() => {
-    return [
-      { 
-        field: "status", 
-        headerName: "Status",
-        headerAlign: 'center',
-        width: 100,
-        flex: 0.6,
-        renderCell: (params) => {
-          const getStatusColor = (status) => {
-            switch (status.toLowerCase()) {
-              case 'pending':
-                return { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' };
-              case 'running':
-                return { bg: '#EFF6FF', text: '#1E40AF', border: '#93C5FD' };
-              case 'completed':
-                return { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' };
-              case 'failed':
-                return { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
-              case 'declined':
-                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
-              case 'retrying':
-                return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
-              case 'stopping':
-                return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' };
-              default:
-                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
-            }
-          };
-
-          const statusColors = getStatusColor(params.value);
-          return (
-            <Box sx={{
-              backgroundColor: statusColors.bg,
-              color: statusColors.text,
-              border: `1px solid ${statusColors.border}`,
-              borderRadius: '6px',
-              px: 2,
-              py: 1,
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              width: 'fit-content',
-              minWidth: '90px',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto',
-            }}>
-              {params.value.charAt(0).toUpperCase() + params.value.slice(1)}
-            </Box>
-          );
-        }
-      },
-      { field: "job_name", headerName: "Job Name", width: 120, flex: 0.8 },
-      ...( isPro && (userRole === 'admin' || userRole === 'moderator') ? [
-        { field: "owner", headerName: "Owner", width: 150, flex: 1 }
-      ] : []),
-      { field: "description", headerName: "Description", width: 200, flex: 1.5 },
-      { 
-        field: "created_at", 
-        headerName: "Created At", 
-        width: 180, 
-        flex: 1,
-        renderCell: (params) => formatDate(params.value)
-      },
-      {
-        field: 'actions',
-        headerName: '',
-        sortable: false,
-        width: 80,
-        flex: 0.3,
-        renderCell: (params) => {
-          const job = params.row;
-          return (
-            <Box>
-              <IconButton
-                onClick={(e) => handleMenuOpen(e, job.id)}
-                size="small"
-              >
-                <MoreVert />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl) && selectedJobId === job.id}
-                onClose={handleMenuClose}
-              >
-                {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
-                  <>
-                    <MenuItem onClick={() => approveJob(job.id)}>
-                      <CheckCircle sx={{ mr: 1 }} /> Approve
-                    </MenuItem>
-                    <MenuItem onClick={() => declineJob(job.id)}>
-                      <Cancel sx={{ mr: 1 }} /> Decline
-                    </MenuItem>
-                  </>
-                )}
-                {job.status === 'ready' && (
-                  <MenuItem onClick={() => startJob(job.id)}>
-                    <PlayArrow sx={{ mr: 1 }} /> Start
-                  </MenuItem>
-                )}
-                {job.status === 'running' && (userRole === 'admin' || userRole === 'user') && (
-                  <MenuItem onClick={() => stopJob(job.id)}>
-                    <Stop sx={{ mr: 1 }} /> Stop
-                  </MenuItem>
-                )}
-                <MenuItem onClick={() => handleDetailsClick(job)}>
-                  <ListAlt sx={{ mr: 1 }} /> Details
-                </MenuItem>
-                {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
-                  <MenuItem onClick={() => viewLogs(job.id, job.status)}>
-                    <Visibility sx={{ mr: 1 }} /> Logs
-                  </MenuItem>
-                )}
-                <MenuItem onClick={() => openPlanFile(job.id)}>
-                  <Description sx={{ mr: 1 }} /> Plan
-                </MenuItem>
-                {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
-                  <MenuItem onClick={() => rescheduleJob(job.id)}>
-                    <Autorenew sx={{ mr: 1 }} /> Retry
-                  </MenuItem>
-                )}
-                {job.status === 'completed' && (
-                  <>
-                    <MenuItem onClick={() => downloadResult(job.id)}>
-                      <Download sx={{ mr: 1 }} /> Result
-                    </MenuItem>
-                    <MenuItem onClick={() => {
-                      window.open(`/dashboards/${job.id}/dashboard/index.html`, '_blank');
-                      handleMenuClose();
-                    }}>
-                      <Dashboard sx={{ mr: 1 }} /> Dashboard
-                    </MenuItem>
-                  </>
-                )}
-                <MenuItem onClick={() => deleteJob(job.id)}>
-                  <Delete sx={{ mr: 1 }} /> Delete
-                </MenuItem>
-              </Menu>
-            </Box>
-          );
-        },
-      }
-    ];
-  }, [anchorEl, selectedJobId, userRole, isPro]);
+  const getStatusColor = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'pending':
+        return { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' };
+      case 'running':
+        return { bg: '#EFF6FF', text: '#1E40AF', border: '#93C5FD' };
+      case 'completed':
+        return { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' };
+      case 'failed':
+        return { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
+      case 'declined':
+        return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
+      case 'retrying':
+        return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
+      case 'stopping':
+        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' };
+      default:
+        return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
+    }
+  };
 
   const rows = useMemo(() => jobs.map((job) => {
     return {
@@ -455,27 +348,42 @@ const Jobs = () => {
     });
   };
 
+  const formatCores = (millicores) => {
+    if (!millicores && millicores !== 0) return '';
+    return (millicores / 1000).toFixed(1);
+  };
+
+  const formatGiB = (bytes) => {
+    if (!bytes && bytes !== 0) return '';
+    const gib = bytes / (1024 ** 3);
+    return gib >= 10 ? gib.toFixed(0) : gib.toFixed(1);
+  };
+
+
   const EmptyState = () => (
     <Box sx={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      py: 8,
-      px: 2,
+      py: 10,
+      px: 3,
       textAlign: 'center',
+      gap: 1.5,
     }}>
       <ListAlt sx={{ 
-        fontSize: 64,
+        fontSize: 72,
         color: 'var(--text-secondary)',
-        mb: 2,
-        opacity: 0.5
+        opacity: 0.4
       }} />
       <Typography variant="h6" sx={{ 
-        color: 'var(--text-secondary)',
-        fontWeight: 600
+        color: 'var(--text-primary)',
+        fontWeight: 700
       }}>
-        There's nothing here yet
+        No jobs yet
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'var(--text-secondary)', maxWidth: 520 }}>
+        Create a job to start a test run. Once a job is created, you'll see its status, logs, and results here.
       </Typography>
     </Box>
   );
@@ -535,77 +443,207 @@ const Jobs = () => {
           )}
         </Box>
 
-        <ErrorMessage message={error} />
+        {/* Cluster capacity dashboard */}
+        <Box
+          sx={{
+            mb: 3,
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)', mb: 1 }}>
+            Cluster capacity
+          </Typography>
 
-        <Box sx={{ 
-          height: 'calc(100vh - 280px)',
-          width: '100%',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          overflow: 'hidden',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-            '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid var(--border-color)',
-              '&:focus': {
-                outline: 'none',
-              },
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#F8FAFC',
-              borderBottom: '2px solid var(--border-color)',
-              '& .MuiDataGrid-columnHeader': {
-                '&:focus': {
-                  outline: 'none',
-                },
-                '&:focus-within': {
-                  outline: 'none',
-                },
-                '&:not(:last-child)': {
-                  borderRight: 'none',
-                },
-                '& .MuiDataGrid-columnSeparator': {
-                  display: 'none',
-                },
-              },
-            },
-            '& .MuiDataGrid-row': {
-              '&:hover': {
-                backgroundColor: '#F8FAFC',
-              },
-              '&:nth-of-type(even)': {
-                backgroundColor: '#FAFAFA',
-              },
-            },
-            '& .MuiDataGrid-overlay': {
-              background: 'transparent',
-            },
-          },
-        }}>
-          {jobs.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              hideFooter
-              disableSelectionOnClick
-              disableColumnMenu
-              autoHeight
-              getRowHeight={() => 'auto'}
-              sx={{
-                '& .MuiDataGrid-cell': {
-                  py: 2,
-                },
-                '& .MuiDataGrid-columnHeader': {
-                  py: 2,
-                  fontWeight: 600,
-                },
-              }}
-            />
+          {!resources && !resourcesError && (
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+              Loading cluster capacity...
+            </Typography>
+          )}
+
+          {resourcesError && (
+            <Typography variant="body2" sx={{ color: 'var(--danger-color)' }}>
+              {resourcesError}
+            </Typography>
+          )}
+
+          {resources && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2 }}>
+              {(typeof resources.userJobsTotal === 'number' && typeof resources.perUserCurrentJobsLimit === 'number') && (
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Jobs</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {resources.userJobsTotal}/{resources.perUserCurrentJobsLimit}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                    {resources.perUserCurrentJobsLimit === 0 ? 'No limit' : 'Current / Limit'}
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Nodes Available</Typography>
+                <Typography variant="h6" sx={{ m: 0 }}>{resources.nodesTotal}</Typography>
+              </Box>
+
+              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
+                <Typography variant="h6" sx={{ m: 0 }}>
+                  {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+              </Box>
+
+              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
+                <Typography variant="h6" sx={{ m: 0 }}>
+                  {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+              </Box>
+            </Box>
           )}
         </Box>
+
+        <ErrorMessage message={error} />
+
+        {jobs.length === 0 ? (
+          <Box sx={{ 
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+          }}>
+            <EmptyState />
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 2,
+            }}
+          >
+            {rows.map((job) => {
+              const statusColors = getStatusColor(job.status);
+              return (
+                <Box
+                  key={job.id}
+                  sx={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+                    p: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {job.job_name}
+                    </Typography>
+                    <IconButton onClick={(e) => handleMenuOpen(e, job.id)} size="small">
+                      <MoreVert />
+                    </IconButton>
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl) && selectedJobId === job.id}
+                      onClose={handleMenuClose}
+                    >
+                      {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
+                        <>
+                          <MenuItem onClick={() => approveJob(job.id)}>
+                            <CheckCircle sx={{ mr: 1 }} /> Approve
+                          </MenuItem>
+                          <MenuItem onClick={() => declineJob(job.id)}>
+                            <Cancel sx={{ mr: 1 }} /> Decline
+                          </MenuItem>
+                        </>
+                      )}
+                      {job.status === 'ready' && (
+                        <MenuItem onClick={() => startJob(job.id)}>
+                          <PlayArrow sx={{ mr: 1 }} /> Start
+                        </MenuItem>
+                      )}
+                      {job.status === 'running' && (userRole === 'admin' || userRole === 'user') && (
+                        <MenuItem onClick={() => stopJob(job.id)}>
+                          <Stop sx={{ mr: 1 }} /> Stop
+                        </MenuItem>
+                      )}
+                      <MenuItem onClick={() => handleDetailsClick(job)}>
+                        <ListAlt sx={{ mr: 1 }} /> Details
+                      </MenuItem>
+                      {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
+                        <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                          <Visibility sx={{ mr: 1 }} /> Logs
+                        </MenuItem>
+                      )}
+                      <MenuItem onClick={() => openPlanFile(job.id)}>
+                        <Description sx={{ mr: 1 }} /> Plan
+                      </MenuItem>
+                      {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
+                        <MenuItem onClick={() => rescheduleJob(job.id)}>
+                          <Autorenew sx={{ mr: 1 }} /> Retry
+                        </MenuItem>
+                      )}
+                      {job.status === 'completed' && (
+                        <>
+                          <MenuItem onClick={() => downloadResult(job.id)}>
+                            <Download sx={{ mr: 1 }} /> Result
+                          </MenuItem>
+                          <MenuItem onClick={() => {
+                            window.open(`/dashboards/${job.id}/dashboard/index.html`, '_blank');
+                            handleMenuClose();
+                          }}>
+                            <Dashboard sx={{ mr: 1 }} /> Dashboard
+                          </MenuItem>
+                        </>
+                      )}
+                      <MenuItem onClick={() => deleteJob(job.id)}>
+                        <Delete sx={{ mr: 1 }} /> Delete
+                      </MenuItem>
+                    </Menu>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{
+                      backgroundColor: statusColors.bg,
+                      color: statusColors.text,
+                      border: `1px solid ${statusColors.border}`,
+                      borderRadius: '6px',
+                      px: 1.5,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      width: 'fit-content',
+                    }}>
+                      {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                    </Box>
+                    {(userRole === 'admin' || userRole === 'moderator') && isPro && job.owner && (
+                      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+                        • {job.owner}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {job.description && (
+                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+                      {job.description}
+                    </Typography>
+                  )}
+
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                    Created: {formatDate(job.created_at)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
 
         <Modal
           open={Boolean(logs)}

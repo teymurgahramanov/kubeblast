@@ -75,6 +75,7 @@ const Users = ({ setAddUser }) => {
     full_name: user.full_name || '',
     email: user.email || '',
     role: user.role,
+    method: user.method ?? user.mehod ?? '',
     enabled: user.enabled,
   }));
 
@@ -107,6 +108,7 @@ const Users = ({ setAddUser }) => {
     { field: 'username', headerName: 'Username', width: 180, flex: 1 },
     { field: 'full_name', headerName: 'Full Name', width: 200, flex: 1 },
     { field: 'role', headerName: 'Role', width: 150, flex: 1 },
+    { field: 'method', headerName: 'Method', width: 160, flex: 1 },
     {
       field: 'enabled',
       headerName: 'Status',
