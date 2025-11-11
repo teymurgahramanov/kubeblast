@@ -115,32 +115,32 @@ const Profile = () => {
         top: 0,
         zIndex: 1100,
         px: 3,
-        py: 1.5,
-        display: 'flex',
-        justifyContent: 'space-between',
+        py: 1,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center'
       }}>
-        <Link to="/jobs" style={{ textDecoration: 'none' }}>
+        <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
           <Box
             component="img"
             src="/logo.svg"
             alt="KubeBlast"
             sx={{
-              height: 48,
+              height: 36,
               width: 'auto',
               '&:hover': { opacity: 0.8 }
             }}
           />
         </Link>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+          Profile
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
           <Menuselect />
         </Box>
       </Box>
 
       <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 3 }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 4, fontWeight: 600, color: 'var(--text-primary)' }}>
-          Profile Settings
-        </Typography>
 
         {message.text && (
           <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage({ type: '', text: '' })}>

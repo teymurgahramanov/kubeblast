@@ -37,9 +37,9 @@ spec:
           - |
             mkdir -p /data/{{ job_id }}
             {% if slaves %}
-            jmeter -n -t /tmp/plan.jmx -l /data/{{ job_id }}/result.jtl -e -o /data/{{ job_id }}/dashboard -f -Jjmeterengine.remote.stop=true -Jserver.rmi.ssl.disable=true -R {%for slave in slaves%}{{ slave }},{%endfor%}
+            jmeter -n -t /tmp/plan.jmx -l /data/{{ job_id }}/result.jtl -e -o /data/{{ job_id }}/report -f -Jjmeterengine.remote.stop=true -Jserver.rmi.ssl.disable=true -R {%for slave in slaves%}{{ slave }},{%endfor%}
             {% else %}
-            jmeter -n -t /tmp/plan.jmx -l /data/{{ job_id }}/result.jtl -e -o /data/{{ job_id }}/dashboard -f -Jserver.rmi.ssl.disable=true -Jjmeterengine.remote.stop=true
+            jmeter -n -t /tmp/plan.jmx -l /data/{{ job_id }}/result.jtl -e -o /data/{{ job_id }}/report -f -Jserver.rmi.ssl.disable=true -Jjmeterengine.remote.stop=true
             {% endif %}
         volumeMounts:
         - name: plan

@@ -39,6 +39,7 @@ def read_file(job_id, file_name):
     return file_content
 
 def download_file(current_user, job_id, type):
+    job = jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
             file_path = STORAGE_DIR / job_id / "plan.jmx"

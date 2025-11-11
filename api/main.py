@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import token, user_profile, jobs, logs, files, resources
+from routes import token, user_profile, jobs, logs, files, stats
 from core.log import logger
 from config import config
 import uvicorn
@@ -17,14 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/dashboards", StaticFiles(directory=config.STORAGE_DIR), name="dashboards")
+app.mount("/reports", StaticFiles(directory=config.STORAGE_DIR), name="reports")
 
 app.include_router(token.router,tags=["token"])
 app.include_router(user_profile.router,tags=["profile"])
 app.include_router(jobs.router,tags=["jobs"])
 app.include_router(logs.router,tags=["logs"])
 app.include_router(files.router,tags=["files"])
-app.include_router(resources.router,tags=["cluster"])
+app.include_router(stats.router,tags=["stats"])
 
 @app.on_event("startup")
 async def initialize():

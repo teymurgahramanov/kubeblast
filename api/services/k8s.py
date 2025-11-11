@@ -238,23 +238,6 @@ def delete_workload(job_id):
                 name=cm_name
             )
             logger.info(f"ConfigMap {cm_name} deleted")
-
-        logger.info(f"Deleting Pods with label selector: {label_selector}")
-        pods = client.CoreV1Api().list_namespaced_pod(
-            namespace=namespace,
-            label_selector=label_selector
-        )
-        
-        logger.info(f"Found {len(pods.items)} Pods to delete")
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-            logger.info(f"Deleting Pod: {pod_name}")
-            client.CoreV1Api().delete_namespaced_pod(
-                name=pod_name,
-                namespace=namespace,
-                body=client.V1DeleteOptions(),
-                grace_period_seconds=0
-            )
     except Exception as e:
         logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")

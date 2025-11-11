@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard } from '@mui/icons-material';
+import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel } from '@mui/material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
@@ -19,6 +19,9 @@ const Jobs = () => {
   const [selectedJobDetails, setSelectedJobDetails] = useState(null);
   const [resources, setResources] = useState(null);
   const [resourcesError, setResourcesError] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('created_desc'); // created_desc | created_asc | name_asc | name_desc | status_asc | status_desc
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
@@ -70,7 +73,7 @@ const Jobs = () => {
   useEffect(() => {
     const fetchResources = async () => {
       try {
-        const response = await axiosInstance.get('/resources');
+        const response = await axiosInstance.get('/stats/capacity');
         setResources(response.data);
         setResourcesError('');
       } catch (err) {
@@ -334,6 +337,47 @@ const Jobs = () => {
     };
   }), [jobs]);
 
+  // Ensure unsupported sort values fall back to newest
+  useEffect(() => {
+    if (sortBy !== 'created_desc' && sortBy !== 'created_asc') {
+      setSortBy('created_desc');
+    }
+  }, [sortBy]);
+
+  const visibleRows = useMemo(() => {
+    const text = (searchText || '').toLowerCase().trim();
+    let result = rows.filter((row) => {
+      const matchesText = !text || [
+        row.job_name || '',
+        row.description || '',
+        row.owner || '',
+        String(row.id || '')
+      ].some((v) => String(v).toLowerCase().includes(text));
+      const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter;
+      return matchesText && matchesStatus;
+    });
+    const by = sortBy;
+    result.sort((a, b) => {
+      switch (by) {
+        case 'created_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'created_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'name_asc':
+          return String(a.job_name || '').localeCompare(String(b.job_name || ''));
+        case 'name_desc':
+          return String(b.job_name || '').localeCompare(String(a.job_name || ''));
+        case 'status_asc':
+          return String(a.status || '').localeCompare(String(b.status || ''));
+        case 'status_desc':
+          return String(b.status || '').localeCompare(String(a.status || ''));
+        default:
+          return 0;
+      }
+    });
+    return result;
+  }, [rows, searchText, statusFilter, sortBy]);
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -398,33 +442,33 @@ const Jobs = () => {
         top: 0,
         zIndex: 1100,
         px: 3,
-        py: 1.5,
-        display: 'flex',
-        justifyContent: 'space-between',
+        py: 1,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center'
       }}>
-        <Link to="/jobs" style={{ textDecoration: 'none' }}>
+        <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
           <Box
             component="img"
             src="/logo.svg"
             alt="KubeBlast"
             sx={{
-              height: 48,
+              height: 36,
               width: 'auto',
               '&:hover': { opacity: 0.8 }
             }}
           />
         </Link>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+          Jobs
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
           <Menuselect />
         </Box>
       </Box>
 
       <Box className="page-container fade-in">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-            Jobs
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
           {(userRole === 'admin' || userRole === 'user') && (
             <Button
               variant="contained"
@@ -443,6 +487,58 @@ const Jobs = () => {
           )}
         </Box>
 
+        {/* Filters & sorting */}
+        <Box
+          sx={{
+            mb: 2,
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <TextField
+            size="small"
+            label="Search"
+            placeholder="Name, description, owner"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            variant="outlined"
+          />
+          <FormControl size="small">
+            <InputLabel id="jobs-status-label">Status</InputLabel>
+            <Select
+              labelId="jobs-status-label"
+              label="Status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="running">Running</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="failed">Failed</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small">
+            <InputLabel id="jobs-sort-label">Sort by</InputLabel>
+            <Select
+              labelId="jobs-sort-label"
+              label="Sort by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <MenuItem value="created_desc">Newest</MenuItem>
+              <MenuItem value="created_asc">Oldest</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
         {/* Cluster capacity dashboard */}
         <Box
           sx={{
@@ -455,12 +551,12 @@ const Jobs = () => {
           }}
         >
           <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)', mb: 1 }}>
-            Cluster capacity
+            Capacity
           </Typography>
 
           {!resources && !resourcesError && (
             <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
-              Loading cluster capacity...
+              Loading capacity stats...
             </Typography>
           )}
 
@@ -473,37 +569,87 @@ const Jobs = () => {
           {resources && (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2 }}>
               {(typeof resources.userJobsTotal === 'number' && typeof resources.perUserCurrentJobsLimit === 'number') && (
-                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Jobs</Typography>
-                  <Typography variant="h6" sx={{ m: 0 }}>
-                    {resources.userJobsTotal}/{resources.perUserCurrentJobsLimit}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                    {resources.perUserCurrentJobsLimit === 0 ? 'No limit' : 'Current / Limit'}
-                  </Typography>
-                </Box>
+                <Tooltip title="Your jobs vs allowed concurrent limit" arrow>
+                  <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Jobs</Typography>
+                    <Typography variant="h6" sx={{ m: 0 }}>
+                      {resources.userJobsTotal}/{resources.perUserCurrentJobsLimit}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                      {resources.perUserCurrentJobsLimit === 0 ? 'No limit' : 'Current / Limit'}
+                    </Typography>
+                  </Box>
+                </Tooltip>
               )}
 
-              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Nodes Available</Typography>
-                <Typography variant="h6" sx={{ m: 0 }}>{resources.nodesTotal}</Typography>
-              </Box>
+              <Tooltip title="Usable nodes (matching selector/tolerations) vs total cluster nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Nodes</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {(resources.nodesMatching ?? resources.nodesTotal ?? 0)}/{resources.nodesTotal ?? 0}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Selected / Total</Typography>
+                </Box>
+              </Tooltip>
 
-              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
-                <Typography variant="h6" sx={{ m: 0 }}>
-                  {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
-              </Box>
+              {resources.jobResources && (
+                <Tooltip title="Default resource requests/limits applied to each job pod" arrow>
+                  <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Per-job resources</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {(() => {
+                        const jr = resources.jobResources || {};
+                        const cpuReq = jr.requests?.cpu !== undefined
+                          ? String(jr.requests.cpu)
+                          : (jr.requests?.cpu_m !== undefined ? `${formatCores(jr.requests.cpu_m)} cores` : undefined);
+                        const cpuLim = jr.limits?.cpu !== undefined
+                          ? String(jr.limits.cpu)
+                          : (jr.limits?.cpu_m !== undefined ? `${formatCores(jr.limits.cpu_m)} cores` : undefined);
+                        const memReq = jr.requests?.memory !== undefined
+                          ? String(jr.requests.memory)
+                          : (jr.requests?.memory_bytes !== undefined ? `${formatGiB(jr.requests.memory_bytes)} GiB` : undefined);
+                        const memLim = jr.limits?.memory !== undefined
+                          ? String(jr.limits.memory)
+                          : (jr.limits?.memory_bytes !== undefined ? `${formatGiB(jr.limits.memory_bytes)} GiB` : undefined);
 
-              <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
-                <Typography variant="h6" sx={{ m: 0 }}>
-                  {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
-              </Box>
+                        const cpuLine = `${cpuReq ?? '-'} / ${cpuLim ?? '-'}`;
+                        const memLine = `${memReq ?? '-'} / ${memLim ?? '-'}`;
+
+                        return (
+                          <>
+                            <Typography variant="body2" sx={{ m: 0, color: 'var(--text-primary)' }}>
+                              <span style={{ fontWeight: 700 }}>CPU</span> {cpuLine}
+                            </Typography>
+                            <Typography variant="body2" sx={{ m: 0, color: 'var(--text-primary)' }}>
+                              <span style={{ fontWeight: 700 }}>Memory</span> {memLine}
+                            </Typography>
+                          </>
+                        );
+                      })()}
+                    </Box>
+                  </Box>
+                </Tooltip>
+              )}
+
+              <Tooltip title="Allocatable vs total CPU across selected nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+                </Box>
+              </Tooltip>
+
+              <Tooltip title="Allocatable vs total memory across selected nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+                </Box>
+              </Tooltip>
             </Box>
           )}
         </Box>
@@ -511,13 +657,7 @@ const Jobs = () => {
         <ErrorMessage message={error} />
 
         {jobs.length === 0 ? (
-          <Box sx={{ 
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          }}>
-            <EmptyState />
-          </Box>
+          <EmptyState />
         ) : (
           <Box
             sx={{
@@ -526,7 +666,7 @@ const Jobs = () => {
               gap: 2,
             }}
           >
-            {rows.map((job) => {
+            {visibleRows.map((job) => {
               const statusColors = getStatusColor(job.status);
               return (
                 <Box
@@ -596,10 +736,10 @@ const Jobs = () => {
                             <Download sx={{ mr: 1 }} /> Result
                           </MenuItem>
                           <MenuItem onClick={() => {
-                            window.open(`/dashboards/${job.id}/dashboard/index.html`, '_blank');
+                            window.open(`/reports/${job.id}/report/index.html`, '_blank');
                             handleMenuClose();
                           }}>
-                            <Dashboard sx={{ mr: 1 }} /> Dashboard
+                            <Dashboard sx={{ mr: 1 }} /> Report
                           </MenuItem>
                         </>
                       )}

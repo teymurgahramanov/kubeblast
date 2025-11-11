@@ -94,7 +94,7 @@ def _node_taints_tolerated(node: client.V1Node, tolerations: Optional[List[Dict]
     return True
 
 
-def get_cluster_resources(current_user=None) -> Dict:
+def get_cluster_capacity(current_user=None) -> Dict:
     v1 = client.CoreV1Api()
     nodes = v1.list_node().items
 
@@ -128,9 +128,11 @@ def get_cluster_resources(current_user=None) -> Dict:
         user_jobs_total = db.mongo.jobs.count_documents({"owner": current_user.username})
 
     return {
-        "nodesTotal": len(matched_nodes),
+        "nodesTotal": len(nodes),
+        "nodesMatching": len(matched_nodes),
         "capacity": {"cpu_m": total_cpu_m, "memory_bytes": total_mem_b},
         "allocatable": {"cpu_m": alloc_cpu_m, "memory_bytes": alloc_mem_b},
+        "jobResources": config.K8S_JOB_RESOURCES or {},
         "perUserCurrentJobsLimit": config.PER_USER_CURRENT_JOBS_LIMIT,
         "userJobsTotal": user_jobs_total,
     }
