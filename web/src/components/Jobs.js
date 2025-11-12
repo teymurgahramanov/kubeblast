@@ -30,6 +30,217 @@ const Jobs = () => {
     window.location.href = proRedirectUrl;
   };
 
+  const openReport = async (job_id) => {
+    try {
+      if (!job_id) {
+        setError("No job available.");
+        return;
+      }
+      // Fetch index.html via API
+      const response = await axiosInstance.get(`/files/${job_id}`, {
+        headers: { 
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          'Accept': 'text/html'
+        },
+        params: { type: "report" },
+        responseType: 'text',
+      });
+
+      const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
+
+      // Parse and inline assets so no nginx/static serving is needed
+      const inlineAssets = async (html, currentDir = '') => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const toArray = (list) => Array.prototype.slice.call(list || []);
+
+        const normalizePath = (baseDir, relPath) => {
+          // Build a URL using a dummy origin to resolve relative paths
+          const dummy = 'http://x/';
+          const base = new URL(baseDir ? (dummy + baseDir) : dummy);
+          const resolved = new URL(relPath, base);
+          // Remove dummy origin and leading slash to keep path relative to report root
+          return resolved.pathname.replace(/^\//, '');
+        };
+
+        const fetchText = async (relPath) => {
+          const path = normalizePath(currentDir, relPath);
+          const res = await axiosInstance.get(`/files/${job_id}`, {
+            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            params: { type: "report", path },
+            responseType: 'text'
+          });
+          return typeof res.data === 'string' ? res.data : String(res.data || '');
+        };
+
+        const fetchBinary = async (relPath) => {
+          const path = normalizePath(currentDir, relPath);
+          const res = await axiosInstance.get(`/files/${job_id}`, {
+            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            params: { type: "report", path },
+            responseType: 'arraybuffer'
+          });
+          return res.data;
+        };
+
+        const guessMime = (p) => {
+          const lower = String(p || '').toLowerCase();
+          if (lower.endsWith('.png')) return 'image/png';
+          if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+          if (lower.endsWith('.gif')) return 'image/gif';
+          if (lower.endsWith('.svg')) return 'image/svg+xml';
+          if (lower.endsWith('.webp')) return 'image/webp';
+          if (lower.endsWith('.ico')) return 'image/x-icon';
+          if (lower.endsWith('.css')) return 'text/css';
+          if (lower.endsWith('.js')) return 'text/javascript';
+          return 'application/octet-stream';
+        };
+
+        const toDataUrl = (arrayBuffer, mime) => {
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+          return `data:${mime};base64,${base64}`;
+        };
+
+        // Inline stylesheets
+        const linkEls = toArray(doc.querySelectorAll('link[rel="stylesheet"][href]'));
+        await Promise.all(linkEls.map(async (link) => {
+          const href = link.getAttribute('href');
+          try {
+            const cssText = await fetchText(href);
+            const styleEl = doc.createElement('style');
+            styleEl.textContent = cssText;
+            link.parentNode.replaceChild(styleEl, link);
+          } catch (e) {
+            // leave link as-is on failure
+          }
+        }));
+
+        // Inline scripts
+        const scriptEls = toArray(doc.querySelectorAll('script[src]'));
+        await Promise.all(scriptEls.map(async (script) => {
+          const src = script.getAttribute('src');
+          try {
+            const jsText = await fetchText(src);
+            const inlineScript = doc.createElement('script');
+            inlineScript.textContent = jsText;
+            // Preserve attributes like type if present
+            const typeAttr = script.getAttribute('type');
+            if (typeAttr) inlineScript.setAttribute('type', typeAttr);
+            script.parentNode.replaceChild(inlineScript, script);
+          } catch (e) {
+            // leave script as-is on failure
+          }
+        }));
+
+        // Inline images and icons
+        const imgEls = toArray(doc.querySelectorAll('img[src]'));
+        await Promise.all(imgEls.map(async (img) => {
+          const src = img.getAttribute('src');
+          try {
+            const data = await fetchBinary(src);
+            const mime = guessMime(src);
+            const url = toDataUrl(data, mime);
+            img.setAttribute('src', url);
+          } catch (e) {
+            // leave src as-is on failure
+          }
+        }));
+
+        const iconLinks = toArray(doc.querySelectorAll('link[rel="icon"][href], link[rel="shortcut icon"][href]'));
+        await Promise.all(iconLinks.map(async (link) => {
+          const href = link.getAttribute('href');
+          try {
+            const data = await fetchBinary(href);
+            const mime = guessMime(href);
+            const url = toDataUrl(data, mime);
+            link.setAttribute('href', url);
+          } catch (e) {
+            // leave href as-is on failure
+          }
+        }));
+
+        // Return full HTML
+        return '<!doctype html>\n' + doc.documentElement.outerHTML;
+      };
+
+      const getDir = (p) => {
+        if (!p) return '';
+        const idx = p.lastIndexOf('/');
+        return idx === -1 ? '' : p.slice(0, idx + 1);
+      };
+
+      const navigateTo = async (win, path) => {
+        // Fetch and inline the requested page, then render and re-bind
+        const res = await axiosInstance.get(`/files/${job_id}`, {
+          headers: { 
+            Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+            'Accept': 'text/html'
+          },
+          params: { type: "report", path },
+          responseType: 'text',
+        });
+        const html = typeof res.data === 'string' ? res.data : String(res.data || '');
+        const inlined = await inlineAssets(html, getDir(path));
+        win.document.open();
+        win.document.write(inlined);
+        win.document.close();
+        bindLinkHandlers(win, getDir(path));
+      };
+
+      const bindLinkHandlers = (win, currentDir) => {
+        // Avoid multiple bindings by resetting handler on each render
+        win.document.addEventListener('click', async (e) => {
+          const anchor = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+          if (!anchor) return;
+          const href = anchor.getAttribute('href') || '';
+          // Ignore external links, hashes, javascript, mailto
+          const lower = href.toLowerCase();
+          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:') || lower.startsWith('javascript:') || lower.startsWith('#')) {
+            return;
+          }
+          e.preventDefault();
+          // Resolve relative path against currentDir
+          const dummy = 'http://x/';
+          const base = new URL(currentDir ? (dummy + currentDir) : dummy);
+          const resolved = new URL(href, base);
+          const relPath = resolved.pathname.replace(/^\//, '');
+          try {
+            await navigateTo(win, relPath);
+          } catch (err) {
+            // Surface error back in app UI
+            const msg = (err && (err.response?.data?.detail || err.message)) || 'Failed to load report page';
+            setError(msg);
+          }
+        }, { capture: true });
+      };
+
+      const inlinedHtml = await inlineAssets(rawHtml, '');
+
+      const reportWindow = window.open('', '_blank');
+      if (reportWindow) {
+        reportWindow.document.open();
+        reportWindow.document.write(inlinedHtml);
+        reportWindow.document.close();
+        // Intercept internal navigation to load via API and re-inline assets
+        bindLinkHandlers(reportWindow, '');
+      } else {
+        setError('Popup blocked. Please allow popups for this site.');
+      }
+      handleMenuClose();
+    } catch (error) {
+      const errorDetail = error.response?.data instanceof Blob ? 
+        await error.response.data.text() : 
+        error.response?.data?.detail || error.message;
+      setError(errorDetail);
+    }
+  };
+
   const renderProFeature = (text) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{text}</Typography>
@@ -593,7 +804,7 @@ const Jobs = () => {
               </Tooltip>
 
               {resources.jobResources && (
-                <Tooltip title="Default resource requests/limits applied to each job pod" arrow>
+                <Tooltip title="Default resource requests/limits applied to each job" arrow>
                   <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                     <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Per-job resources</Typography>
                     <Box sx={{ mt: 0.5 }}>
@@ -622,6 +833,9 @@ const Jobs = () => {
                             </Typography>
                             <Typography variant="body2" sx={{ m: 0, color: 'var(--text-primary)' }}>
                               <span style={{ fontWeight: 700 }}>Memory</span> {memLine}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                              Requests / Limit
                             </Typography>
                           </>
                         );
@@ -735,10 +949,7 @@ const Jobs = () => {
                           <MenuItem onClick={() => downloadResult(job.id)}>
                             <Download sx={{ mr: 1 }} /> Result
                           </MenuItem>
-                          <MenuItem onClick={() => {
-                            window.open(`/reports/${job.id}/report/index.html`, '_blank');
-                            handleMenuClose();
-                          }}>
+                          <MenuItem onClick={() => openReport(job.id)}>
                             <Dashboard sx={{ mr: 1 }} /> Report
                           </MenuItem>
                         </>
