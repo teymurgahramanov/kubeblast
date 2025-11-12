@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, FormControlLabel, Checkbox } from '@mui/material';
+import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { Delete, Edit, MoreVert, PersonAdd, PersonOff, Person } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
@@ -16,6 +16,7 @@ const Users = ({ setAddUser }) => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [addUser, setAddUserState] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const userRole = sessionStorage.getItem('user_role');
 
   const fetchUsers = async () => {
@@ -78,6 +79,14 @@ const Users = ({ setAddUser }) => {
     method: user.method ?? user.mehod ?? '',
     enabled: user.enabled,
   }));
+
+  const visibleRows = React.useMemo(() => {
+    const text = (searchText || '').toLowerCase().trim();
+    return rows.filter((row) => {
+      const username = String(row.username || '').toLowerCase();
+      return !text || username.includes(text);
+    });
+  }, [rows, searchText]);
 
   const EmptyState = () => (
     <Box sx={{
@@ -220,6 +229,31 @@ const Users = ({ setAddUser }) => {
           </Button>
         </Box>
 
+        {/* Filters */}
+        <Box
+          sx={{
+            mb: 2,
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <TextField
+            size="small"
+            label="Search username"
+            placeholder="Enter username"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            variant="outlined"
+          />
+        </Box>
+
         <ErrorMessage message={error} />
 
         <Box sx={{ 
@@ -268,11 +302,11 @@ const Users = ({ setAddUser }) => {
             },
           },
         }}>
-          {users.length === 0 ? (
+          {visibleRows.length === 0 ? (
             <EmptyState />
           ) : (
             <DataGrid
-              rows={rows}
+              rows={visibleRows}
               columns={columns}
               getRowId={(row) => row.username}
               hideFooter
