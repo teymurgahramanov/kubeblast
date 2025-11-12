@@ -123,6 +123,67 @@ def get_cluster_capacity(current_user=None) -> Dict:
         total_mem_b += _parse_memory_to_bytes(cap.get("memory"))
         alloc_mem_b += _parse_memory_to_bytes(allo.get("memory"))
 
+    # Calculate allocated resources (sum of container requests) on matched nodes across all namespaces
+    allocated_cpu_m = 0
+    allocated_mem_b = 0
+
+    matched_node_names = {n.metadata.name for n in matched_nodes}
+    try:
+        pods = client.CoreV1Api().list_pod_for_all_namespaces().items
+        for pod in pods:
+            # consider only non-terminated pods
+            phase = getattr(pod.status, "phase", None)
+            if phase in ("Succeeded", "Failed"):
+                continue
+            if getattr(getattr(pod, "metadata", None), "deletion_timestamp", None):
+                continue
+
+            node_name = getattr(pod.spec, "node_name", None)
+            if not node_name or node_name not in matched_node_names:
+                continue
+
+            # Sum of app container requests
+            pod_req_cpu_m = 0
+            pod_req_mem_b = 0
+            for container in getattr(pod.spec, "containers", []) or []:
+                resources = getattr(container, "resources", None)
+                requests = getattr(resources, "requests", None) if resources else None
+                if not requests:
+                    continue
+                pod_req_cpu_m += _parse_cpu_to_millicores(requests.get("cpu"))
+                pod_req_mem_b += _parse_memory_to_bytes(requests.get("memory"))
+
+            # Max of init container requests
+            init_max_cpu_m = 0
+            init_max_mem_b = 0
+            for ic in getattr(pod.spec, "init_containers", []) or []:
+                resources = getattr(ic, "resources", None)
+                requests = getattr(resources, "requests", None) if resources else None
+                if not requests:
+                    continue
+                init_max_cpu_m = max(init_max_cpu_m, _parse_cpu_to_millicores(requests.get("cpu")))
+                init_max_mem_b = max(init_max_mem_b, _parse_memory_to_bytes(requests.get("memory")))
+
+            # Effective per-pod request is max(init) vs sum(app) for each resource
+            eff_cpu_m = max(pod_req_cpu_m, init_max_cpu_m)
+            eff_mem_b = max(pod_req_mem_b, init_max_mem_b)
+
+            # Add pod overhead if defined
+            overhead = getattr(pod.spec, "overhead", None)
+            if isinstance(overhead, dict):
+                eff_cpu_m += _parse_cpu_to_millicores(overhead.get("cpu"))
+                eff_mem_b += _parse_memory_to_bytes(overhead.get("memory"))
+
+            allocated_cpu_m += eff_cpu_m
+            allocated_mem_b += eff_mem_b
+    except Exception:
+        # If listing pods fails, leave allocated as 0 to keep endpoint robust
+        pass
+
+    # Available = allocatable - allocated (clamped to zero)
+    available_cpu_m = max(0, alloc_cpu_m - allocated_cpu_m)
+    available_mem_b = max(0, alloc_mem_b - allocated_mem_b)
+
     user_jobs_total = 0
     if current_user is not None and getattr(current_user, "username", None):
         user_jobs_total = db.mongo.jobs.count_documents({"owner": current_user.username})
@@ -131,7 +192,8 @@ def get_cluster_capacity(current_user=None) -> Dict:
         "nodesTotal": len(nodes),
         "nodesMatching": len(matched_nodes),
         "capacity": {"cpu_m": total_cpu_m, "memory_bytes": total_mem_b},
-        "allocatable": {"cpu_m": alloc_cpu_m, "memory_bytes": alloc_mem_b},
+        "allocated": {"cpu_m": allocated_cpu_m, "memory_bytes": allocated_mem_b},
+        "allocatable": {"cpu_m": available_cpu_m, "memory_bytes": available_mem_b},
         "jobResources": config.K8S_JOB_RESOURCES or {},
         "perUserCurrentJobsLimit": config.PER_USER_CURRENT_JOBS_LIMIT,
         "userJobsTotal": user_jobs_total,
