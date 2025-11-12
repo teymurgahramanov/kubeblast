@@ -181,7 +181,7 @@ const Users = ({ setAddUser }) => {
       {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         position: 'sticky',
         top: 0,
         zIndex: 1100,
@@ -233,7 +233,7 @@ const Users = ({ setAddUser }) => {
         <Box
           sx={{
             mb: 2,
-            backgroundColor: 'white',
+            backgroundColor: 'background.paper',
             borderRadius: '12px',
             border: '1px solid var(--border-color)',
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
@@ -259,7 +259,7 @@ const Users = ({ setAddUser }) => {
         <Box sx={{ 
           height: 'calc(100vh - 280px)',
           width: '100%',
-          backgroundColor: 'white',
+          backgroundColor: 'background.paper',
           borderRadius: '12px',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
           overflow: 'hidden',
@@ -272,7 +272,7 @@ const Users = ({ setAddUser }) => {
               },
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#F8FAFC',
+              backgroundColor: 'var(--background-light)',
               borderBottom: '2px solid var(--border-color)',
               '& .MuiDataGrid-columnHeader': {
                 '&:focus': {
@@ -291,10 +291,10 @@ const Users = ({ setAddUser }) => {
             },
             '& .MuiDataGrid-row': {
               '&:hover': {
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--background-light)',
               },
               '&:nth-of-type(even)': {
-                backgroundColor: '#FAFAFA',
+                backgroundColor: 'transparent',
               },
             },
             '& .MuiDataGrid-overlay': {
@@ -311,10 +311,22 @@ const Users = ({ setAddUser }) => {
               getRowId={(row) => row.username}
               hideFooter
               disableSelectionOnClick
+              disableRowSelectionOnClick
+              rowSelectionModel={[]}
+              onRowSelectionModelChange={() => {}}
               disableColumnMenu
               autoHeight
               getRowHeight={() => 'auto'}
               sx={{
+                '& .MuiDataGrid-row.Mui-selected': {
+                  backgroundColor: 'transparent !important'
+                },
+                '& .MuiDataGrid-row.Mui-selected:hover': {
+                  backgroundColor: 'var(--background-light) !important'
+                },
+                '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+                  outline: 'none'
+                },
                 '& .MuiDataGrid-cell': {
                   py: 2,
                 },

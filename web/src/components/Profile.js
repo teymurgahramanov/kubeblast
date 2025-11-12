@@ -110,7 +110,7 @@ const Profile = () => {
       {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         position: 'sticky',
         top: 0,
         zIndex: 1100,

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
-import { AccountCircle, Logout, People, Settings, Star, Person } from '@mui/icons-material';
+import { AccountCircle, Logout, People, Settings, Star, Person, DarkMode, LightMode } from '@mui/icons-material';
+import { ColorModeContext } from '../lib/theme';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
+  const { mode, toggleColorMode } = useContext(ColorModeContext);
   const userRole = sessionStorage.getItem('user_role');
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
@@ -97,6 +99,13 @@ const Menuselect = () => {
             <Person fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={() => { toggleColorMode(); handleClose(); }}>
+          <ListItemIcon>
+            {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>{mode === 'dark' ? 'Light theme' : 'Dark theme'}</ListItemText>
         </MenuItem>
 
         {userRole === 'admin' && (

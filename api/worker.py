@@ -111,7 +111,7 @@ def process_job_update():
                         logger.warning(f"Unrecognized status for job {job_id}.")
                         continue
                     else:
-                        logger.info(f"Job {job_id} status: {k8s_status}")
+                        logger.debug(f"Job {job_id} status: {k8s_status}")
                     
                     try:
                         update_result = jobs_collection.update_one(

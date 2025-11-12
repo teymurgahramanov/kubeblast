@@ -648,7 +648,7 @@ const Jobs = () => {
       {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         position: 'sticky',
         top: 0,
         zIndex: 1100,
@@ -702,7 +702,7 @@ const Jobs = () => {
         <Box
           sx={{
             mb: 2,
-            backgroundColor: 'white',
+            backgroundColor: 'background.paper',
             borderRadius: '12px',
             border: '1px solid var(--border-color)',
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
@@ -754,7 +754,7 @@ const Jobs = () => {
         <Box
           sx={{
             mb: 3,
-            backgroundColor: 'white',
+            backgroundColor: 'background.paper',
             borderRadius: '12px',
             border: '1px solid var(--border-color)',
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
@@ -886,7 +886,7 @@ const Jobs = () => {
                 <Box
                   key={job.id}
                   sx={{
-                    backgroundColor: 'white',
+                    backgroundColor: 'background.paper',
                     borderRadius: '12px',
                     border: '1px solid var(--border-color)',
                     boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
@@ -1027,7 +1027,7 @@ const Jobs = () => {
             </Typography>
             <Box sx={{ 
               whiteSpace: 'pre-wrap',
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--background-light)',
               padding: '1rem',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
@@ -1074,7 +1074,7 @@ const Jobs = () => {
             {selectedJobDetails && (
               <Box sx={{ 
                 whiteSpace: 'pre-wrap',
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--background-light)',
                 padding: '1rem',
                 borderRadius: '4px',
                 border: '1px solid var(--border-color)',
