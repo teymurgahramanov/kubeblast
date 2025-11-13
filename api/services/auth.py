@@ -31,7 +31,7 @@ def get_user(username: str):
     else:
         return None
 
-def authenticate_user(username: str, plain_password: str, method: str, oauth_user_data: dict = None):
+def authenticate_user(username: str, plain_password: str, method: str, oidc_user_data: dict = None):
     match method:
         case "local":
             user = get_user(username)
@@ -60,15 +60,15 @@ def authenticate_user(username: str, plain_password: str, method: str, oauth_use
                     return user
             else:
                 return False
-        case "oauth":
-            if config.IS_PRO and config.OAUTH_ENABLED:
-                if not oauth_user_data:
-                    logger.error("OAuth user data is required for OAuth authentication")
+        case "oidc":
+            if config.IS_PRO and config.OIDC_ENABLED:
+                if not oidc_user_data:
+                    logger.error("OIDC user data is required for OIDC authentication")
                     return False
                 
-                username = oauth_user_data.get("username")
+                username = oidc_user_data.get("username")
                 if not username:
-                    logger.error("No username in OAuth user data")
+                    logger.error("No username in OIDC user data")
                     return False
                 
                 user = get_user(username)
@@ -76,14 +76,14 @@ def authenticate_user(username: str, plain_password: str, method: str, oauth_use
                     return user
                 
                 # Create new user if auto-create is enabled
-                if config.OAUTH_AUTO_CREATE_USERS:
+                if config.OIDC_AUTO_CREATE_USERS:
                     try:
-                        new_user = models.UserInDB(**oauth_user_data)
+                        new_user = models.UserInDB(**oidc_user_data)
                         db.mongo.users.insert_one(new_user.dict())
-                        logger.info(f"Created new OAuth user: {username}")
+                        logger.info(f"Created new OIDC user: {username}")
                         return new_user
                     except Exception as e:
-                        logger.error(f"Failed to create OAuth user: {str(e)}")
+                        logger.error(f"Failed to create OIDC user: {str(e)}")
                         return False
                 return False
             else:
@@ -192,14 +192,14 @@ def revoke_refresh_token(username: str):
     """Revoke user's refresh token."""
     db.mongo.refresh_tokens.delete_one({"username": username})
 
-def login(form_data=None, method="local", oauth_user_data=None) -> models.Token:
-    if method == "oauth":
-        if not oauth_user_data:
+def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
+    if method == "oidc":
+        if not oidc_user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="OAuth user data is required",
+                detail="OIDC user data is required",
             )
-        username = oauth_user_data.get("username")
+        username = oidc_user_data.get("username")
         password = None
     else:
         if not form_data:
@@ -211,7 +211,7 @@ def login(form_data=None, method="local", oauth_user_data=None) -> models.Token:
         password = form_data.password
         logger.debug(f"Login attempt for user {username} with method {method}")
     
-    user = authenticate_user(username, password, method, oauth_user_data=oauth_user_data)
+    user = authenticate_user(username, password, method, oidc_user_data=oidc_user_data)
     
     if not user:
         raise HTTPException(

@@ -87,26 +87,33 @@ class Config:
     LDAP_USE_TLS: bool = os.getenv("LDAP_USE_TLS", "false").lower() == "true"
     LDAP_VERIFY_CERT: bool = os.getenv("LDAP_VERIFY_CERT", "false").lower() == "true"
 
-    # OAuth Configuration
-    OAUTH_ENABLED: bool = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
-    OAUTH_CLIENT_ID: str = os.getenv("OAUTH_CLIENT_ID")
-    OAUTH_CLIENT_SECRET: str = os.getenv("OAUTH_CLIENT_SECRET")
-    OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:3000/login")
-    OAUTH_AUTH_URL: str = os.getenv("OAUTH_AUTH_URL")
-    OAUTH_TOKEN_URL: str = os.getenv("OAUTH_TOKEN_URL")
-    OAUTH_USERINFO_URL: str = os.getenv("OAUTH_USERINFO_URL")
-    OAUTH_SCOPES: list = os.getenv("OAUTH_SCOPES", "openid profile email").split()
+    # OIDC Configuration
+    OIDC_ENABLED: bool = os.getenv("OIDC_ENABLED", "false").lower() == "true"
+    OIDC_CLIENT_ID: str = os.getenv("OIDC_CLIENT_ID")
+    OIDC_CLIENT_SECRET: str = os.getenv("OIDC_CLIENT_SECRET")
+    OIDC_REDIRECT_URI: str = os.getenv("OIDC_REDIRECT_URI", "http://localhost:3000/login")
+    OIDC_AUTH_URL: str = os.getenv("OIDC_AUTH_URL")
+    OIDC_TOKEN_URL: str = os.getenv("OIDC_TOKEN_URL")
+    OIDC_USERINFO_URL: str = os.getenv("OIDC_USERINFO_URL")
+    OIDC_SCOPES: list = os.getenv("OIDC_SCOPES", "openid profile email").split()
     
-    # OAuth Role Mapping (JSON format)
-    OAUTH_ROLE_MAPPING: dict = {}
-    oauth_role_mapping_env = os.getenv("OAUTH_ROLE_MAPPING")
-    if oauth_role_mapping_env:
+    # OIDC Role Mapping (JSON format)
+    # Example (set as a JSON string in env):
+    #   OIDC_ROLE_MAPPING='{"realm_admin":"admin","myclient:editor":"moderator","/groups/devops":"moderator","@corp.com":"user"}'
+    # Mapping keys can match:
+    # - Realm roles (e.g., "realm_admin")
+    # - Client roles as "clientId:role" (e.g., "myclient:editor")
+    # - Group names/paths from "groups" claim (e.g., "/groups/devops")
+    # - Email domain substrings (e.g., "@corp.com")
+    OIDC_ROLE_MAPPING: dict = {}
+    oidc_role_mapping_env = os.getenv("OIDC_ROLE_MAPPING")
+    if oidc_role_mapping_env:
         try:
-            OAUTH_ROLE_MAPPING = json.loads(oauth_role_mapping_env)
+            OIDC_ROLE_MAPPING = json.loads(oidc_role_mapping_env)
         except json.JSONDecodeError:
-            OAUTH_ROLE_MAPPING = {}
+            OIDC_ROLE_MAPPING = {}
     
-    OAUTH_DEFAULT_ROLE: str = os.getenv("OAUTH_DEFAULT_ROLE", "user")
-    OAUTH_AUTO_CREATE_USERS: bool = os.getenv("OAUTH_AUTO_CREATE_USERS", "true").lower() == "true"
+    OIDC_DEFAULT_ROLE: str = os.getenv("OIDC_DEFAULT_ROLE", "user")
+    OIDC_AUTO_CREATE_USERS: bool = os.getenv("OIDC_AUTO_CREATE_USERS", "true").lower() == "true"
 
 config = Config()

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel } from '@mui/material';
 import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import { getUserRole } from "../utils/auth";
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
@@ -22,7 +23,7 @@ const Jobs = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc'); // created_desc | created_asc | name_asc | name_desc | status_asc | status_desc
-  const userRole = sessionStorage.getItem('user_role');
+  const userRole = getUserRole();
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
 

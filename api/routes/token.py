@@ -10,7 +10,7 @@ import secrets
 
 router = APIRouter(prefix="/api")
 
-_oauth_states = {}
+_oidc_states = {}
 
 @router.post("/token", response_model=models.Token)
 async def login(
@@ -67,86 +67,86 @@ async def logout(current_user: Annotated[models.User, Depends(auth.get_current_a
         )
 
 
-@router.get("/oauth/enabled")
-async def oauth_enabled():
-    """Check if OAuth is enabled."""
+@router.get("/oidc/enabled")
+async def oidc_enabled():
+    """Check if OIDC is enabled."""
     return {
-        "enabled": config.OAUTH_ENABLED
+        "enabled": config.OIDC_ENABLED
     }
 
 
-@router.get("/oauth/authorize")
-async def oauth_authorize():
-    """Get OAuth authorization URL to redirect user to provider."""
-    if not config.OAUTH_ENABLED:
+@router.get("/oidc/authorize")
+async def oidc_authorize():
+    """Get OIDC authorization URL to redirect user to provider."""
+    if not config.OIDC_ENABLED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OAuth authentication is not enabled"
+            detail="OIDC authentication is not enabled"
         )
     
     try:
-        from services.oauth_auth import OAuthAuth
-        oauth = OAuthAuth()
+        from services.oidc_auth import OIDCAuth
+        oidc = OIDCAuth()
         
         state = secrets.token_urlsafe(32)
-        _oauth_states[state] = True
+        _oidc_states[state] = True
         
-        auth_url = oauth.get_authorization_url(state)
+        auth_url = oidc.get_authorization_url(state)
         
         return {
             "authorization_url": auth_url,
             "state": state
         }
     except Exception as e:
-        logger.error(f"Failed to generate OAuth URL: {str(e)}")
+        logger.error(f"Failed to generate OIDC URL: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OAuth not properly configured: {str(e)}"
+            detail=f"OIDC not properly configured: {str(e)}"
         )
 
 
-@router.get("/oauth/callback")
-async def oauth_callback(
+@router.get("/oidc/callback")
+async def oidc_callback(
     code: str = Query(...),
     state: str = Query(...),
     error: Optional[str] = Query(None)
 ):
-    """Handle OAuth callback - exchange code for token."""
-    if not config.OAUTH_ENABLED:
+    """Handle OIDC callback - exchange code for token."""
+    if not config.OIDC_ENABLED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OAuth authentication is not enabled"
+            detail="OIDC authentication is not enabled"
         )
     
     if error:
-        logger.error(f"OAuth provider error: {error}")
+        logger.error(f"OIDC provider error: {error}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth authentication failed: {error}"
+            detail=f"OIDC authentication failed: {error}"
         )
     
-    if state not in _oauth_states:
+    if state not in _oidc_states:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid state parameter"
         )
-    _oauth_states.pop(state, None)
+    _oidc_states.pop(state, None)
     
     try:
-        from services.oauth_auth import OAuthAuth
-        oauth = OAuthAuth()
+        from services.oidc_auth import OIDCAuth
+        oidc = OIDCAuth()
         
-        oauth_user = await oauth.authenticate(code)
+        oidc_user = await oidc.authenticate(code)
         
-        if not oauth_user:
+        if not oidc_user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="OAuth authentication failed"
+                detail="OIDC authentication failed"
             )
         
-        user_data = oauth.map_oauth_user_to_db_user(oauth_user)
+        user_data = oidc.map_oidc_user_to_db_user(oidc_user)
         
-        token = auth.login(method="oauth", oauth_user_data=user_data.dict())
+        token = auth.login(method="oidc", oidc_user_data=user_data.dict())
         
         return {
             "access_token": token.access_token,
@@ -159,8 +159,8 @@ async def oauth_callback(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OAuth callback error: {str(e)}")
+        logger.error(f"OIDC callback error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OAuth authentication failed: {str(e)}"
+            detail=f"OIDC authentication failed: {str(e)}"
         )

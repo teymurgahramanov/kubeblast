@@ -1,9 +1,10 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { getAccessToken, getUserRole } from "../utils/auth";
 
 const PrivateRoute = ({ children, requiredRole }) => {
-  const accessToken = sessionStorage.getItem("access_token");
-  const userRole = sessionStorage.getItem("user_role"); // Store role in sessionStorage after login
+  const accessToken = getAccessToken();
+  const userRole = getUserRole();
 
   if (!accessToken) {
     return <Navigate to="/" replace />;

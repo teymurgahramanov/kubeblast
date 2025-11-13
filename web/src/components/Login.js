@@ -12,34 +12,34 @@ const Login = () => {
   });
   const [authMethod, setAuthMethod] = useState('local');
   const [error, setError] = useState('');
-  const [oauthEnabled, setOauthEnabled] = useState(false);
+  const [oidcEnabled, setOidcEnabled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
 
-  // Check OAuth configuration on mount
+  // Check OIDC configuration on mount
   useEffect(() => {
-    const checkOAuthConfig = async () => {
+    const checkOIDCConfig = async () => {
       try {
-        const response = await axiosInstance.get('/oauth/enabled');
-        setOauthEnabled(response.data.enabled);
+        const response = await axiosInstance.get('/oidc/enabled');
+        setOidcEnabled(response.data.enabled);
       } catch (error) {
-        console.error('Failed to check OAuth config:', error);
+        console.error('Failed to check OIDC config:', error);
       }
     };
-    checkOAuthConfig();
+    checkOIDCConfig();
   }, []);
 
-  // Handle OAuth callback
+  // Handle OIDC callback
   useEffect(() => {
-    const handleOAuthCallback = async () => {
+    const handleOIDCCallback = async () => {
       const params = new URLSearchParams(location.search);
       const code = params.get('code');
       const state = params.get('state');
       const error = params.get('error');
 
       if (error) {
-        setError(`OAuth authentication failed: ${params.get('error_description') || error}`);
+        setError(`OIDC authentication failed: ${params.get('error_description') || error}`);
         // Clean up URL
         navigate('/login', { replace: true });
         return;
@@ -47,7 +47,7 @@ const Login = () => {
 
       if (code && state) {
         try {
-          const response = await axiosInstance.get(`/oauth/callback?code=${code}&state=${state}`);
+          const response = await axiosInstance.get(`/oidc/callback?code=${code}&state=${state}`);
           
           // Store the tokens
           sessionStorage.setItem('access_token', response.data.access_token);
@@ -57,13 +57,13 @@ const Login = () => {
 
           navigate('/jobs');
         } catch (error) {
-          setError(error.response?.data?.detail || 'OAuth authentication failed');
+          setError(error.response?.data?.detail || 'OIDC authentication failed');
           navigate('/login', { replace: true });
         }
       }
     };
 
-    handleOAuthCallback();
+    handleOIDCCallback();
   }, [location, navigate]);
 
   const handleInputChange = (e) => {
@@ -120,18 +120,18 @@ const Login = () => {
     }
   };
 
-  const handleOAuthLogin = async () => {
+  const handleOIDCLogin = async () => {
     try {
-      const response = await axiosInstance.get('/oauth/authorize');
+      const response = await axiosInstance.get('/oidc/authorize');
       const { authorization_url, state } = response.data;
       
       // Store state in sessionStorage for verification
-      sessionStorage.setItem('oauth_state', state);
+      sessionStorage.setItem('oidc_state', state);
       
-      // Redirect to OAuth provider
+      // Redirect to OIDC provider
       window.location.href = authorization_url;
     } catch (error) {
-      setError(error.response?.data?.detail || 'Failed to initiate OAuth login');
+      setError(error.response?.data?.detail || 'Failed to initiate OIDC login');
     }
   };
 
@@ -224,7 +224,7 @@ const Login = () => {
             Login
           </Button>
 
-          {oauthEnabled && (
+          {oidcEnabled && (
             <>
               <Divider sx={{ my: 3 }}>
                 <Typography variant="body2" color="text.secondary">
@@ -235,7 +235,7 @@ const Login = () => {
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={handleOAuthLogin}
+                onClick={handleOIDCLogin}
                 sx={{
                   textTransform: 'none',
                   borderColor: 'var(--primary-color)',

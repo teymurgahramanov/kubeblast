@@ -4,6 +4,7 @@ import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, TextField }
 import { DataGrid } from '@mui/x-data-grid';
 import { Delete, Edit, MoreVert, PersonAdd, PersonOff, Person } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import { getUserRole } from "../utils/auth";
 import Menuselect from "./Menuselect";
 import EditUser from "./EditUser";
 import ErrorMessage from './ErrorMessage';
@@ -17,7 +18,7 @@ const Users = ({ setAddUser }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [addUser, setAddUserState] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const userRole = sessionStorage.getItem('user_role');
+  const userRole = getUserRole();
 
   const fetchUsers = async () => {
     try {

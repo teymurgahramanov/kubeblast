@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Jobs from './components/Jobs';
 import Users from './components/Users';
 import PrivateRoute from './components/PrivateRoute';
+import { getUserRole } from './utils/auth';
 import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
@@ -12,7 +13,7 @@ import Settings from './components/Settings';
 import './App.css';
 
 const AdminRoute = ({ children }) => {
-  const isAdmin = sessionStorage.getItem('user_role') === 'admin';
+  const isAdmin = getUserRole() === 'admin';
   return isAdmin ? children : <Navigate to="/jobs" />;
 };
 

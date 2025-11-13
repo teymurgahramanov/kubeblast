@@ -15,7 +15,7 @@ class User(BaseModel):
     email: Optional[str] = None
     enabled: bool = True
     auto_approve: bool = False
-    method: Literal["local", "ldap", "oauth"] = "local"
+    method: Literal["local", "ldap", "oidc"] = "local"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
 import { AccountCircle, Logout, People, Settings, Star, Person, DarkMode, LightMode } from '@mui/icons-material';
 import { ColorModeContext } from '../lib/theme';
+import { getUserRole, getUsername } from '../utils/auth';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
-  const userRole = sessionStorage.getItem('user_role');
+  const userRole = getUserRole();
   const isPro = process.env.REACT_APP_IS_PRO === 'true';
   const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
-  const username = sessionStorage.getItem('username');
+  const username = getUsername();
   const firstLetter = username ? username.charAt(0).toUpperCase() : '';
 
   const handleClick = (event) => {
