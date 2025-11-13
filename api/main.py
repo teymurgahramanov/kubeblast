@@ -17,8 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/reports", StaticFiles(directory=config.STORAGE_DIR), name="reports")
-
 app.include_router(token.router,tags=["token"])
 app.include_router(user_profile.router,tags=["profile"])
 app.include_router(jobs.router,tags=["jobs"])

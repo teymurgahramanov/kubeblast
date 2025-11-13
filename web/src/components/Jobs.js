@@ -518,22 +518,36 @@ const Jobs = () => {
 
   const getStatusColor = (status) => {
     switch ((status || '').toLowerCase()) {
+      // Neutral/gray
       case 'pending':
-        return { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' };
-      case 'running':
-        return { bg: '#EFF6FF', text: '#1E40AF', border: '#93C5FD' };
-      case 'completed':
-        return { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' };
-      case 'failed':
-        return { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
-      case 'declined':
-        return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
-      case 'retrying':
-        return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' }; // gray-200 bg, gray-900 text
+      case 'starting':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
       case 'stopping':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' };
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+      case 'retrying':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+
+      // Positive
+      case 'completed':
+        return { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' }; // lighter green
+
+      // Progress
+      case 'running':
+        return { bg: '#BFDBFE', text: '#1E40AF', border: '#93C5FD' }; // lighter blue
+
+      // Attention
+      case 'ready':
+        return { bg: '#FDE68A', text: '#92400E', border: '#F59E0B' }; // amber-300 bg, amber-800 text
+
+      // Negative
+      case 'failed':
+        return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' }; // red-300 bg, red-800 text
+      case 'declined':
+        return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' };
+
       default:
-        return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
     }
   };
 
@@ -845,23 +859,23 @@ const Jobs = () => {
                 </Tooltip>
               )}
 
-              <Tooltip title="Allocatable vs total CPU across selected nodes" arrow>
+              <Tooltip title="Available vs total CPU across selected nodes" arrow>
                 <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
                   <Typography variant="h6" sx={{ m: 0 }}>
                     {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
                 </Box>
               </Tooltip>
 
-              <Tooltip title="Allocatable vs total memory across selected nodes" arrow>
+              <Tooltip title="Available vs total memory across selected nodes" arrow>
                 <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
                   <Typography variant="h6" sx={{ m: 0 }}>
                     {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Allocatable / Total</Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
                 </Box>
               </Tooltip>
             </Box>
@@ -964,7 +978,6 @@ const Jobs = () => {
                     <Box sx={{
                       backgroundColor: statusColors.bg,
                       color: statusColors.text,
-                      border: `1px solid ${statusColors.border}`,
                       borderRadius: '6px',
                       px: 1.5,
                       py: 0.5,

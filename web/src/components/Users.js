@@ -125,19 +125,18 @@ const Users = ({ setAddUser }) => {
       flex: 0.8,
       renderCell: (params) => {
         const statusColors = params.row.enabled 
-          ? { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' }
-          : { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
+          ? { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' } // enabled: lighter green
+          : { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' }; // disabled: bright red
         
         return (
           <Box sx={{
             backgroundColor: statusColors.bg,
             color: statusColors.text,
-            border: `1px solid ${statusColors.border}`,
             borderRadius: '6px',
             px: 2,
-            py: 1,
-            fontSize: '0.875rem',
-            fontWeight: 500,
+            py: 0.75,
+            fontSize: '0.8125rem',
+            fontWeight: 700,
             width: 'fit-content',
             minWidth: '90px',
             textAlign: 'center',
