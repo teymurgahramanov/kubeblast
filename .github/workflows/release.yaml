@@ -67,6 +67,7 @@ jobs:
           APP_VERSION="$RELEASE_NAME"
           echo "Updating $CHART_FILE with appVersion=$APP_VERSION"
           sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" $CHART_FILE
+          sed -i "s/^version:.*/version: \"$APP_VERSION\"/" $CHART_FILE
           mkdir -p packaged
           helm dependency update helm/
           helm package helm/ --destination packaged
@@ -89,20 +90,7 @@ jobs:
         with:
           name: ${{ inputs.release-name }}
           tag: ${{ inputs.release-name }}
-          bodyFile: RELEASE_NOTES.md
+          bodyFile: RELEASE.md
           allowUpdates: true
           artifactErrorsFailBuild: true
           makeLatest: true
-
-      - name: Bump Helm chart version
-        id: bump
-        run: |
-          CURRENT_CHART_VERSION=$(grep '^version:' $CHART_FILE | cut -d' ' -f2)
-          NEW_CHART_VERSION=$(echo $CURRENT_CHART_VERSION | awk -F. -v OFS=. '{$NF += 1 ; print}')
-          sed -i "s/^version:.*/version: $NEW_CHART_VERSION/" $CHART_FILE
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add $CHART_FILE
-          git commit -m "⬆️ Bump Helm chart version to $NEW_CHART_VERSION"
-          git push --force
-
