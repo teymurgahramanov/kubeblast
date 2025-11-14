@@ -21,11 +21,11 @@ affinity: {}
 # Resources configuration for Kubeblast container
 resources:
   requests:
-    cpu: "500m"
-    memory: "1Gi"
+    cpu: "50m"
+    memory: "256Mi"
   limits:
-    cpu: "1000m"
-    memory: "2Gi"
+    cpu: "100m"
+    memory: "512Mi"
 
 # Environment variables for Kubeblast container. Refer to README.md for more details.
 # Use envFromSecret to load environment variables from a secret.
