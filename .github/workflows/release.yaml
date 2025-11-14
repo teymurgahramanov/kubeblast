@@ -45,7 +45,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_NAME }}, ${{ env.IMAGE_NAME }}:latest
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
