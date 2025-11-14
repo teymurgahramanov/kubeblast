@@ -1,0 +1,22 @@
+{{- if .Values.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.instanceName }}-pvc
+  {{- with .Values.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.persistence.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  storageClassName: {{ .Values.persistence.storageClassName }}
+  accessModes:
+    - {{ .Values.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

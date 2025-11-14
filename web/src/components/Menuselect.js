@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
-import { AccountCircle, Logout, People, Settings, Star, Person } from '@mui/icons-material';
+import { AccountCircle, Logout, People, Settings, Star, Person, DarkMode, LightMode } from '@mui/icons-material';
+import { ColorModeContext } from '../lib/theme';
+import { getUserRole, getUsername } from '../utils/auth';
+import axiosInstance from "../utils/axiosInstance";
+import config from '../config.json';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
-  const userRole = sessionStorage.getItem('user_role');
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
-  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
-  const username = sessionStorage.getItem('username');
+  const { mode, toggleColorMode } = useContext(ColorModeContext);
+  const userRole = getUserRole();
+  const [isPro, setIsPro] = useState(false);
+  const proRedirectUrl = config.proRedirectUrl;
+  const username = getUsername();
   const firstLetter = username ? username.charAt(0).toUpperCase() : '';
+
+  useEffect(() => {
+    const fetchAppStats = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/app');
+        setIsPro(Boolean(res.data?.LICENSE_VALID));
+      } catch {
+        setIsPro(false);
+      }
+    };
+    fetchAppStats();
+  }, []);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -97,6 +114,13 @@ const Menuselect = () => {
             <Person fontSize="small" />
           </ListItemIcon>
           <ListItemText>Profile</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={() => { toggleColorMode(); handleClose(); }}>
+          <ListItemIcon>
+            {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>{mode === 'dark' ? 'Light theme' : 'Dark theme'}</ListItemText>
         </MenuItem>
 
         {userRole === 'admin' && (

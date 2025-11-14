@@ -31,3 +31,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "kubeblast.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kubeblast.fullname" . }}
 {{- end }}
+
+{{/*
+Return the PVC name to use
+*/}}
+{{- define "kubeblast.pvcName" -}}
+{{- if .Values.pvc.existingClaim }}
+{{- .Values.pvc.existingClaim }}
+{{- else }}
+{{- include "kubeblast.fullname" . }}
+{{- end }}
+{{- end }}

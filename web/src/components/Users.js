@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, FormControlLabel, Checkbox } from '@mui/material';
+import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { Delete, Edit, MoreVert, PersonAdd, PersonOff, Person } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
+import { getUserRole } from "../utils/auth";
 import Menuselect from "./Menuselect";
 import EditUser from "./EditUser";
 import ErrorMessage from './ErrorMessage';
@@ -16,7 +17,8 @@ const Users = ({ setAddUser }) => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [addUser, setAddUserState] = useState(false);
-  const userRole = sessionStorage.getItem('user_role');
+  const [searchText, setSearchText] = useState('');
+  const userRole = getUserRole();
 
   const fetchUsers = async () => {
     try {
@@ -75,8 +77,17 @@ const Users = ({ setAddUser }) => {
     full_name: user.full_name || '',
     email: user.email || '',
     role: user.role,
+    method: user.method ?? user.mehod ?? '',
     enabled: user.enabled,
   }));
+
+  const visibleRows = React.useMemo(() => {
+    const text = (searchText || '').toLowerCase().trim();
+    return rows.filter((row) => {
+      const username = String(row.username || '').toLowerCase();
+      return !text || username.includes(text);
+    });
+  }, [rows, searchText]);
 
   const EmptyState = () => (
     <Box sx={{
@@ -107,6 +118,7 @@ const Users = ({ setAddUser }) => {
     { field: 'username', headerName: 'Username', width: 180, flex: 1 },
     { field: 'full_name', headerName: 'Full Name', width: 200, flex: 1 },
     { field: 'role', headerName: 'Role', width: 150, flex: 1 },
+    { field: 'method', headerName: 'Method', width: 160, flex: 1 },
     {
       field: 'enabled',
       headerName: 'Status',
@@ -114,19 +126,18 @@ const Users = ({ setAddUser }) => {
       flex: 0.8,
       renderCell: (params) => {
         const statusColors = params.row.enabled 
-          ? { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' }
-          : { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
+          ? { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' } // enabled: lighter green
+          : { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' }; // disabled: bright red
         
         return (
           <Box sx={{
             backgroundColor: statusColors.bg,
             color: statusColors.text,
-            border: `1px solid ${statusColors.border}`,
             borderRadius: '6px',
             px: 2,
-            py: 1,
-            fontSize: '0.875rem',
-            fontWeight: 500,
+            py: 0.75,
+            fontSize: '0.8125rem',
+            fontWeight: 700,
             width: 'fit-content',
             minWidth: '90px',
             textAlign: 'center',
@@ -170,38 +181,38 @@ const Users = ({ setAddUser }) => {
       {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         position: 'sticky',
         top: 0,
         zIndex: 1100,
         px: 3,
-        py: 1.5,
-        display: 'flex',
-        justifyContent: 'space-between',
+        py: 1,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center'
       }}>
-        <Link to="/jobs" style={{ textDecoration: 'none' }}>
+        <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
           <Box
             component="img"
             src="/logo.svg"
             alt="KubeBlast"
             sx={{
-              height: 48,
+              height: 36,
               width: 'auto',
               '&:hover': { opacity: 0.8 }
             }}
           />
         </Link>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+          Users
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
           <Menuselect />
         </Box>
       </Box>
 
       <Box className="page-container fade-in">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-            Users
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
           <Button
             variant="contained"
             onClick={() => setAddUser(true)}
@@ -218,12 +229,37 @@ const Users = ({ setAddUser }) => {
           </Button>
         </Box>
 
+        {/* Filters */}
+        <Box
+          sx={{
+            mb: 2,
+            backgroundColor: 'background.paper',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <TextField
+            size="small"
+            label="Search username"
+            placeholder="Enter username"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            variant="outlined"
+          />
+        </Box>
+
         <ErrorMessage message={error} />
 
         <Box sx={{ 
           height: 'calc(100vh - 280px)',
           width: '100%',
-          backgroundColor: 'white',
+          backgroundColor: 'background.paper',
           borderRadius: '12px',
           boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
           overflow: 'hidden',
@@ -236,7 +272,7 @@ const Users = ({ setAddUser }) => {
               },
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#F8FAFC',
+              backgroundColor: 'var(--background-light)',
               borderBottom: '2px solid var(--border-color)',
               '& .MuiDataGrid-columnHeader': {
                 '&:focus': {
@@ -255,10 +291,10 @@ const Users = ({ setAddUser }) => {
             },
             '& .MuiDataGrid-row': {
               '&:hover': {
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--background-light)',
               },
               '&:nth-of-type(even)': {
-                backgroundColor: '#FAFAFA',
+                backgroundColor: 'transparent',
               },
             },
             '& .MuiDataGrid-overlay': {
@@ -266,19 +302,31 @@ const Users = ({ setAddUser }) => {
             },
           },
         }}>
-          {users.length === 0 ? (
+          {visibleRows.length === 0 ? (
             <EmptyState />
           ) : (
             <DataGrid
-              rows={rows}
+              rows={visibleRows}
               columns={columns}
               getRowId={(row) => row.username}
               hideFooter
               disableSelectionOnClick
+              disableRowSelectionOnClick
+              rowSelectionModel={[]}
+              onRowSelectionModelChange={() => {}}
               disableColumnMenu
               autoHeight
               getRowHeight={() => 'auto'}
               sx={{
+                '& .MuiDataGrid-row.Mui-selected': {
+                  backgroundColor: 'transparent !important'
+                },
+                '& .MuiDataGrid-row.Mui-selected:hover': {
+                  backgroundColor: 'var(--background-light) !important'
+                },
+                '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+                  outline: 'none'
+                },
                 '& .MuiDataGrid-cell': {
                   py: 2,
                 },

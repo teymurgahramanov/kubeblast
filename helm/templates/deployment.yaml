@@ -37,21 +37,19 @@ spec:
               containerPort: {{ .Values.service.port.api }}
               protocol: TCP
           env:
-            - name: STORAGE_BACKEND
-              value: {{ .Values.storageBackend }}
             - name: STORAGE_PVC_NAME
-              value: {{ include "kubeblast.fullname" . }}
+              value: {{ include "kubeblast.pvcName" . }}
             {{- if .Values.mongodb.enabled }}
-            - name: MONGO_HOST
-              value: "{{ .Values.mongodb.service.nameOverride }}"
-            - name: MONGO_PORT
+            - name: MONGODB_HOST
+              value: "{{ .Values.mongodb.instanceName }}"
+            - name: MONGODB_PORT
               value: "27017"
-            - name: MONGO_USER
-              value: {{ .Values.mongodb.auth.username }}
-            - name: MONGO_PASSWORD
-              value: {{ .Values.mongodb.auth.password }}
-            - name: MONGO_DATABASE
-              value: {{ .Values.mongodb.auth.database }}
+            - name: MONGODB_USER
+              value: {{ .Values.mongodb.username }}
+            - name: MONGODB_PASS
+              value: {{ .Values.mongodb.password }}
+            - name: MONGODB_NAME
+              value: {{ .Values.mongodb.database }}
             {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}
@@ -64,17 +62,13 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.storageBackend | eq "fs" }}
           volumeMounts:
-            - name: {{ include "kubeblast.fullname" . }}
+            - name: data
               mountPath: /data
-          {{- end }}
-      {{- if .Values.storageBackend | eq "fs" }}
       volumes:
-        - name: {{ include "kubeblast.fullname" . }}
+        - name: data
           persistentVolumeClaim:
-            claimName: {{ include "kubeblast.fullname" . }}
-      {{- end }}
+            claimName: {{ include "kubeblast.pvcName" . }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

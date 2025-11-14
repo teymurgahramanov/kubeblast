@@ -22,6 +22,29 @@ html, body, #root {
   --border-color: #e2e8f0;
 }
 
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --primary-color: #7aa2f7;
+  --primary-dark: #557bdc;
+  --secondary-color: #22d3ee;
+  --background-light: #0f172a;
+  --background-dark: #0b1220;
+  --text-primary: #e5e7eb;
+  --text-secondary: #94a3b8;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --border-color: #334155;
+}
+
+/* Base backgrounds in dark mode */
+[data-theme="dark"] html,
+[data-theme="dark"] body,
+[data-theme="dark"] #root {
+  background-color: #0b1220;
+  color: #e5e7eb;
+}
+
 /* Login page styling */
 .login-container {
   display: flex;
@@ -64,12 +87,22 @@ html, body, #root {
   margin-bottom: 1.5rem;
 }
 
+[data-theme="dark"] .card {
+  background: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 /* Data grid customization */
 .MuiDataGrid-root {
   border: none !important;
   background: white;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .MuiDataGrid-root {
+  background: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .MuiDataGrid-cell {
@@ -130,6 +163,10 @@ html, body, #root {
   position: sticky;
   top: 0;
   z-index: 1100;
+}
+
+[data-theme="dark"] .app-header {
+  background-color: #0f172a;
 }
 
 .app-header a {

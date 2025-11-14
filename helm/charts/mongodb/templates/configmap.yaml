@@ -1,0 +1,18 @@
+{{- if .Values.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-init
+data:
+  init-user.js: |
+    db = db.getSiblingDB("{{ .Values.database }}");
+
+    db.createUser({
+      user: "{{ .Values.username }}",
+      pwd: "{{ .Values.password }}",
+      roles: [
+        { role: "readWrite", db: "{{ .Values.database }}" }
+      ]
+    });
+{{- end }}

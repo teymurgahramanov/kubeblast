@@ -38,27 +38,24 @@ envFromSecret: ""
 # If you want to use external MongoDB, set "enabled" to false and configure env variables.
 mongodb:
   enabled: false
-  architecture: standalone
-  auth:
-    enabled: true
-    rootPassword: "kubeblast"
-    username: "kubeblast"
-    password: "kubeblast"
-    database: "kubeblast"
+  instanceName: "kubeblast-mongodb"
+  username: "kubeblast"
+  password: "kubeblast"
+  database: "kubeblast"
   persistence:
     enabled: true
-    size: 2Gi
-  service:
-    nameOverride: mongo
-
-# Storage backend configuration
-# "fs" - file system
-# "s3" - S3 storage (AWS, GCP, MinIO, etc.)
-storageBackend: "fs"
+    size: "2Gi"
+    accessMode: "ReadWriteOnce"
+    storageClassName: ""
+    annotations: {}
+    labels: {}
 
 # Storage PVC configuration
-# Used only if storageBackend is "fs"
 pvc:
+  # If you want to use an existing PVC, set existingClaim to the PVC name
+  # When existingClaim is set, a new PVC will not be created
+  existingClaim: ""
+  # PVC creation settings (used only if existingClaim is empty)
   storageClassName: ""
   size: "2Gi"
   accessMode: "ReadWriteMany"

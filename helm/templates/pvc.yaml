@@ -1,10 +1,14 @@
-{{- if .Values.storageBackend | eq "fs" }}
+{{- if not .Values.pvc.existingClaim }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "kubeblast.fullname" . }}
   labels:
     {{- include "kubeblast.labels" . | nindent 4 }}
+  {{- with .Values.pvc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   storageClassName: {{ .Values.pvc.storageClassName }}
   accessModes:

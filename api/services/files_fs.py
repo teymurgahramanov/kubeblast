@@ -1,5 +1,3 @@
-import io
-import zipfile
 import shutil
 from pathlib import Path
 from fastapi import HTTPException, Response
@@ -40,7 +38,7 @@ def read_file(job_id, file_name):
         raise HTTPException(status_code=404, detail="Plan file not found.")
     return file_content
 
-def download_file(current_user, job_id, type):
+def download_file(current_user, job_id, type, path=None):
     job = jobs.get_job(current_user, job_id).dict()
     match type:
         case "plan":
@@ -58,28 +56,54 @@ def download_file(current_user, job_id, type):
             except Exception as e:
                 logger.error(f"Failed to read plan from filesystem: {str(e)}")
                 raise HTTPException(status_code=404, detail="Plan file not found.")
-        case "report":
+        case "result":
+            file_path = STORAGE_DIR / job_id / "result.jtl"
             try:
-                report_dir = STORAGE_DIR / job_id / "report"
-                if not report_dir.exists():
-                    raise HTTPException(status_code=404, detail="No report files found")
-
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for file_path in report_dir.rglob('*'):
-                        if file_path.is_file():
-                            relative_path = file_path.relative_to(report_dir)
-                            zip_file.write(file_path, relative_path)
-
+                with open(file_path, 'rb') as f:
+                    content = f.read()
                 return Response(
-                    content=zip_buffer.getvalue(),
-                    media_type="application/zip",
+                    content=content,
+                    media_type="text/plain",
                     headers={
-                        "Content-Disposition": f'attachment; filename="{job["name"]}.zip"'
+                        "Content-Disposition": f'attachment; filename="{job["name"]}.jtl"'
                     }
                 )
-            except HTTPException as e:
-                raise e
             except Exception as e:
-                logger.error(f"Failed to create report zip: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Failed to create report zip: {str(e)}") 
+                logger.error(f"Failed to read result from filesystem: {str(e)}")
+                raise HTTPException(status_code=404, detail="Result file not found.") 
+        case "report":
+            report_dir = (STORAGE_DIR / job_id / "report")
+            try:
+                if path is None or path == "" or path == "/":
+                    index_path = report_dir / "index.html"
+                    with open(index_path, 'r') as f:
+                        content = f.read()
+                    return Response(
+                        content=content,
+                        media_type="text/html",
+                        headers={
+                            "Content-Disposition": "inline;"
+                        }
+                    )
+                # Serve requested asset as a blob from within the report directory
+                # Normalize and protect against path traversal
+                normalized_subpath = str(path).lstrip("/\\")
+                base_dir = report_dir.resolve()
+                requested_path = (report_dir / normalized_subpath).resolve()
+                if requested_path != base_dir and base_dir not in requested_path.parents:
+                    logger.warning(f"Blocked path traversal attempt: {requested_path}")
+                    raise HTTPException(status_code=400, detail="Invalid path.")
+                with open(requested_path, 'rb') as f:
+                    content = f.read()
+                return Response(
+                    content=content,
+                    media_type="application/octet-stream",
+                    headers={
+                        "Content-Disposition": "inline;"
+                    }
+                )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to read report content from filesystem: {str(e)}")
+                raise HTTPException(status_code=404, detail="Report content not found.")

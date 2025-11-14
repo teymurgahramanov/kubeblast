@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button } from '@mui/material';
-import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt } from '@mui/icons-material';
+import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel } from '@mui/material';
+import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
-import { DataGrid } from '@mui/x-data-grid';
+import { getUserRole } from "../utils/auth";
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
+import config from '../config.json';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -18,12 +19,240 @@ const Jobs = () => {
   const [openAddJob, setOpenAddJob] = useState(false);
   const [openDetails, setOpenDetails] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState(null);
-  const userRole = sessionStorage.getItem('user_role');
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
-  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
+  const [resources, setResources] = useState(null);
+  const [resourcesError, setResourcesError] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('created_desc'); // created_desc | created_asc | name_asc | name_desc | status_asc | status_desc
+  const userRole = getUserRole();
+  const [isPro, setIsPro] = useState(false);
+  const proRedirectUrl = config.proRedirectUrl;
+
+  useEffect(() => {
+    const fetchAppStats = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/app');
+        setIsPro(Boolean(res.data?.LICENSE_VALID));
+      } catch {
+        setIsPro(false);
+      }
+    };
+    fetchAppStats();
+  }, []);
 
   const handleProFeature = () => {
     window.location.href = proRedirectUrl;
+  };
+
+  const openReport = async (job_id) => {
+    try {
+      if (!job_id) {
+        setError("No job available.");
+        return;
+      }
+      // Fetch index.html via API
+      const response = await axiosInstance.get(`/files/${job_id}`, {
+        headers: { 
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          'Accept': 'text/html'
+        },
+        params: { type: "report" },
+        responseType: 'text',
+      });
+
+      const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
+
+      // Parse and inline assets so no nginx/static serving is needed
+      const inlineAssets = async (html, currentDir = '') => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const toArray = (list) => Array.prototype.slice.call(list || []);
+
+        const normalizePath = (baseDir, relPath) => {
+          // Build a URL using a dummy origin to resolve relative paths
+          const dummy = 'http://x/';
+          const base = new URL(baseDir ? (dummy + baseDir) : dummy);
+          const resolved = new URL(relPath, base);
+          // Remove dummy origin and leading slash to keep path relative to report root
+          return resolved.pathname.replace(/^\//, '');
+        };
+
+        const fetchText = async (relPath) => {
+          const path = normalizePath(currentDir, relPath);
+          const res = await axiosInstance.get(`/files/${job_id}`, {
+            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            params: { type: "report", path },
+            responseType: 'text'
+          });
+          return typeof res.data === 'string' ? res.data : String(res.data || '');
+        };
+
+        const fetchBinary = async (relPath) => {
+          const path = normalizePath(currentDir, relPath);
+          const res = await axiosInstance.get(`/files/${job_id}`, {
+            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            params: { type: "report", path },
+            responseType: 'arraybuffer'
+          });
+          return res.data;
+        };
+
+        const guessMime = (p) => {
+          const lower = String(p || '').toLowerCase();
+          if (lower.endsWith('.png')) return 'image/png';
+          if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+          if (lower.endsWith('.gif')) return 'image/gif';
+          if (lower.endsWith('.svg')) return 'image/svg+xml';
+          if (lower.endsWith('.webp')) return 'image/webp';
+          if (lower.endsWith('.ico')) return 'image/x-icon';
+          if (lower.endsWith('.css')) return 'text/css';
+          if (lower.endsWith('.js')) return 'text/javascript';
+          return 'application/octet-stream';
+        };
+
+        const toDataUrl = (arrayBuffer, mime) => {
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+          return `data:${mime};base64,${base64}`;
+        };
+
+        // Inline stylesheets
+        const linkEls = toArray(doc.querySelectorAll('link[rel="stylesheet"][href]'));
+        await Promise.all(linkEls.map(async (link) => {
+          const href = link.getAttribute('href');
+          try {
+            const cssText = await fetchText(href);
+            const styleEl = doc.createElement('style');
+            styleEl.textContent = cssText;
+            link.parentNode.replaceChild(styleEl, link);
+          } catch (e) {
+            // leave link as-is on failure
+          }
+        }));
+
+        // Inline scripts
+        const scriptEls = toArray(doc.querySelectorAll('script[src]'));
+        await Promise.all(scriptEls.map(async (script) => {
+          const src = script.getAttribute('src');
+          try {
+            const jsText = await fetchText(src);
+            const inlineScript = doc.createElement('script');
+            inlineScript.textContent = jsText;
+            // Preserve attributes like type if present
+            const typeAttr = script.getAttribute('type');
+            if (typeAttr) inlineScript.setAttribute('type', typeAttr);
+            script.parentNode.replaceChild(inlineScript, script);
+          } catch (e) {
+            // leave script as-is on failure
+          }
+        }));
+
+        // Inline images and icons
+        const imgEls = toArray(doc.querySelectorAll('img[src]'));
+        await Promise.all(imgEls.map(async (img) => {
+          const src = img.getAttribute('src');
+          try {
+            const data = await fetchBinary(src);
+            const mime = guessMime(src);
+            const url = toDataUrl(data, mime);
+            img.setAttribute('src', url);
+          } catch (e) {
+            // leave src as-is on failure
+          }
+        }));
+
+        const iconLinks = toArray(doc.querySelectorAll('link[rel="icon"][href], link[rel="shortcut icon"][href]'));
+        await Promise.all(iconLinks.map(async (link) => {
+          const href = link.getAttribute('href');
+          try {
+            const data = await fetchBinary(href);
+            const mime = guessMime(href);
+            const url = toDataUrl(data, mime);
+            link.setAttribute('href', url);
+          } catch (e) {
+            // leave href as-is on failure
+          }
+        }));
+
+        // Return full HTML
+        return '<!doctype html>\n' + doc.documentElement.outerHTML;
+      };
+
+      const getDir = (p) => {
+        if (!p) return '';
+        const idx = p.lastIndexOf('/');
+        return idx === -1 ? '' : p.slice(0, idx + 1);
+      };
+
+      const navigateTo = async (win, path) => {
+        // Fetch and inline the requested page, then render and re-bind
+        const res = await axiosInstance.get(`/files/${job_id}`, {
+          headers: { 
+            Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+            'Accept': 'text/html'
+          },
+          params: { type: "report", path },
+          responseType: 'text',
+        });
+        const html = typeof res.data === 'string' ? res.data : String(res.data || '');
+        const inlined = await inlineAssets(html, getDir(path));
+        win.document.open();
+        win.document.write(inlined);
+        win.document.close();
+        bindLinkHandlers(win, getDir(path));
+      };
+
+      const bindLinkHandlers = (win, currentDir) => {
+        // Avoid multiple bindings by resetting handler on each render
+        win.document.addEventListener('click', async (e) => {
+          const anchor = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+          if (!anchor) return;
+          const href = anchor.getAttribute('href') || '';
+          // Ignore external links, hashes, javascript, mailto
+          const lower = href.toLowerCase();
+          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:') || lower.startsWith('javascript:') || lower.startsWith('#')) {
+            return;
+          }
+          e.preventDefault();
+          // Resolve relative path against currentDir
+          const dummy = 'http://x/';
+          const base = new URL(currentDir ? (dummy + currentDir) : dummy);
+          const resolved = new URL(href, base);
+          const relPath = resolved.pathname.replace(/^\//, '');
+          try {
+            await navigateTo(win, relPath);
+          } catch (err) {
+            // Surface error back in app UI
+            const msg = (err && (err.response?.data?.detail || err.message)) || 'Failed to load report page';
+            setError(msg);
+          }
+        }, { capture: true });
+      };
+
+      const inlinedHtml = await inlineAssets(rawHtml, '');
+
+      const reportWindow = window.open('', '_blank');
+      if (reportWindow) {
+        reportWindow.document.open();
+        reportWindow.document.write(inlinedHtml);
+        reportWindow.document.close();
+        // Intercept internal navigation to load via API and re-inline assets
+        bindLinkHandlers(reportWindow, '');
+      } else {
+        setError('Popup blocked. Please allow popups for this site.');
+      }
+      handleMenuClose();
+    } catch (error) {
+      const errorDetail = error.response?.data instanceof Blob ? 
+        await error.response.data.text() : 
+        error.response?.data?.detail || error.message;
+      setError(errorDetail);
+    }
   };
 
   const renderProFeature = (text) => (
@@ -63,6 +292,24 @@ const Jobs = () => {
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
+  }, []);
+
+  // Fetch cluster resources (capacity dashboard)
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await axiosInstance.get('/stats/capacity');
+        setResources(response.data);
+        setResourcesError('');
+      } catch (err) {
+        setResources(null);
+        setResourcesError(err.response?.data?.detail || err.message || 'Failed to load cluster resources');
+      }
+    };
+
+    fetchResources();
+    const interval = setInterval(fetchResources, 30000); // refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const handleMenuOpen = (event, job_id) => {
@@ -203,7 +450,7 @@ const Jobs = () => {
     }
   };
 
-  const downloadReport = async (job_id) => {
+  const downloadResult = async (job_id) => {
     try {
       if (!job_id) {
         setError("No job available.");
@@ -211,14 +458,14 @@ const Jobs = () => {
       }
       const response = await axiosInstance.get(`/files/${job_id}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-        params: { type: "report" },
+        params: { type: "result" },
         responseType: 'blob',
       });
-      const blob = new Blob([response.data], { type: 'application/zip' });
+      const blob = new Blob([response.data], { type: 'text/plain' });
       const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.download = `kubeblast_${jobs.find(job => job.id === job_id)?.name}.zip`;
+      link.download = `kubeblast_${jobs.find(job => job.id === job_id)?.name}.jtl`;
       link.click();
       handleMenuClose();
     } catch (error) {
@@ -265,143 +512,58 @@ const Jobs = () => {
     }
   };
 
+  const stopJob = async (job_id) => {
+    try {
+      await axiosInstance.put(`/jobs/stop/${job_id}`, {}, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+      });
+      setJobs(jobs.map(job => job.id === job_id ? { ...job, status: 'stopping' } : job));
+      handleMenuClose();
+    } catch (error) {
+      setError(error.response?.data?.detail || error.message);
+    }
+  };
+
   const handleDetailsClick = (job) => {
     setSelectedJobDetails(job);
     setOpenDetails(true);
     handleMenuClose();
   };
 
-  const columns = useMemo(() => {
-    return [
-      { 
-        field: "status", 
-        headerName: "Status",
-        headerAlign: 'center',
-        width: 100,
-        flex: 0.6,
-        renderCell: (params) => {
-          const getStatusColor = (status) => {
-            switch (status.toLowerCase()) {
-              case 'pending':
-                return { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' };
-              case 'running':
-                return { bg: '#EFF6FF', text: '#1E40AF', border: '#93C5FD' };
-              case 'completed':
-                return { bg: '#F0FDF4', text: '#166534', border: '#86EFAC' };
-              case 'failed':
-                return { bg: '#FEF2F2', text: '#991B1B', border: '#FCA5A5' };
-              case 'declined':
-                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
-              case 'retrying':
-                return { bg: '#FFFBEB', text: '#B45309', border: '#FCD34D' };
-              default:
-                return { bg: '#F9FAFB', text: '#374151', border: '#D1D5DB' };
-            }
-          };
+  const getStatusColor = (status) => {
+    switch ((status || '').toLowerCase()) {
+      // Neutral/gray
+      case 'pending':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' }; // gray-200 bg, gray-900 text
+      case 'starting':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+      case 'stopping':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+      case 'retrying':
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
 
-          const statusColors = getStatusColor(params.value);
-          return (
-            <Box sx={{
-              backgroundColor: statusColors.bg,
-              color: statusColors.text,
-              border: `1px solid ${statusColors.border}`,
-              borderRadius: '6px',
-              px: 2,
-              py: 1,
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              width: 'fit-content',
-              minWidth: '90px',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto',
-            }}>
-              {params.value.charAt(0).toUpperCase() + params.value.slice(1)}
-            </Box>
-          );
-        }
-      },
-      { field: "job_name", headerName: "Job Name", width: 120, flex: 0.8 },
-      ...( isPro && (userRole === 'admin' || userRole === 'moderator') ? [
-        { field: "owner", headerName: "Owner", width: 150, flex: 1 }
-      ] : []),
-      { field: "description", headerName: "Description", width: 200, flex: 1.5 },
-      { 
-        field: "created_at", 
-        headerName: "Created At", 
-        width: 180, 
-        flex: 1,
-        renderCell: (params) => formatDate(params.value)
-      },
-      {
-        field: 'actions',
-        headerName: '',
-        sortable: false,
-        width: 80,
-        flex: 0.3,
-        renderCell: (params) => {
-          const job = params.row;
-          return (
-            <Box>
-              <IconButton
-                onClick={(e) => handleMenuOpen(e, job.id)}
-                size="small"
-              >
-                <MoreVert />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl) && selectedJobId === job.id}
-                onClose={handleMenuClose}
-              >
-                {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
-                  <>
-                    <MenuItem onClick={() => approveJob(job.id)}>
-                      <CheckCircle sx={{ mr: 1 }} /> Approve
-                    </MenuItem>
-                    <MenuItem onClick={() => declineJob(job.id)}>
-                      <Cancel sx={{ mr: 1 }} /> Decline
-                    </MenuItem>
-                  </>
-                )}
-                {job.status === 'ready' && (
-                  <MenuItem onClick={() => startJob(job.id)}>
-                    <PlayArrow sx={{ mr: 1 }} /> Start
-                  </MenuItem>
-                )}
-                <MenuItem onClick={() => handleDetailsClick(job)}>
-                  <ListAlt sx={{ mr: 1 }} /> Details
-                </MenuItem>
-                {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
-                  <MenuItem onClick={() => viewLogs(job.id, job.status)}>
-                    <Visibility sx={{ mr: 1 }} /> Logs
-                  </MenuItem>
-                )}
-                <MenuItem onClick={() => openPlanFile(job.id)}>
-                  <Description sx={{ mr: 1 }} /> Plan
-                </MenuItem>
-                {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
-                  <MenuItem onClick={() => rescheduleJob(job.id)}>
-                    <Autorenew sx={{ mr: 1 }} /> Retry
-                  </MenuItem>
-                )}
-                {job.status === 'completed' && (
-                  <MenuItem onClick={() => downloadReport(job.id)}>
-                    <Download sx={{ mr: 1 }} /> Report
-                  </MenuItem>
-                )}
-                <MenuItem onClick={() => deleteJob(job.id)}>
-                  <Delete sx={{ mr: 1 }} /> Delete
-                </MenuItem>
-              </Menu>
-            </Box>
-          );
-        },
-      }
-    ];
-  }, [anchorEl, selectedJobId, userRole, isPro]);
+      // Positive
+      case 'completed':
+        return { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' }; // lighter green
+
+      // Progress
+      case 'running':
+        return { bg: '#BFDBFE', text: '#1E40AF', border: '#93C5FD' }; // lighter blue
+
+      // Attention
+      case 'ready':
+        return { bg: '#FDE68A', text: '#92400E', border: '#F59E0B' }; // amber-300 bg, amber-800 text
+
+      // Negative
+      case 'failed':
+        return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' }; // red-300 bg, red-800 text
+      case 'declined':
+        return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' };
+
+      default:
+        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+    }
+  };
 
   const rows = useMemo(() => jobs.map((job) => {
     return {
@@ -413,6 +575,47 @@ const Jobs = () => {
       created_at: job.created_at
     };
   }), [jobs]);
+
+  // Ensure unsupported sort values fall back to newest
+  useEffect(() => {
+    if (sortBy !== 'created_desc' && sortBy !== 'created_asc') {
+      setSortBy('created_desc');
+    }
+  }, [sortBy]);
+
+  const visibleRows = useMemo(() => {
+    const text = (searchText || '').toLowerCase().trim();
+    let result = rows.filter((row) => {
+      const matchesText = !text || [
+        row.job_name || '',
+        row.description || '',
+        row.owner || '',
+        String(row.id || '')
+      ].some((v) => String(v).toLowerCase().includes(text));
+      const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter;
+      return matchesText && matchesStatus;
+    });
+    const by = sortBy;
+    result.sort((a, b) => {
+      switch (by) {
+        case 'created_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'created_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'name_asc':
+          return String(a.job_name || '').localeCompare(String(b.job_name || ''));
+        case 'name_desc':
+          return String(b.job_name || '').localeCompare(String(a.job_name || ''));
+        case 'status_asc':
+          return String(a.status || '').localeCompare(String(b.status || ''));
+        case 'status_desc':
+          return String(b.status || '').localeCompare(String(a.status || ''));
+        default:
+          return 0;
+      }
+    });
+    return result;
+  }, [rows, searchText, statusFilter, sortBy]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -428,27 +631,42 @@ const Jobs = () => {
     });
   };
 
+  const formatCores = (millicores) => {
+    if (!millicores && millicores !== 0) return '';
+    return (millicores / 1000).toFixed(1);
+  };
+
+  const formatGiB = (bytes) => {
+    if (!bytes && bytes !== 0) return '';
+    const gib = bytes / (1024 ** 3);
+    return gib >= 10 ? gib.toFixed(0) : gib.toFixed(1);
+  };
+
+
   const EmptyState = () => (
     <Box sx={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      py: 8,
-      px: 2,
+      py: 10,
+      px: 3,
       textAlign: 'center',
+      gap: 1.5,
     }}>
       <ListAlt sx={{ 
-        fontSize: 64,
+        fontSize: 72,
         color: 'var(--text-secondary)',
-        mb: 2,
-        opacity: 0.5
+        opacity: 0.4
       }} />
       <Typography variant="h6" sx={{ 
-        color: 'var(--text-secondary)',
-        fontWeight: 600
+        color: 'var(--text-primary)',
+        fontWeight: 700
       }}>
-        There's nothing here yet
+        No jobs yet
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'var(--text-secondary)', maxWidth: 520 }}>
+        Create a job to start a test run. Once a job is created, you'll see its status, logs, and results here.
       </Typography>
     </Box>
   );
@@ -458,38 +676,38 @@ const Jobs = () => {
       {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'white',
+        backgroundColor: 'background.paper',
         position: 'sticky',
         top: 0,
         zIndex: 1100,
         px: 3,
-        py: 1.5,
-        display: 'flex',
-        justifyContent: 'space-between',
+        py: 1,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center'
       }}>
-        <Link to="/jobs" style={{ textDecoration: 'none' }}>
+        <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
           <Box
             component="img"
             src="/logo.svg"
             alt="KubeBlast"
             sx={{
-              height: 48,
+              height: 36,
               width: 'auto',
               '&:hover': { opacity: 0.8 }
             }}
           />
         </Link>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+          Jobs
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
           <Menuselect />
         </Box>
       </Box>
 
       <Box className="page-container fade-in">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-            Jobs
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
           {(userRole === 'admin' || userRole === 'user') && (
             <Button
               variant="contained"
@@ -508,77 +726,302 @@ const Jobs = () => {
           )}
         </Box>
 
-        <ErrorMessage message={error} />
+        {/* Filters & sorting */}
+        <Box
+          sx={{
+            mb: 2,
+            backgroundColor: 'background.paper',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <TextField
+            size="small"
+            label="Search"
+            placeholder="Name, description, owner"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            variant="outlined"
+          />
+          <FormControl size="small">
+            <InputLabel id="jobs-status-label">Status</InputLabel>
+            <Select
+              labelId="jobs-status-label"
+              label="Status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="running">Running</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="failed">Failed</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small">
+            <InputLabel id="jobs-sort-label">Sort by</InputLabel>
+            <Select
+              labelId="jobs-sort-label"
+              label="Sort by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <MenuItem value="created_desc">Newest</MenuItem>
+              <MenuItem value="created_asc">Oldest</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
 
-        <Box sx={{ 
-          height: 'calc(100vh - 280px)',
-          width: '100%',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          overflow: 'hidden',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-            '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid var(--border-color)',
-              '&:focus': {
-                outline: 'none',
-              },
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#F8FAFC',
-              borderBottom: '2px solid var(--border-color)',
-              '& .MuiDataGrid-columnHeader': {
-                '&:focus': {
-                  outline: 'none',
-                },
-                '&:focus-within': {
-                  outline: 'none',
-                },
-                '&:not(:last-child)': {
-                  borderRight: 'none',
-                },
-                '& .MuiDataGrid-columnSeparator': {
-                  display: 'none',
-                },
-              },
-            },
-            '& .MuiDataGrid-row': {
-              '&:hover': {
-                backgroundColor: '#F8FAFC',
-              },
-              '&:nth-of-type(even)': {
-                backgroundColor: '#FAFAFA',
-              },
-            },
-            '& .MuiDataGrid-overlay': {
-              background: 'transparent',
-            },
-          },
-        }}>
-          {jobs.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              hideFooter
-              disableSelectionOnClick
-              disableColumnMenu
-              autoHeight
-              getRowHeight={() => 'auto'}
-              sx={{
-                '& .MuiDataGrid-cell': {
-                  py: 2,
-                },
-                '& .MuiDataGrid-columnHeader': {
-                  py: 2,
-                  fontWeight: 600,
-                },
-              }}
-            />
+        {/* Cluster capacity dashboard */}
+        <Box
+          sx={{
+            mb: 3,
+            backgroundColor: 'background.paper',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            p: 2,
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)', mb: 1 }}>
+            Capacity
+          </Typography>
+
+          {!resources && !resourcesError && (
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+              Loading capacity stats...
+            </Typography>
+          )}
+
+          {resourcesError && (
+            <Typography variant="body2" sx={{ color: 'var(--danger-color)' }}>
+              {resourcesError}
+            </Typography>
+          )}
+
+          {resources && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2 }}>
+              {(typeof resources.userJobsTotal === 'number' && typeof resources.perUserCurrentJobsLimit === 'number') && (
+                <Tooltip title="Your jobs vs allowed concurrent limit" arrow>
+                  <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Jobs</Typography>
+                    <Typography variant="h6" sx={{ m: 0 }}>
+                      {resources.userJobsTotal}/{resources.perUserCurrentJobsLimit}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                      {resources.perUserCurrentJobsLimit === 0 ? 'No limit' : 'Current / Limit'}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              )}
+
+              <Tooltip title="Usable nodes (matching selector/tolerations) vs total cluster nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Nodes</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {(resources.nodesMatching ?? resources.nodesTotal ?? 0)}/{resources.nodesTotal ?? 0}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Selected / Total</Typography>
+                </Box>
+              </Tooltip>
+
+              {resources.jobResources && (
+                <Tooltip title="Default resource requests/limits applied to each job" arrow>
+                  <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Per-job resources</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      {(() => {
+                        const jr = resources.jobResources || {};
+                        const cpuReq = jr.requests?.cpu !== undefined
+                          ? String(jr.requests.cpu)
+                          : (jr.requests?.cpu_m !== undefined ? `${formatCores(jr.requests.cpu_m)} cores` : undefined);
+                        const cpuLim = jr.limits?.cpu !== undefined
+                          ? String(jr.limits.cpu)
+                          : (jr.limits?.cpu_m !== undefined ? `${formatCores(jr.limits.cpu_m)} cores` : undefined);
+                        const memReq = jr.requests?.memory !== undefined
+                          ? String(jr.requests.memory)
+                          : (jr.requests?.memory_bytes !== undefined ? `${formatGiB(jr.requests.memory_bytes)} GiB` : undefined);
+                        const memLim = jr.limits?.memory !== undefined
+                          ? String(jr.limits.memory)
+                          : (jr.limits?.memory_bytes !== undefined ? `${formatGiB(jr.limits.memory_bytes)} GiB` : undefined);
+
+                        const cpuLine = `${cpuReq ?? '-'} / ${cpuLim ?? '-'}`;
+                        const memLine = `${memReq ?? '-'} / ${memLim ?? '-'}`;
+
+                        return (
+                          <>
+                            <Typography variant="body2" sx={{ m: 0, color: 'var(--text-primary)' }}>
+                              <span style={{ fontWeight: 700 }}>CPU</span> {cpuLine}
+                            </Typography>
+                            <Typography variant="body2" sx={{ m: 0, color: 'var(--text-primary)' }}>
+                              <span style={{ fontWeight: 700 }}>Memory</span> {memLine}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                              Requests / Limit
+                            </Typography>
+                          </>
+                        );
+                      })()}
+                    </Box>
+                  </Box>
+                </Tooltip>
+              )}
+
+              <Tooltip title="Available vs total CPU across selected nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
+                </Box>
+              </Tooltip>
+
+              <Tooltip title="Available vs total memory across selected nodes" arrow>
+                <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
+                  <Typography variant="h6" sx={{ m: 0 }}>
+                    {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
+                </Box>
+              </Tooltip>
+            </Box>
           )}
         </Box>
+
+        <ErrorMessage message={error} />
+
+        {jobs.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 2,
+            }}
+          >
+            {visibleRows.map((job) => {
+              const statusColors = getStatusColor(job.status);
+              return (
+                <Box
+                  key={job.id}
+                  sx={{
+                    backgroundColor: 'background.paper',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+                    p: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {job.job_name}
+                    </Typography>
+                    <IconButton onClick={(e) => handleMenuOpen(e, job.id)} size="small">
+                      <MoreVert />
+                    </IconButton>
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl) && selectedJobId === job.id}
+                      onClose={handleMenuClose}
+                    >
+                      {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
+                        <>
+                          <MenuItem onClick={() => approveJob(job.id)}>
+                            <CheckCircle sx={{ mr: 1 }} /> Approve
+                          </MenuItem>
+                          <MenuItem onClick={() => declineJob(job.id)}>
+                            <Cancel sx={{ mr: 1 }} /> Decline
+                          </MenuItem>
+                        </>
+                      )}
+                      {job.status === 'ready' && (
+                        <MenuItem onClick={() => startJob(job.id)}>
+                          <PlayArrow sx={{ mr: 1 }} /> Start
+                        </MenuItem>
+                      )}
+                      {job.status === 'running' && (userRole === 'admin' || userRole === 'user') && (
+                        <MenuItem onClick={() => stopJob(job.id)}>
+                          <Stop sx={{ mr: 1 }} /> Stop
+                        </MenuItem>
+                      )}
+                      <MenuItem onClick={() => handleDetailsClick(job)}>
+                        <ListAlt sx={{ mr: 1 }} /> Details
+                      </MenuItem>
+                      {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
+                        <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                          <Visibility sx={{ mr: 1 }} /> Logs
+                        </MenuItem>
+                      )}
+                      <MenuItem onClick={() => openPlanFile(job.id)}>
+                        <Description sx={{ mr: 1 }} /> Plan
+                      </MenuItem>
+                      {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
+                        <MenuItem onClick={() => rescheduleJob(job.id)}>
+                          <Autorenew sx={{ mr: 1 }} /> Retry
+                        </MenuItem>
+                      )}
+                      {job.status === 'completed' && (
+                        <>
+                          <MenuItem onClick={() => downloadResult(job.id)}>
+                            <Download sx={{ mr: 1 }} /> Result
+                          </MenuItem>
+                          <MenuItem onClick={() => openReport(job.id)}>
+                            <Dashboard sx={{ mr: 1 }} /> Report
+                          </MenuItem>
+                        </>
+                      )}
+                      <MenuItem onClick={() => deleteJob(job.id)}>
+                        <Delete sx={{ mr: 1 }} /> Delete
+                      </MenuItem>
+                    </Menu>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{
+                      backgroundColor: statusColors.bg,
+                      color: statusColors.text,
+                      borderRadius: '6px',
+                      px: 1.5,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      width: 'fit-content',
+                    }}>
+                      {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                    </Box>
+                    {(userRole === 'admin' || userRole === 'moderator') && isPro && job.owner && (
+                      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+                        • {job.owner}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {job.description && (
+                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
+                      {job.description}
+                    </Typography>
+                  )}
+
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                    Created: {formatDate(job.created_at)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
 
         <Modal
           open={Boolean(logs)}
@@ -611,7 +1054,7 @@ const Jobs = () => {
             </Typography>
             <Box sx={{ 
               whiteSpace: 'pre-wrap',
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--background-light)',
               padding: '1rem',
               borderRadius: '4px',
               border: '1px solid var(--border-color)',
@@ -658,7 +1101,7 @@ const Jobs = () => {
             {selectedJobDetails && (
               <Box sx={{ 
                 whiteSpace: 'pre-wrap',
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--background-light)',
                 padding: '1rem',
                 borderRadius: '4px',
                 border: '1px solid var(--border-color)',

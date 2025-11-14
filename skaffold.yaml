@@ -1,0 +1,41 @@
+---
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: kubeblast
+
+build:
+  artifacts:
+    - image: kubeblast
+      context: ./
+      docker:
+        dockerfile: Dockerfile
+
+deploy:
+  helm:
+    releases:
+      - name: kubeblast
+        namespace: kubeblast-dev
+        createNamespace: true
+        chartPath: ./helm
+        valuesFiles:
+          - ./dev-values.yaml
+        setValueTemplates:
+          image.repository: "{{ .IMAGE_REPO_kubeblast }}"
+          image.tag: "{{ .IMAGE_TAG_kubeblast }}"         
+portForward:
+  - resourceType: service
+    resourceName: kubeblast
+    namespace: kubeblast-dev
+    port: 80
+    localPort: 9001
+  - resourceType: deployment
+    resourceName: kubeblast
+    namespace: kubeblast-dev
+    port: 8000
+    localPort: 9002
+
+profiles:
+  - name: docker-desktop
+    activation:
+      - kubeContext: docker-desktop

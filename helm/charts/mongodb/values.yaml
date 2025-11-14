@@ -1,0 +1,12 @@
+enabled: true
+instanceName: "kubeblast-mongodb"
+username: "kubeblast"
+password: "kubeblast"
+database: "kubeblast"
+persistence:
+  enabled: true
+  size: "2Gi"
+  accessMode: "ReadWriteOnce"
+  storageClassName: ""
+  annotations: {}
+  labels: {}
