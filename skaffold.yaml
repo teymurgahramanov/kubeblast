@@ -10,8 +10,6 @@ build:
       context: ./
       docker:
         dockerfile: Dockerfile
-        buildArgs:
-          EDITION_IS_PRO: "true"
 
 deploy:
   helm:

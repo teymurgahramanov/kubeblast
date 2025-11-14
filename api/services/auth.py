@@ -43,7 +43,7 @@ def authenticate_user(username: str, plain_password: str, method: str, oidc_user
                 return False
             return user
         case "ldap":
-            if config.IS_PRO and config.LDAP_ENABLED:
+            if config.LICENSE_VALID and config.LDAP_ENABLED:
                 from .ldap_auth import LDAPAuth
                 ldap_auth = LDAPAuth()
                 try:
@@ -61,7 +61,7 @@ def authenticate_user(username: str, plain_password: str, method: str, oidc_user
             else:
                 return False
         case "oidc":
-            if config.IS_PRO and config.OIDC_ENABLED:
+            if config.LICENSE_VALID and config.OIDC_ENABLED:
                 if not oidc_user_data:
                     logger.error("OIDC user data is required for OIDC authentication")
                     return False

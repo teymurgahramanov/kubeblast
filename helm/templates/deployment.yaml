@@ -41,15 +41,15 @@ spec:
               value: {{ include "kubeblast.pvcName" . }}
             {{- if .Values.mongodb.enabled }}
             - name: MONGODB_HOST
-              value: "{{ .Values.mongodb.service.nameOverride }}"
+              value: "{{ .Values.mongodb.instanceName }}"
             - name: MONGODB_PORT
               value: "27017"
             - name: MONGODB_USER
-              value: {{ .Values.mongodb.auth.username }}
+              value: {{ .Values.mongodb.username }}
             - name: MONGODB_PASS
-              value: {{ .Values.mongodb.auth.password }}
+              value: {{ .Values.mongodb.password }}
             - name: MONGODB_NAME
-              value: {{ .Values.mongodb.auth.database }}
+              value: {{ .Values.mongodb.database }}
             {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}

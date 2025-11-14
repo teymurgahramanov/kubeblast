@@ -38,18 +38,17 @@ envFromSecret: ""
 # If you want to use external MongoDB, set "enabled" to false and configure env variables.
 mongodb:
   enabled: false
-  architecture: standalone
-  auth:
-    enabled: true
-    rootPassword: "kubeblast"
-    username: "kubeblast"
-    password: "kubeblast"
-    database: "kubeblast"
+  instanceName: "kubeblast-mongodb"
+  username: "kubeblast"
+  password: "kubeblast"
+  database: "kubeblast"
   persistence:
     enabled: true
-    size: 2Gi
-  service:
-    nameOverride: mongodb
+    size: "2Gi"
+    accessMode: "ReadWriteOnce"
+    storageClassName: ""
+    annotations: {}
+    labels: {}
 
 # Storage PVC configuration
 pvc:

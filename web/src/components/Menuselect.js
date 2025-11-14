@@ -1,19 +1,33 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
 import { AccountCircle, Logout, People, Settings, Star, Person, DarkMode, LightMode } from '@mui/icons-material';
 import { ColorModeContext } from '../lib/theme';
 import { getUserRole, getUsername } from '../utils/auth';
+import axiosInstance from "../utils/axiosInstance";
+import config from '../config.json';
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const userRole = getUserRole();
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
-  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
+  const [isPro, setIsPro] = useState(false);
+  const proRedirectUrl = config.proRedirectUrl;
   const username = getUsername();
   const firstLetter = username ? username.charAt(0).toUpperCase() : '';
+
+  useEffect(() => {
+    const fetchAppStats = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/app');
+        setIsPro(Boolean(res.data?.LICENSE_VALID));
+      } catch {
+        setIsPro(false);
+      }
+    };
+    fetchAppStats();
+  }, []);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);

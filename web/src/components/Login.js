@@ -13,9 +13,9 @@ const Login = () => {
   const [authMethod, setAuthMethod] = useState('local');
   const [error, setError] = useState('');
   const [oidcEnabled, setOidcEnabled] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
 
   // Check OIDC configuration on mount
   useEffect(() => {
@@ -28,6 +28,16 @@ const Login = () => {
       }
     };
     checkOIDCConfig();
+
+    const checkLicense = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/app');
+        setIsPro(Boolean(res.data?.LICENSE_VALID));
+      } catch {
+        setIsPro(false);
+      }
+    };
+    checkLicense();
   }, []);
 
   // Handle OIDC callback
@@ -224,7 +234,7 @@ const Login = () => {
             Login
           </Button>
 
-          {oidcEnabled && (
+          {oidcEnabled && isPro && (
             <>
               <Divider sx={{ my: 3 }}>
                 <Typography variant="body2" color="text.secondary">

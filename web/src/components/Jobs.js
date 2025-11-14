@@ -7,6 +7,7 @@ import { getUserRole } from "../utils/auth";
 import Menuselect from "./Menuselect";
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
+import config from '../config.json';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -24,8 +25,20 @@ const Jobs = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc'); // created_desc | created_asc | name_asc | name_desc | status_asc | status_desc
   const userRole = getUserRole();
-  const isPro = process.env.REACT_APP_IS_PRO === 'true';
-  const proRedirectUrl = process.env.REACT_APP_PRO_REDIRECT_URL || 'https://kubeblast.teymur.pro';
+  const [isPro, setIsPro] = useState(false);
+  const proRedirectUrl = config.proRedirectUrl;
+
+  useEffect(() => {
+    const fetchAppStats = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/app');
+        setIsPro(Boolean(res.data?.LICENSE_VALID));
+      } catch {
+        setIsPro(false);
+      }
+    };
+    fetchAppStats();
+  }, []);
 
   const handleProFeature = () => {
     window.location.href = proRedirectUrl;

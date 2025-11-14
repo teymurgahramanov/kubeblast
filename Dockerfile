@@ -1,9 +1,5 @@
 FROM node:20-alpine AS web-build
 
-ARG EDITION_IS_PRO=false
-ENV REACT_APP_IS_PRO="${EDITION_IS_PRO}"
-ENV REACT_APP_PRO_REDIRECT_URL=https://github.com/teymurgahramanov/kubeblast
-
 WORKDIR /app
 COPY web/package*.json ./
 RUN npm install
@@ -13,6 +9,11 @@ RUN npm run build
 
 FROM alpine:3.19 AS base
 
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    PYTHONWARNINGS="ignore::DeprecationWarning"
+    
 RUN apk add --no-cache \
     bash \
     nginx \
@@ -26,10 +27,6 @@ RUN apk add --no-cache \
  && mkdir -p /app/api \
  && mkdir -p /var/log/supervisor
 
-ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_BREAK_SYSTEM_PACKAGES=1 \
-    PYTHONWARNINGS="ignore::DeprecationWarning"
 
 COPY api/requirements.txt /app/api/
 RUN pip install --no-cache-dir -r /app/api/requirements.txt

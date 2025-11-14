@@ -59,7 +59,7 @@ def create_job(current_user, file_content, description, distributed):
             detail=f"The same job already exists: {job_name}"
         )
     
-    if not config.IS_PRO:
+    if not config.LICENSE_VALID:
         job_status = "ready"
     elif current_user.auto_approve:
         job_status = "ready"

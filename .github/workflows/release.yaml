@@ -47,16 +47,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}:latest
 
-      - name: Build and push Pro image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          build-args: |
-            EDITION_IS_PRO=true
-          push: true
-          tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}-pro:latest
-
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:

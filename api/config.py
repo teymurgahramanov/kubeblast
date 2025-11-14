@@ -9,9 +9,10 @@ load_dotenv()
 class Config:
 
     # General
-    IS_PRO = False
-    PRO_LICENSE_KEY: str = os.getenv("PRO_LICENSE_KEY")
-    PRO_LICENSE_ID: str = os.getenv("PRO_LICENSE_ID")
+    APP_VERSION: str = "1.1.0"
+    LICENSE_VALID: bool = False
+    LICENSE_KEY: str = os.getenv("LICENSE_KEY")
+    LICENSE_ID: str = os.getenv("LICENSE_ID")
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
@@ -27,7 +28,8 @@ class Config:
     MONGODB_USER: str = os.getenv("MONGODB_USER", "kubeblast")
     MONGODB_PASS: str = os.getenv("MONGODB_PASS", "kubeblast")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "kubeblast")
-    MONGODB_URI: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASS}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}"
+    MONGODB_PARAMS: str = os.getenv("MONGODB_PARAMS", "")
+    MONGODB_URI: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASS}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}{MONGODB_PARAMS}"
 
     # Storage
     STORAGE_DIR: str = "/data"

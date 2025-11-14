@@ -27,14 +27,14 @@ app.include_router(stats.router,tags=["stats"])
 @app.on_event("startup")
 async def initialize():
 
-  if config.PRO_LICENSE_KEY and config.PRO_LICENSE_ID:
+  if config.LICENSE_KEY and config.LICENSE_ID:
       from license_check import check_license
-      if not check_license(config.PRO_LICENSE_ID, config.PRO_LICENSE_KEY):
+      if not check_license(config.LICENSE_ID, config.LICENSE_KEY):
           logger.error("Invalid license key. Continuing in community mode.")
-          config.IS_PRO = False
+          config.LICENSE_VALID = False
       else:
           logger.info("License key is valid. Pro features enabled.")
-          config.IS_PRO = True
+          config.LICENSE_VALID = True
   else:
       logger.info("License or account id not provided. Continuing in community mode.")
   
@@ -57,7 +57,7 @@ async def initialize():
 
 @app.on_event("startup")
 async def load_pro_routes():
-  if config.IS_PRO:
+  if config.LICENSE_VALID:
     from routes import jobs_extra, users
     app.include_router(jobs_extra.router, tags=["jobs_extra"])
     app.include_router(users.router, tags=["users"])
