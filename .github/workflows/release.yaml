@@ -1,15 +1,20 @@
-name: Create and publish a Docker image
+name: Create release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      release-name:
+        type: string
+        description: Release name
+        required: true
 
 env:
   IMAGE_NAME: ${{ github.repository }}
   HELM_REPO_NAME: charts
-  HELM_REPO_OWNER: ${{ github.actor }}
+  HELM_REPO_OWNER: ${{ secrets.HELM_REPO_OWNER }}
   HELM_REPO_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
-  RELEASE_VERSION: ${{ github.event.release.tag_name }}
+  RELEASE_NAME: ${{ github.event.inputs.release-name }}
+  CHART_FILE: helm/Chart.yaml
 
 jobs:
   release:
@@ -42,16 +47,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}:latest
 
-      - name: Build and push Pro image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          build-args: |
-            EDITION_IS_PRO=true
-          push: true
-          tags: ${{ env.IMAGE_NAME }}-pro:${{ env.RELEASE_VERSION }}, ${{ env.IMAGE_NAME }}-pro:latest
-
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
@@ -59,16 +54,17 @@ jobs:
 
       - name: Update Chart.yaml and package
         run: |
-          CHART_FILE="helm/Chart.yaml"
-          echo "Updating $CHART_FILE with version=$RELEASE_VERSION and appVersion=$RELEASE_VERSION"
-          sed -i "s/^version:.*/version: $RELEASE_VERSION/" $CHART_FILE
-          sed -i "s/^appVersion:.*/appVersion: \"$RELEASE_VERSION\"/" $CHART_FILE
+          APP_VERSION="$RELEASE_NAME"
+          echo "Updating $CHART_FILE with appVersion=$APP_VERSION"
+          sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" $CHART_FILE
+          sed -i "s/^version:.*/version: \"$APP_VERSION\"/" $CHART_FILE
           mkdir -p packaged
           helm dependency update helm/
           helm package helm/ --destination packaged
 
       - name: Push Helm chart
         run: |
+          REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)
           git clone -b gh-pages --depth 1 https://${{ env.HELM_REPO_OWNER }}:${{ env.HELM_REPO_TOKEN }}@github.com/${{ env.HELM_REPO_OWNER }}/${{ env.HELM_REPO_NAME }}.git helm-charts
           mv -f packaged/*.tgz helm-charts/
           cd helm-charts
@@ -76,7 +72,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Publish chart for release ${{ github.event.release.tag_name }}" || echo "No changes to commit"
+          git commit -m "🆕 Publish $REPO_NAME ${{ env.RELEASE_NAME }}"
           git push
 
-
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ inputs.release-name }}
+          tag: ${{ inputs.release-name }}
+          bodyFile: RELEASE.md
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          makeLatest: true

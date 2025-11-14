@@ -1,0 +1,45 @@
+{{- if .Values.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.instanceName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.instanceName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.instanceName }}
+    spec:
+      containers:
+      - name: {{ .Values.instanceName }}
+        image: mongo:8.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.instanceName }}-secret
+              key: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.instanceName }}-secret
+              key: MONGO_INITDB_ROOT_PASSWORD
+        volumeMounts:
+        - name: {{ .Values.instanceName }}-data
+          mountPath: /data/db
+        - name: init
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: {{ .Values.instanceName }}-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.instanceName }}-pvc
+      - name: init
+        configMap:
+          name: mongodb-init
+{{- end }}

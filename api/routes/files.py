@@ -5,10 +5,7 @@ from core import models
 from services import auth
 from config import config
 
-if config.STORAGE_BACKEND == "fs":
-    from services import files_fs as files
-elif config.STORAGE_BACKEND == "s3":
-    from services import files_s3 as files
+from services import files_fs as files
 
 router = APIRouter(prefix="/api")
 
@@ -16,6 +13,7 @@ router = APIRouter(prefix="/api")
 async def get_file(
     current_user: Annotated[models.User, Depends(auth.check_role([]))], 
     job_id: str, 
-    type: Annotated[Literal["plan", "report", "artifacts"], Query(...)]
+    type: Annotated[Literal["plan", "result", "report"], Query()],
+    path: Annotated[str | None, Query()] = None
 ):
-    return files.download_file(current_user, job_id, type)
+    return files.download_file(current_user, job_id, type, path)

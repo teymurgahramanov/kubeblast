@@ -6,6 +6,7 @@ from datetime import datetime
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: Optional[str] = None
 
 class User(BaseModel):
     username: str
@@ -14,7 +15,7 @@ class User(BaseModel):
     email: Optional[str] = None
     enabled: bool = True
     auto_approve: bool = False
-    method: Literal["local", "ldap"] = "local"
+    method: Literal["local", "ldap", "oidc"] = "local"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -88,5 +89,5 @@ class Job(BaseModel):
     owner: str
     distributed: Optional[bool] = False
     description: Optional[Annotated[str, StringConstraints(max_length=20)]] = None
-    status: Literal["pending", "ready", "declined", "approved", "starting", "retrying", "running", "completed", "failed"]
+    status: Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]
     created_at: Optional[datetime] = None

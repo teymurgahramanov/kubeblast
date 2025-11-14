@@ -1,5 +1,5 @@
 from core import k8s
-from kubernetes import client
+from kubernetes import client, stream
 from config import config
 from jinja2 import Template
 from fastapi import HTTPException
@@ -7,10 +7,7 @@ import yaml
 import os
 from core.log import logger
 
-if config.STORAGE_BACKEND == "fs":
-    from services import files_fs as files
-elif config.STORAGE_BACKEND == "s3":
-    from services import files_s3 as files
+from services import files_fs as files
 
 def get_namespace():
     try:
@@ -87,7 +84,7 @@ def schedule_workload(job_id,distributed):
         client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap_manifest)
         logger.info(f"Created ConfigMap for job {job_id}")
         
-        #if config.IS_PRO and distributed:
+        #if config.LICENSE_VALID and distributed:
         #    try:
         #        from services import k8s_extra
         #         slaves = k8s_extra.create_slaves(job_id)
@@ -107,20 +104,13 @@ def schedule_workload(job_id,distributed):
             job_id=job_id,
             priority_class=config.K8S_JOB_PRIORITY_CLASS,
             image_job=config.K8S_JOB_IMAGE,
-            image_helper=config.K8S_JOB_HELPER_IMAGE,
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
             image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
             slaves=slaves,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
             resources=config.K8S_JOB_RESOURCES,
-            storage_backend=config.STORAGE_BACKEND,
-            storage_pvc_name=config.STORAGE_PVC_NAME,
-            s3_url=config.S3_URL,
-            s3_access_key=config.S3_ACCESS_KEY,
-            s3_secret_key=config.S3_SECRET_KEY,
-            s3_bucket=config.S3_BUCKET,
-            s3_region=config.S3_REGION
+            storage_pvc_name=config.STORAGE_PVC_NAME
         )
 
         job_manifest = yaml.safe_load(rendered_job)
@@ -132,6 +122,71 @@ def schedule_workload(job_id,distributed):
         delete_workload(job_id)
         raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
     
+def stop_workload(job_id):
+    """Gracefully stop a running workload by executing shutdown.sh in the pod"""
+    namespace = get_namespace()
+    label_selector = gen_label_selector(job_id, "master")
+    
+    try:
+        logger.info(f"Gracefully stopping workload with label selector: {label_selector}")
+        
+        # Get pod
+        pods = client.CoreV1Api().list_namespaced_pod(
+            namespace=namespace,
+            label_selector=label_selector
+        )
+        
+        if not pods.items:
+            logger.warning(f"No pods found for job {job_id}")
+            raise HTTPException(status_code=404, detail="No running pods found for this job")
+        
+        pod = pods.items[0]
+        pod_name = pod.metadata.name
+        
+        # Execute shutdown.sh in the pod
+        try:
+            logger.info(f"Executing shutdown.sh in pod {pod_name}")
+            exec_command = ['/bin/sh', '-c', 'shutdown.sh']
+            
+            resp = stream.stream(
+                client.CoreV1Api().connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                container='jmeter',
+                command=exec_command,
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False
+            )
+            
+            # Read response
+            output = ""
+            while resp.is_open():
+                resp.update(timeout=1)
+                if resp.peek_stdout():
+                    output += resp.read_stdout()
+                if resp.peek_stderr():
+                    output += resp.read_stderr()
+            
+            resp.close()
+            
+            logger.info(f"Shutdown command executed successfully in pod {pod_name}")
+            logger.info(f"Output: {output}")
+            logger.info(f"JMeter will shutdown gracefully and Kubernetes will clean up the Job automatically")
+            
+        except Exception as e:
+            logger.error(f"Failed to execute shutdown command in pod: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to execute shutdown command: {str(e)}")
+        
+        logger.info(f"Workload {job_id} shutdown initiated")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to stop workload {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error stopping workload")
+
 def delete_workload(job_id):
     namespace = get_namespace()
     label_selector = f"kubeblast/job-id={job_id}"
@@ -183,23 +238,6 @@ def delete_workload(job_id):
                 name=cm_name
             )
             logger.info(f"ConfigMap {cm_name} deleted")
-
-        logger.info(f"Deleting Pods with label selector: {label_selector}")
-        pods = client.CoreV1Api().list_namespaced_pod(
-            namespace=namespace,
-            label_selector=label_selector
-        )
-        
-        logger.info(f"Found {len(pods.items)} Pods to delete")
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-            logger.info(f"Deleting Pod: {pod_name}")
-            client.CoreV1Api().delete_namespaced_pod(
-                name=pod_name,
-                namespace=namespace,
-                body=client.V1DeleteOptions(),
-                grace_period_seconds=0
-            )
     except Exception as e:
         logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")
