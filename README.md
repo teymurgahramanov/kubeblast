@@ -18,7 +18,7 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
 * **Problem** – You need to run load tests but want to avoid extra infrastructure costs or impacting production workloads.  
 * **Solution** – Kubeblast provides fine-grained placement control and resource limits, allowing teams to use idle cluster capacity safely and efficiently—without disrupting core applications.
 
-### 4. **Load Test Scenario Moderation**
+### 3. **Load Test Scenario Moderation**
 * **Problem** – An unreviewed load test can overwhelm production, exceed quotas, or unintentionally (or intentionally) disrupt other workloads.  
 * **Solution** – Kubeblast introduces moderator roles through RBAC. Every new test plan can be reviewed and approved before execution, ensuring safe, compliant, and controlled load testing.
 
