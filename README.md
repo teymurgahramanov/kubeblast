@@ -29,7 +29,7 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
 - __Resource Control__ – Size it to fit your resource pool.
 
 ## ⭐ Advanced Features
-__Kubeblast Advanced__ unlocks more features:
+Get more with __Kubeblast Advanced__:
 - __Built-in RBAC__ – Role-based access control with support for Users, Admins, and Moderators.
 - __Moderation Workflow__ – Assign moderators to review and approve Load Test scenarios before execution.
 - __LDAP Support__ – Seamlessly integrate with your LDAP directory for centralized authentication and controlled access management.
