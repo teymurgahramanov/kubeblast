@@ -838,7 +838,7 @@ const Jobs = () => {
           {resources && (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2 }}>
               {typeof resources.jobsTotal === 'number' && (
-                <Tooltip title="Jobs count running overall on the platform" arrow>
+                <Tooltip title="Jobs running across the platform" arrow>
                   <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                     <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Overall jobs running</Typography>
                     <Typography variant="h6" sx={{ m: 0 }}>
