@@ -6,24 +6,36 @@
 </p>
 
 # Kubeblast
-Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platform, where running JMeter load tests is simple and efficient.
+Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platform, where running JMeter load tests is simple and efficient. It offers a simple *click-and-run* workflow, built-in RBAC with moderator approval, full flexibility, and an lightweight open-source footprint.
 
-No scripting, no setup — just run your tests and get results!
+## 💡 Example Use-Cases
+
+### 1. **Self-Service Load Testing**
+* **Problem** – Developers and QA teams often depend on Ops engineers to prepare JMeter environments or end up running tests locally. This causes delays, inconsistent setups, and slows the delivery pipeline.  
+* **Solution** – Kubeblast lets users run Load Test scenarios with a few clicks, monitor execution, and instantly access results, enabling a true self-service experience.
+
+### 2. **Leveraging Spare Cluster Capacity**
+* **Problem** – You need to run load tests but want to avoid extra infrastructure costs or impacting production workloads.  
+* **Solution** – Kubeblast provides fine-grained placement control and resource limits, allowing teams to use idle cluster capacity safely and efficiently—without disrupting core applications.
+
+### 4. **Load Test Scenario Moderation**
+* **Problem** – An unreviewed load test can overwhelm production, exceed quotas, or unintentionally (or intentionally) disrupt other workloads.  
+* **Solution** – Kubeblast introduces moderator roles through RBAC. Every new test plan can be reviewed and approved before execution, ensuring safe, compliant, and controlled load testing.
 
 ## ✨ Features
-- __Simplicity First__ – Just upload your JMX file and click *Start*. That's it.
+- __Simplicity First__ – Just upload your existing Load Test scenario and click *Start*. That's it.
 - __Intuitive UI__ – Manage jobs, view logs, and monitor execution in real-time.
 - __Placement Control__ – Define which Kubernetes nodes to run workloads.
-- __Resource Control__ – Set up requests and limits to fit your resource pool.
+- __Resource Control__ – Size it to fit your resource pool.
 
-## ⭐ Pro Features
-__Kubeblast Pro__ unlocks advanced features:
+## ⭐ Advanced Features
+__Kubeblast Advanced__ unlocks more features:
 - __Built-in RBAC__ – Role-based access control with support for Users, Admins, and Moderators.
-- __Moderation Workflow__ – Assign moderators to review and approve JMX test plans before execution.
-- __LDAP Support__ – Integrate with LDAP for centralized authentication and access management.
-- __OIDC Support__ – Integrate with OIDC provider for centralized authentication and access management.
+- __Moderation Workflow__ – Assign moderators to review and approve Load Test scenarios before execution.
+- __LDAP Support__ – Seamlessly integrate with your LDAP directory for centralized authentication and controlled access management.
+- __OIDC Support__ –  Connect to any OIDC provider to enable secure, centralized authentication and streamlined access control.
 
-To request access to the Pro edition, contact me at teymur_gahramanov@outlook.com or via [Telegram](https://t.me/teymurgahramanov).
+To request access to the **Advanced** edition, contact me at teymur_gahramanov@outlook.com.
 
 ## ▶️ Quick start
 1. Add Helm repository
@@ -41,28 +53,6 @@ To request access to the Pro edition, contact me at teymur_gahramanov@outlook.co
    ```
    kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```
-
-## ❓ **Why Kubeblast?**  
-Unlike YAML-heavy or SaaS-oriented alternatives, Kubeblast delivers a click-and-run experience for existing **JMeter (.jmx)** scripts, adds RBAC with optional moderator review, is flexible, open-source, and has the lightest footprint.
-
-
-## 💡 Example Use-Cases
-
-### 1. **Self-Service Load Testing for QA & Developers**
-* **Problem** – Engineers keep pinging DevOps to spin up JMeter or, worse, run tests manually on their laptops.  
-* **Solution** – Kubeblast’s Web UI lets users upload a JMX file, launch a test with a few clicks, watch execution logs, and get the report.
-
-### 2. **Team-Wide Resource Sharing**
-* **Problem** – Classic load-testing setups spin up extra VM fleets—or overwork developers’ laptops. 
-* **Solution** – Kubeblast enables you to share your existing cluster resources with your team.
-
-### 3. **Using Spare Cluster Capacity**
-* **Problem** – You need to stress-test at scale but want to use existing resources and not to pay for extra.  
-* **Solution** – Beside placement and resource control Kubeblast supports priority class configuration, allowing load tests to use idle cluster capacity — without impacting primary workloads.
-
-### 4. **Load Test Scenario Moderation**
-* **Problem** – An unchecked Load Test scenario can flood production, exhausts quotas or accidently (or intentionally) disrupt other workloads.
-* **Solution** – With Kubeblast you can assign “moderator” roles and every new test plan will be reviewed before approving the run.
 
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
