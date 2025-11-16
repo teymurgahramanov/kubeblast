@@ -18,9 +18,13 @@ class Config:
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
     WORKER_WATCH_INTERVAL: int = 3
+
+    # Capacity updater interval (seconds)
+    CAPACITY_WARM_INTERVAL: int = 10
 
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
@@ -99,14 +103,6 @@ class Config:
     OIDC_USERINFO_URL: str = os.getenv("OIDC_USERINFO_URL")
     OIDC_SCOPES: list = os.getenv("OIDC_SCOPES", "openid profile email").split()
     
-    # OIDC Role Mapping (JSON format)
-    # Example (set as a JSON string in env):
-    #   OIDC_ROLE_MAPPING='{"realm_admin":"admin","myclient:editor":"moderator","/groups/devops":"moderator","@corp.com":"user"}'
-    # Mapping keys can match:
-    # - Realm roles (e.g., "realm_admin")
-    # - Client roles as "clientId:role" (e.g., "myclient:editor")
-    # - Group names/paths from "groups" claim (e.g., "/groups/devops")
-    # - Email domain substrings (e.g., "@corp.com")
     OIDC_ROLE_MAPPING: dict = {}
     oidc_role_mapping_env = os.getenv("OIDC_ROLE_MAPPING")
     if oidc_role_mapping_env:
@@ -119,3 +115,17 @@ class Config:
     OIDC_AUTO_CREATE_USERS: bool = os.getenv("OIDC_AUTO_CREATE_USERS", "true").lower() == "true"
 
 config = Config()
+
+def now():
+    """Get timezone-aware datetime for the configured timezone."""
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(config.TIMEZONE))
+    except ImportError:
+        try:
+            import pytz
+            return datetime.now(pytz.timezone(config.TIMEZONE))
+        except:
+            from datetime import timezone
+            return datetime.now(timezone.utc)

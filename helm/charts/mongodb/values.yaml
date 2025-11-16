@@ -3,6 +3,15 @@ instanceName: "kubeblast-mongodb"
 username: "kubeblast"
 password: "kubeblast"
 database: "kubeblast"
+imagePullPolicy: "IfNotPresent"
+imagePullSecrets: []
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
 persistence:
   enabled: true
   size: "2Gi"
@@ -10,3 +19,5 @@ persistence:
   storageClassName: ""
   annotations: {}
   labels: {}
+extraVolumes: []
+extraVolumeMounts: []

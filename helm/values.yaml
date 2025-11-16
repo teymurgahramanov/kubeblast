@@ -42,6 +42,15 @@ mongodb:
   username: "kubeblast"
   password: "kubeblast"
   database: "kubeblast"
+  imagePullPolicy: "IfNotPresent"
+  imagePullSecrets: []
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
   persistence:
     enabled: true
     size: "2Gi"
@@ -49,6 +58,8 @@ mongodb:
     storageClassName: ""
     annotations: {}
     labels: {}
+  extraVolumes: []
+  extraVolumeMounts: []
 
 # Storage PVC configuration
 pvc:
@@ -67,6 +78,12 @@ podAnnotations: {}
 
 # Additional labels for Kubeblast pod
 podLabels: {}
+
+# Extra volumes to add to the Kubeblast pod
+extraVolumes: []
+
+# Extra volume mounts to add to the Kubeblast container
+extraVolumeMounts: []
 
 # Kubeblast container image configuration
 image:
