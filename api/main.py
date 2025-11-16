@@ -6,6 +6,7 @@ from core.log import logger
 from config import config
 import uvicorn
 import os
+import threading
 
 app = FastAPI()
 
@@ -61,6 +62,43 @@ async def load_pro_routes():
     from routes import jobs_extra, users
     app.include_router(jobs_extra.router, tags=["jobs_extra"])
     app.include_router(users.router, tags=["users"])
+
+@app.on_event("startup")
+async def start_capacity_warmer():
+  stop_event = threading.Event()
+  app.state.capacity_warm_stop_event = stop_event
+
+  def _warm_loop():
+    try:
+      from services import capacity
+      try:
+        capacity.compute_and_store_capacity()
+      except Exception as e:
+        logger.warning(f"Initial capacity warm failed: {e}")
+      interval = int(config.CAPACITY_WARM_INTERVAL)
+      while not stop_event.wait(interval):
+        try:
+          capacity.compute_and_store_capacity()
+        except Exception as e:
+          logger.warning(f"Capacity warm failed: {e}")
+    finally:
+      pass
+
+  t = threading.Thread(target=_warm_loop, name="capacity-warm", daemon=True)
+  t.start()
+  app.state.capacity_warm_thread = t
+
+@app.on_event("shutdown")
+async def stop_capacity_warmer():
+  stop_event = getattr(app.state, "capacity_warm_stop_event", None)
+  t = getattr(app.state, "capacity_warm_thread", None)
+  if stop_event:
+    stop_event.set()
+  if t and t.is_alive():
+    try:
+      t.join(timeout=5)
+    except Exception:
+      pass
 
 uvicorn.run(
   app,

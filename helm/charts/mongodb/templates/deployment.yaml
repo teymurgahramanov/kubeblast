@@ -14,9 +14,14 @@ spec:
       labels:
         app: {{ .Values.instanceName }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ .Values.instanceName }}
         image: mongo:8.0
+        imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" }}
         ports:
         - containerPort: 27017
         env:
@@ -35,6 +40,11 @@ spec:
           mountPath: /data/db
         - name: init
           mountPath: /docker-entrypoint-initdb.d
+        {{- with .Values.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
       volumes:
       - name: {{ .Values.instanceName }}-data
         persistentVolumeClaim:
@@ -42,4 +52,7 @@ spec:
       - name: init
         configMap:
           name: mongodb-init
+      {{- with .Values.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
 {{- end }}

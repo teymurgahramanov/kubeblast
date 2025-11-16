@@ -36,6 +36,15 @@ spec:
             - name: api
               containerPort: {{ .Values.service.port.api }}
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/stats/app
+              port: api
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 12
           env:
             - name: STORAGE_PVC_NAME
               value: {{ include "kubeblast.pvcName" . }}
@@ -65,10 +74,16 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "kubeblast.pvcName" . }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

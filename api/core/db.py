@@ -1,5 +1,6 @@
 from config import config
 from pymongo import MongoClient
+from pymongo import ASCENDING
 
 MONGODB_URI = config.MONGODB_URI
 MONGODB_NAME = config.MONGODB_NAME

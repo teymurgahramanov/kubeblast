@@ -1,6 +1,6 @@
 from fastapi import Form
 from typing import Literal, Optional, Annotated
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, Field
 from datetime import datetime
 
 class Token(BaseModel):
@@ -91,3 +91,14 @@ class Job(BaseModel):
     description: Optional[Annotated[str, StringConstraints(max_length=20)]] = None
     status: Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]
     created_at: Optional[datetime] = None
+
+class CapacityResources(BaseModel):
+    cpu_m: int = 0
+    memory_bytes: int = 0
+
+class Capacity(BaseModel):
+    nodesTotal: int = 0
+    nodesMatching: int = 0
+    capacity: CapacityResources = Field(default_factory=CapacityResources)
+    remaining: CapacityResources = Field(default_factory=CapacityResources)
+    updatedAt: Optional[datetime] = None

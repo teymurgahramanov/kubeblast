@@ -296,20 +296,50 @@ const Jobs = () => {
 
   // Fetch cluster resources (capacity dashboard)
   useEffect(() => {
+    let intervalId = null;
+
     const fetchResources = async () => {
       try {
         const response = await axiosInstance.get('/stats/capacity');
         setResources(response.data);
         setResourcesError('');
       } catch (err) {
-        setResources(null);
-        setResourcesError(err.response?.data?.detail || err.message || 'Failed to load cluster resources');
+        // Keep showing last known resources; only surface the error
+        setResourcesError(err?.response?.data?.detail || err?.message || 'Failed to load cluster resources');
       }
     };
 
+    const startInterval = () => {
+      if (intervalId) return;
+      intervalId = setInterval(fetchResources, 30000); // refresh every 30s
+    };
+
+    const stopInterval = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        stopInterval();
+      } else {
+        // Refresh immediately when tab becomes visible
+        fetchResources();
+        startInterval();
+      }
+    };
+
+    // Initial fetch and start background refresh
     fetchResources();
-    const interval = setInterval(fetchResources, 30000); // refresh every 30s
-    return () => clearInterval(interval);
+    startInterval();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stopInterval();
+    };
   }, []);
 
   const handleMenuOpen = (event, job_id) => {
@@ -807,6 +837,17 @@ const Jobs = () => {
 
           {resources && (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2 }}>
+              {typeof resources.jobsTotal === 'number' && (
+                <Tooltip title="Jobs count running overall on the platform" arrow>
+                  <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Overall jobs running</Typography>
+                    <Typography variant="h6" sx={{ m: 0 }}>
+                      {resources.jobsTotal}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              )}
+
               {(typeof resources.userJobsTotal === 'number' && typeof resources.perUserCurrentJobsLimit === 'number') && (
                 <Tooltip title="Your jobs vs allowed concurrent limit" arrow>
                   <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
@@ -830,6 +871,7 @@ const Jobs = () => {
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Selected / Total</Typography>
                 </Box>
               </Tooltip>
+
 
               {resources.jobResources && (
                 <Tooltip title="Default resource requests/limits applied to each job" arrow>
@@ -877,7 +919,7 @@ const Jobs = () => {
                 <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>CPU</Typography>
                   <Typography variant="h6" sx={{ m: 0 }}>
-                    {`${formatCores(resources.allocatable?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
+                    {`${formatCores(resources.remaining?.cpu_m || 0)}/${formatCores(resources.capacity?.cpu_m || 0)} cores`}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
                 </Box>
@@ -887,7 +929,7 @@ const Jobs = () => {
                 <Box sx={{ p: 1.5, border: '1px solid var(--border-color)', borderRadius: '10px' }}>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Memory</Typography>
                   <Typography variant="h6" sx={{ m: 0 }}>
-                    {`${formatGiB(resources.allocatable?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
+                    {`${formatGiB(resources.remaining?.memory_bytes || 0)}/${formatGiB(resources.capacity?.memory_bytes || 0)} GiB`}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Available / Total</Typography>
                 </Box>

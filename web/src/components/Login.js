@@ -91,14 +91,17 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.post(`/token?method=${authMethod.toLowerCase()}`, {
-        username: credentials.username,
-        password: credentials.password
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
+      const form = new URLSearchParams();
+      form.append('username', credentials.username);
+      form.append('password', credentials.password);
+      // Optional but harmless; OAuth2PasswordRequestForm recognizes these
+      form.append('grant_type', 'password');
+      form.append('scope', '');
+
+      const response = await axiosInstance.post(
+        `/token?method=${authMethod.toLowerCase()}`,
+        form
+      );
       
       // Store the tokens
       const token = response.data.access_token;
