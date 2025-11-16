@@ -34,7 +34,7 @@ async def initialize():
           logger.error("Invalid license key. Continuing in community mode.")
           config.LICENSE_VALID = False
       else:
-          logger.info("License key is valid. Pro features enabled.")
+          logger.info("License key is valid. Advanced features enabled.")
           config.LICENSE_VALID = True
   else:
       logger.info("License or account id not provided. Continuing in community mode.")
