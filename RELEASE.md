@@ -1,11 +1,8 @@
-# Kubeblast 1.1.0 🚀
+# Kubeblast 1.2.0 🚀
 
 ## What's new?
 
-🌙 Dark theme — easier on the eyes, perfect for long sessions.
-📊 Capacity dashboard — instantly see how much capacity you have left.
-🔐 OIDC support — smoother, secure, enterprise-grade logins.
-⛔ Job stop button — stop load test exactly when you need to.
-🌐 In-browser report view — view JMeter reports instantly.
-🎨 UX/UI improvements — cleaner layout and easier navigation.
-👍 Overall tweaks — lighter, fewer moving parts, and more stable.
+📊 Capacity dashboard fixed and upgraded — no more hangs. It now pre-warms on startup, shows real remaining resources, auto-refreshes while open, and stays responsive even if updates fail.
+📈 New capacity metric — instantly see the total number of running jobs across the entire platform.
+🔧 Smarter capacity calculation — improved accuracy with lightweight caching for instant responses.
+👍 Other fixes & improvements — various small optimizations that make the whole experience smoother.
