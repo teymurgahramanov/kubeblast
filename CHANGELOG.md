@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.0] - 2025-11-16
+## [1.1.1] - 2025-11-17
 
 ### Changed
 - Improved cluster capacity calculation: refactored with regex-based parsing, shows remaining resources instead of allocatable, added background warming/caching for faster responses.
