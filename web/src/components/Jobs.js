@@ -738,22 +738,20 @@ const Jobs = () => {
 
       <Box className="page-container fade-in">
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
-          {(userRole === 'admin' || userRole === 'user') && (
-            <Button
-              variant="contained"
-              onClick={handleAddJob}
-              startIcon={<Add />}
-              sx={{
-                backgroundColor: 'var(--primary-color)',
-                '&:hover': { backgroundColor: 'var(--primary-dark)' },
-                borderRadius: '8px',
-                textTransform: 'none',
-                px: 3
-              }}
-            >
-              Add
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            onClick={handleAddJob}
+            startIcon={<Add />}
+            sx={{
+              backgroundColor: 'var(--primary-color)',
+              '&:hover': { backgroundColor: 'var(--primary-dark)' },
+              borderRadius: '8px',
+              textTransform: 'none',
+              px: 3
+            }}
+          >
+            Add
+          </Button>
         </Box>
 
         {/* Filters & sorting */}
@@ -993,7 +991,7 @@ const Jobs = () => {
                           <PlayArrow sx={{ mr: 1 }} /> Start
                         </MenuItem>
                       )}
-                      {job.status === 'running' && (userRole === 'admin' || userRole === 'user') && (
+                      {job.status === 'running' && (
                         <MenuItem onClick={() => stopJob(job.id)}>
                           <Stop sx={{ mr: 1 }} /> Stop
                         </MenuItem>
@@ -1009,7 +1007,7 @@ const Jobs = () => {
                       <MenuItem onClick={() => openPlanFile(job.id)}>
                         <Description sx={{ mr: 1 }} /> Plan
                       </MenuItem>
-                      {(job.status === 'failed' || job.status === 'completed') && (userRole === 'admin' || userRole === 'user') && (
+                      {(job.status === 'failed' || job.status === 'completed') && (
                         <MenuItem onClick={() => rescheduleJob(job.id)}>
                           <Autorenew sx={{ mr: 1 }} /> Retry
                         </MenuItem>

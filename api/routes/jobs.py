@@ -22,7 +22,7 @@ async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth
 
 @router.post("/jobs", response_model=models.Job)
 async def create_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
+    current_user: Annotated[models.User, Depends(auth.check_role([]))],
     description: Annotated[Optional[str], Form(max_length=20)] = None,
     file: UploadFile = File(...),
     distributed: Annotated[Optional[bool], Form()] = False,
@@ -35,13 +35,13 @@ async def create_job(
         return jobs.create_job(current_user, file_content, description, distributed)
 
 @router.put("/jobs/start/{job_id}")
-async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
+async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
     background_tasks.add_task(jobs.start_job, current_user, job_id)
     return {"message": "Starting job"}
 
 @router.put("/jobs/retry/{job_id}")
 async def retry_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
+    current_user: Annotated[models.User, Depends(auth.check_role([]))],
     job_id: str,
     background_tasks: BackgroundTasks
     ):
@@ -50,7 +50,7 @@ async def retry_job(
 
 @router.put("/jobs/stop/{job_id}")
 async def stop_job(
-    current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))],
+    current_user: Annotated[models.User, Depends(auth.check_role([]))],
     job_id: str,
     background_tasks: BackgroundTasks
     ):
@@ -58,5 +58,5 @@ async def stop_job(
     return {"message": "Stopping job"}
 
 @router.delete("/jobs/{job_id}")
-async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role(["user", "admin"]))]):
+async def delete_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
     return jobs.delete_job(current_user, job_id)
