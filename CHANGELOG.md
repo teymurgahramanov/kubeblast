@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.2] - 
+
+### Changed
+
+- Moderators can create jobs now
+
 ## [1.1.1] - 2025-11-17
 
 ### Changed
