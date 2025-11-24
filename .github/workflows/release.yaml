@@ -57,7 +57,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -70,14 +70,11 @@ jobs:
         with:
           version: v3.13.0
 
-      - name: Update Chart.yaml and package
+      - name: Package and push Helm chart
         run: |
           mkdir -p packaged
           helm dependency update helm/
           helm package helm/ --destination packaged
-
-      - name: Push Helm chart
-        run: |
           REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)
           git clone -b gh-pages --depth 1 https://${{ env.HELM_REPO_OWNER }}:${{ env.HELM_REPO_TOKEN }}@github.com/${{ env.HELM_REPO_OWNER }}/${{ env.HELM_REPO_NAME }}.git helm-charts
           mv -f packaged/*.tgz helm-charts/
