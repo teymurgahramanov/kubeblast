@@ -10,6 +10,7 @@ import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
+import Footer from './components/Footer';
 import './App.css';
 
 const AdminRoute = ({ children }) => {
@@ -86,6 +87,9 @@ const App = () => {
           }
         />
       </Routes>
+
+      {/* Footer - appears on all pages */}
+      <Footer />
 
       {/* Add User Modal */}
       {addUser && (
