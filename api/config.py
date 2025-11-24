@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
 
     # General
-    APP_VERSION: str = "1.1.0"
+    APP_VERSION: str = "1.1.3"
     LICENSE_VALID: bool = False
     LICENSE_KEY: str = os.getenv("LICENSE_KEY")
     LICENSE_ID: str = os.getenv("LICENSE_ID")
