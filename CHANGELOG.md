@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3] - 2025-11-24
+
+### Added
+- Footer displaying app version and edition on all pages
+
+### Changed
+- Release workflow now automatically updates APP_VERSION in config.py
+
 ## [1.1.2] - 2025-11-23
 
 ### Changed

@@ -33,6 +33,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Update APP_VERSION in config.py
+        run: |
+          APP_VERSION="${{ env.RELEASE_NAME }}"
+          CONFIG_FILE="api/config.py"
+          echo "Updating $CONFIG_FILE with APP_VERSION=$APP_VERSION"
+          sed -i "s/^    APP_VERSION: str = \".*\"/    APP_VERSION: str = \"$APP_VERSION\"/" $CONFIG_FILE
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:

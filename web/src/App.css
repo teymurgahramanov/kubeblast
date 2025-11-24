@@ -76,6 +76,7 @@ html[data-theme="dark"] #root {
 /* Common components styling */
 .page-container {
   padding: 1.5rem 2rem;
+  padding-bottom: calc(1.5rem + 60px); /* Add extra bottom padding for fixed footer */
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
