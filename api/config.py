@@ -114,18 +114,5 @@ class Config:
     OIDC_DEFAULT_ROLE: str = os.getenv("OIDC_DEFAULT_ROLE", "user")
     OIDC_AUTO_CREATE_USERS: bool = os.getenv("OIDC_AUTO_CREATE_USERS", "true").lower() == "true"
 
-config = Config()
 
-def now():
-    """Get timezone-aware datetime for the configured timezone."""
-    from datetime import datetime
-    try:
-        from zoneinfo import ZoneInfo
-        return datetime.now(ZoneInfo(config.TIMEZONE))
-    except ImportError:
-        try:
-            import pytz
-            return datetime.now(pytz.timezone(config.TIMEZONE))
-        except:
-            from datetime import timezone
-            return datetime.now(timezone.utc)
+config = Config()

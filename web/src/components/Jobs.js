@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel } from '@mui/material';
+import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel, Pagination } from '@mui/material';
 import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { getUserRole } from "../utils/auth";
@@ -13,6 +13,8 @@ const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(5);
+  const [page, setPage] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [logs, setLogs] = useState(null);
@@ -26,6 +28,7 @@ const Jobs = () => {
   const [sortBy, setSortBy] = useState('created_desc'); // created_desc | created_asc | name_asc | name_desc | status_asc | status_desc
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(false);
+  const [timezone, setTimezone] = useState('UTC');
   const proRedirectUrl = config.proRedirectUrl;
 
   useEffect(() => {
@@ -33,7 +36,11 @@ const Jobs = () => {
       try {
         const res = await axiosInstance.get('/stats/app');
         setIsPro(Boolean(res.data?.LICENSE_VALID));
-      } catch {
+        if (res.data?.TIMEZONE) {
+          setTimezone(res.data.TIMEZONE);
+        }
+      } catch (error) {
+        console.error('Error fetching app stats:', error);
         setIsPro(false);
       }
     };
@@ -262,27 +269,44 @@ const Jobs = () => {
     </Box>
   );
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     const token = sessionStorage.getItem('access_token');
     if (!token) {
       setError('Unauthorized: Please log in');
       return;
     }
     try {
+      const params = {
+        page,
+        page_size: pageSize,
+        sort_by: sortBy === 'created_asc' ? 'created_asc' : 'created_desc',
+      };
+
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+
       const response = await axiosInstance.get("/jobs", {
         headers: { Authorization: `Bearer ${token}` },
+        params,
       });
-      setJobs(response.data);
+
+      setJobs(Array.isArray(response.data) ? response.data : []);
+      const totalHeader =
+        response.headers['x-total-count'] ??
+        response.headers['X-Total-Count'];
+      const total = Number(totalHeader ?? 0);
+      setTotalJobs(Number.isNaN(total) ? 0 : total);
       setError(''); // Clear any existing errors on successful fetch
     } catch (error) {
       setError(error.response?.data?.detail || error.message);
     }
-  };
+  }, [page, pageSize, sortBy, statusFilter]);
 
-  // Initial fetch
+  // Initial fetch and refetch when pagination or filters change
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [fetchJobs]);
 
   // Set up polling for auto-updates
   useEffect(() => {
@@ -292,7 +316,7 @@ const Jobs = () => {
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchJobs]);
 
   // Fetch cluster resources (capacity dashboard)
   useEffect(() => {
@@ -606,60 +630,52 @@ const Jobs = () => {
     };
   }), [jobs]);
 
-  // Ensure unsupported sort values fall back to newest
-  useEffect(() => {
-    if (sortBy !== 'created_desc' && sortBy !== 'created_asc') {
-      setSortBy('created_desc');
-    }
-  }, [sortBy]);
-
   const visibleRows = useMemo(() => {
     const text = (searchText || '').toLowerCase().trim();
-    let result = rows.filter((row) => {
-      const matchesText = !text || [
-        row.job_name || '',
-        row.description || '',
-        row.owner || '',
-        String(row.id || '')
-      ].some((v) => String(v).toLowerCase().includes(text));
-      const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter;
-      return matchesText && matchesStatus;
-    });
-    const by = sortBy;
-    result.sort((a, b) => {
-      switch (by) {
-        case 'created_asc':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'created_desc':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'name_asc':
-          return String(a.job_name || '').localeCompare(String(b.job_name || ''));
-        case 'name_desc':
-          return String(b.job_name || '').localeCompare(String(a.job_name || ''));
-        case 'status_asc':
-          return String(a.status || '').localeCompare(String(b.status || ''));
-        case 'status_desc':
-          return String(b.status || '').localeCompare(String(a.status || ''));
-        default:
-          return 0;
-      }
-    });
-    return result;
-  }, [rows, searchText, statusFilter, sortBy]);
+    if (!text) return rows;
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
+    return rows.filter((row) => {
+      return [
+        row.job_name || '',
+        row.owner || '',
+        String(row.id || ''),
+      ].some((v) => String(v).toLowerCase().includes(text));
     });
-  };
+  }, [rows, searchText]);
+
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return '';
+
+    // Normalize backend datetime string:
+    // - If it already has a timezone (Z or ±HH:MM), use as-is
+    // - If it is naive (no timezone info), treat it as UTC by appending "Z"
+    const hasTimezone =
+      /Z$/i.test(dateString) || /[+-]\d\d:?\d\d$/.test(dateString);
+
+    const normalized = hasTimezone ? dateString : `${dateString}Z`;
+
+    try {
+      const date = new Date(normalized);
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+
+      const tz = timezone || 'UTC';
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: tz,
+      });
+    } catch {
+      // As a very last resort, just show the raw string
+      return dateString;
+    }
+  }, [timezone]);
 
   const formatCores = (millicores) => {
     if (!millicores && millicores !== 0) return '';
@@ -772,9 +788,11 @@ const Jobs = () => {
           <TextField
             size="small"
             label="Search"
-            placeholder="Name, description, owner"
+            placeholder="Name, owner"
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+            }}
             variant="outlined"
           />
           <FormControl size="small">
@@ -783,7 +801,10 @@ const Jobs = () => {
               labelId="jobs-status-label"
               label="Status"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
             >
               <MenuItem value="all">All</MenuItem>
               <MenuItem value="pending">Pending</MenuItem>
@@ -798,10 +819,31 @@ const Jobs = () => {
               labelId="jobs-sort-label"
               label="Sort by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(1);
+              }}
             >
               <MenuItem value="created_desc">Newest</MenuItem>
               <MenuItem value="created_asc">Oldest</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small">
+            <InputLabel id="jobs-page-size-label">Page size</InputLabel>
+            <Select
+              labelId="jobs-page-size-label"
+              label="Page size"
+              value={pageSize}
+              onChange={(e) => {
+                const newSize = Number(e.target.value) || 1;
+                setPageSize(newSize);
+                setPage(1);
+              }}
+            >
+              <MenuItem value={5}>5</MenuItem>
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={20}>20</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -1060,6 +1102,24 @@ const Jobs = () => {
                 </Box>
               );
             })}
+          </Box>
+        )}
+
+        {totalJobs > pageSize && (
+          <Box
+            sx={{
+              mt: 3,
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <Pagination
+              count={Math.max(1, Math.ceil(totalJobs / pageSize))}
+              page={page}
+              onChange={(_event, value) => setPage(value)}
+              color="primary"
+              shape="rounded"
+            />
           </Box>
         )}
 

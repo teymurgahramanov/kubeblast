@@ -10,11 +10,27 @@ router = APIRouter(prefix="/api")
 @router.get("/jobs", response_model=List[models.Job])
 async def get_job(
     current_user: Annotated[models.User, Depends(auth.check_role([]))],
+    response: Response,
     status: Optional[str] = Query(None),
     owner: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    sort_by: Literal["created_desc", "created_asc"] = Query("created_desc"),
     ):
-    return jobs.get_jobs(current_user, status=status, owner=owner, name=name)
+    jobs_list, total = jobs.get_jobs(
+        current_user,
+        status=status,
+        owner=owner,
+        name=name,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+    )
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Page"] = str(page)
+    response.headers["X-Page-Size"] = str(page_size)
+    return jobs_list
 
 @router.get("/jobs/{job_id}", response_model=models.Job)
 async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth.check_role([]))]):
@@ -23,16 +39,9 @@ async def get_job(job_id: str, current_user: Annotated[models.User, Depends(auth
 @router.post("/jobs", response_model=models.Job)
 async def create_job(
     current_user: Annotated[models.User, Depends(auth.check_role([]))],
-    description: Annotated[Optional[str], Form(max_length=20)] = None,
-    file: UploadFile = File(...),
-    distributed: Annotated[Optional[bool], Form()] = False,
+    job_data: Annotated[models.JobCreate, Depends(models.JobCreate.create_form)],
     ):
-
-    if file.content_type not in ["text/xml", "application/xml", "application/octet-stream"]:
-        raise HTTPException(status_code=400, detail=f"Invalid file type. Received: {file.content_type}")
-    else:
-        file_content = await file.read()
-        return jobs.create_job(current_user, file_content, description, distributed)
+    return jobs.create_job(current_user, job_data)
 
 @router.put("/jobs/start/{job_id}")
 async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role([]))]):

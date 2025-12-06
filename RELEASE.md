@@ -1,6 +1,6 @@
-# Kubeblast 1.1.3 🚀
+# Kubeblast 1.1.4 🚀
 
 ## What's new?
 
-📱 **App version footer** — version and edition information now displayed in the footer on all pages for better transparency.
-🔧 **Improved release process** — automated version updates in configuration files during releases.
+✅ **Flexible time display in UI** — job timestamps in the Jobs page now correctly respect the configured application timezone.  
+✅ **Paginated Jobs** — The Jobs page shows results page-by-page with configurable page size and in-page search.
