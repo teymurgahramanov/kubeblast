@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.4] - 2025-12-02
+
+### Added
+- Configurable application timezone via the `TIMEZONE` environment variable, exposed through the `/stats/app` API endpoint.
+- Jobs page now uses the server-configured timezone to render job creation timestamps instead of the browser local time.
+- Server-side pagination for `/api/jobs` and paginated Jobs UI with configurable page size and client-side search over the current page.
+
+### Fixed
+- Inconsistent datetime handling between backend storage and UI display; timestamps are now treated as UTC and converted to the configured timezone on the frontend.
+
 ## [1.1.3] - 2025-11-24
 
 ### Added

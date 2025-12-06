@@ -1,4 +1,4 @@
-from fastapi import Form
+from fastapi import Form, UploadFile, File, HTTPException, HTTPException
 from typing import Literal, Optional, Annotated
 from pydantic import BaseModel, StringConstraints, Field
 from datetime import datetime
@@ -90,7 +90,25 @@ class Job(BaseModel):
     distributed: Optional[bool] = False
     description: Optional[Annotated[str, StringConstraints(max_length=20)]] = None
     status: Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]
-    created_at: Optional[datetime] = None
+    created_at: datetime
+
+class JobCreate(Job):
+    name: Optional[str] = None  # Set by service layer
+    owner: Optional[str] = None  # Set by service layer
+    status: Optional[Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]] = None  # Set by service layer
+    file_content: bytes  # File content from upload
+    
+    @classmethod
+    async def create_form(
+        cls,
+        description: Annotated[Optional[str], Form(max_length=20)] = None,
+        file: UploadFile = File(...),
+    ) -> "JobCreate":   
+        if file.content_type not in ["text/xml", "application/xml", "application/octet-stream"]:
+            raise HTTPException(status_code=400, detail=f"Invalid file type. Received: {file.content_type}")
+        else:
+            file_content = await file.read()
+            return cls(description=description, file_content=file_content, created_at=datetime.now())
 
 class CapacityResources(BaseModel):
     cpu_m: int = 0
