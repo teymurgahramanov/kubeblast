@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.4] - 2025-12-02
+## [1.1.4]
 
 ### Added
 - Configurable application timezone via the `TIMEZONE` environment variable, exposed through the `/stats/app` API endpoint.
@@ -10,7 +10,7 @@
 ### Fixed
 - Inconsistent datetime handling between backend storage and UI display; timestamps are now treated as UTC and converted to the configured timezone on the frontend.
 
-## [1.1.3] - 2025-11-24
+## [1.1.3]
 
 ### Added
 - Footer displaying app version and edition on all pages
@@ -18,13 +18,13 @@
 ### Changed
 - Release workflow now automatically updates APP_VERSION in config.py
 
-## [1.1.2] - 2025-11-23
+## [1.1.2]
 
 ### Changed
 
 - Moderators can now create jobs
 
-## [1.1.1] - 2025-11-17
+## [1.1.1]
 
 ### Changed
 - Improved cluster capacity calculation: refactored with regex-based parsing, shows remaining resources instead of allocatable, added background warming/caching for faster responses.
@@ -32,7 +32,7 @@
 - Enhanced Helm chart: added readiness probe to main deployment, added resource limits and image pull configuration to MongoDB deployment, added support for extra volumes and volume mounts.
 - Capacity dashboard: added overall jobs running metric, improved refresh logic (stops when tab is hidden), better error handling (keeps showing last known resources).
 
-## [1.1.0] - 2025-11-14
+## [1.1.0]
 
 ### Added
 - Dark theme.
