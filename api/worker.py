@@ -60,7 +60,7 @@ def determine_job_status(job) -> str:
             label_selector=f"job-name={job.metadata.name}"
         ).items
     except Exception as e:
-        logger.debug(f"Pod lookup failed for job {job.metadata.name}: {e}")
+        logger.error(f"Pod lookup failed for job {job.metadata.name}")
     
     if pods:
         any_running = any(getattr(p.status, "phase", None) == "Running" for p in pods)

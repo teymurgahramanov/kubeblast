@@ -7,7 +7,8 @@ import Menuselect from "./Menuselect";
 const Profile = () => {
   const [profile, setProfile] = useState({
     full_name: '',
-    email: ''
+    email: '',
+    role: ''
   });
   const [passwords, setPasswords] = useState({
     new_password: '',
@@ -29,7 +30,8 @@ const Profile = () => {
       
       setProfile({
         full_name: response.data.full_name || '',
-        email: response.data.email || ''
+        email: response.data.email || '',
+        role: response.data.role || ''
       });
     } catch (error) {
       setMessage({
@@ -150,6 +152,16 @@ const Profile = () => {
 
         <Box component="form" onSubmit={handleProfileUpdate} sx={{ mb: 6 }}>
           <Typography variant="h6" sx={{ mb: 2 }}>Personal Information</Typography>
+          <TextField
+            fullWidth
+            label="Role"
+            value={profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
+            margin="normal"
+            variant="outlined"
+            InputProps={{
+              readOnly: true,
+            }}
+          />
           <TextField
             fullWidth
             label="Full Name"

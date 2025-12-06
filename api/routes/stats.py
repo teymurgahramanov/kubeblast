@@ -30,4 +30,5 @@ async def get_app_stats():
         "APP_VERSION": config.APP_VERSION,
         "LICENSE_VALID": config.LICENSE_VALID,
         "EDITION": "Advanced" if config.LICENSE_VALID else "Community",
+        "TIMEZONE": config.TIMEZONE,
     }
