@@ -37,7 +37,7 @@ envFromSecret: ""
 # MongoDB configuration
 # If you want to use external MongoDB, set "enabled" to false and configure env variables.
 mongodb:
-  enabled: false
+  enabled: true
   instanceName: "kubeblast-mongodb"
   username: "kubeblast"
   password: "kubeblast"
