@@ -44,14 +44,11 @@ To request access to the **Advanced** edition, contact me at teymur_gahramanov@o
    ```
 2. Install Helm chart
    ```
-   helm upgrade --install kubeblast teymurgahramanov/kubeblast \
-      --set mongodb.enabled=true \
-      --namespace kubeblast \
-      --create-namespace 
+   helm install kubeblast teymurgahramanov/kubeblast
    ```
 3. Access UI on http://localhost:8080 using username `admin` and password `admin`. You can use [test.jmx](./test.jmx) for testing.
    ```
-   kubectl -n kubeblast port-forward svc/kubeblast 8080:80
+   kubectl port-forward svc/kubeblast 80:80
    ```
 
 ## ⚙️ Configuration
