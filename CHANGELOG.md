@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.5]
+
+### Changed
+
+- Enabled MongoDB subchart by default
+
 ## [1.1.4]
 
 ### Added
