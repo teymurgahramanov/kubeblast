@@ -2,40 +2,12 @@
     <img src="assets/logo.svg" style="width: 70%; height: auto;" />
 </p>
 <p align="center">
-    Kubernetes-native load testing platform
+    Kubernetes-native load testing platform<br>
+    <a href="https://kubeblast.io" target="_blank">kubeblast.io</a>
 </p>
 
 # Kubeblast
 Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platform, where running JMeter load tests is simple and efficient. It offers a simple *click-and-run* workflow, built-in RBAC with moderator approval, full flexibility, and a lightweight open-source footprint.
-
-## 💡 Example Use-Cases
-
-### 1. **Self-Service Load Testing**
-* **Problem** – Developers and QA teams often depend on Ops engineers to prepare JMeter environments or end up running tests locally. This causes delays, inconsistent setups, and slows the delivery pipeline.  
-* **Solution** – Kubeblast lets users run Load Test scenarios with a few clicks, monitor execution, and instantly access results, enabling a true self-service experience.
-
-### 2. **Leveraging Spare Cluster Capacity**
-* **Problem** – You need to run load tests but want to avoid extra infrastructure costs or impacting production workloads.  
-* **Solution** – Kubeblast provides fine-grained placement control and resource limits, allowing teams to use idle cluster capacity safely and efficiently—without disrupting core applications.
-
-### 3. **Load Test Scenario Moderation**
-* **Problem** – An unreviewed load test can overwhelm production, exceed quotas, or unintentionally (or intentionally) disrupt other workloads.  
-* **Solution** – Kubeblast introduces moderator roles through RBAC. Every new test plan can be reviewed and approved before execution, ensuring safe, compliant, and controlled load testing.
-
-## ✨ Features
-- __Simplicity First__ – Just upload your existing Load Test scenario and click *Start*. That's it.
-- __Intuitive UI__ – Manage jobs, view logs, and monitor execution in real-time.
-- __Placement Control__ – Define which Kubernetes nodes to run workloads.
-- __Resource Control__ – Size it to fit your resource pool.
-
-## ⭐ Advanced Features
-Get more with __Kubeblast Advanced__:
-- __Built-in RBAC__ – Role-based access control with support for Users, Admins, and Moderators.
-- __Moderation Workflow__ – Assign moderators to review and approve Load Test scenarios before execution.
-- __LDAP Support__ – Seamlessly integrate with your LDAP directory for centralized authentication and controlled access management.
-- __OIDC Support__ –  Connect to any OIDC provider to enable secure, centralized authentication and streamlined access control.
-
-To request access to the **Advanced** edition, contact me at teymur_gahramanov@outlook.com.
 
 ## ▶️ Quick start
 1. Add Helm repository
