@@ -16,11 +16,11 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
    ```
 2. Install Helm chart
    ```
-   helm install kubeblast teymurgahramanov/kubeblast
+   helm upgrade --install kubeblast teymurgahramanov/kubeblast
    ```
 3. Access UI on http://localhost:8080 using username `admin` and password `admin`. You can use [test.jmx](./test.jmx) for testing.
    ```
-   kubectl port-forward svc/kubeblast 80:80
+   kubectl port-forward svc/kubeblast 8080:80
    ```
 
 ## ⚙️ Configuration
