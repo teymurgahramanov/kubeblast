@@ -945,7 +945,7 @@ const Jobs = () => {
                               <span style={{ fontWeight: 700 }}>Memory</span> {memLine}
                             </Typography>
                             <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                              Requests / Limit
+                              Min / Max
                             </Typography>
                           </>
                         );
