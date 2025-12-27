@@ -1,6 +1,10 @@
 from core import models, db
 from services import auth
+from config import config
 from fastapi import HTTPException
+from datetime import datetime, timedelta, timezone
+from typing import List
+import secrets
 
 def get_profile(username: str):
     user = db.mongo.users.find_one({"username": username})
@@ -17,4 +21,61 @@ def update_profile(username: str, user_data: dict):
     else:
       raise HTTPException(status_code=400, detail="Can't update external user")
 
+def create_pat(username: str, pat_data: models.PatCreate) -> models.PatCreatedResponse:
+    token_suffix = secrets.token_urlsafe(24)
+    token_prefix = secrets.token_urlsafe(6)[:8]  # 8 char prefix for lookup
+    full_token = f"{config.PAT_STRING_PREFIX}_{token_prefix}_{token_suffix}"
+    
+    hashed_token = auth.hash_password(full_token)
+    
+    expires_at = None
+    if pat_data.expires_in_days:
+        expires_at = datetime.now(timezone.utc) + timedelta(days=pat_data.expires_in_days)
+    
+    created_at = datetime.now(timezone.utc)
 
+    pat_in_db = models.PatInDB(
+        user_id=username,
+        name=pat_data.name,
+        prefix=token_prefix,
+        hashed_token=hashed_token,
+        created_at=created_at,
+        expires_at=expires_at,
+        revoked=False,
+        last_used_at=None,
+    )
+    
+    try:
+        result = db.mongo.pats.insert_one(pat_in_db.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create PAT: {e}")
+    else:
+        return models.PatCreatedResponse(
+            token=full_token,
+        )
+
+def list_pats(username: str) -> List[models.Pat]:
+    pats = db.mongo.pats.find({"user_id": username})
+    return [models.Pat(**pat) for pat in pats]
+
+def revoke_pat(username: str, pat_id: str) -> models.Pat:
+    try:
+        result = db.mongo.pats.update_one({"_id": ObjectId(pat_id), "user_id": username}, {"$set": {"revoked": True}})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to revoke PAT: {e}")
+    else:
+        pat = db.mongo.pats.find_one({"_id": ObjectId(pat_id), "user_id": username})
+        return models.Pat(**pat)
+
+def delete_pat(username: str, pat_id: str) -> None:
+    from bson import ObjectId
+    
+    try:
+        result = db.mongo.pats.delete_one({"_id": ObjectId(pat_id), "user_id": username})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete PAT: {e}")
+    else:
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="PAT not found")
+        else:
+            return {"message": "PAT deleted successfully"}

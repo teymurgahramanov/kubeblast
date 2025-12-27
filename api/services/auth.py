@@ -32,7 +32,7 @@ def get_user(username: str):
     else:
         return None
 
-def authenticate_user(username: str, plain_password: str, method: str, oidc_user_data: dict = None):
+def authenticate_user(username: str = None, plain_password: str = None, method: str = "local", oidc_user_data: dict = None, pat_token: str = None):
     match method:
         case "local":
             user = get_user(username)
@@ -89,6 +89,47 @@ def authenticate_user(username: str, plain_password: str, method: str, oidc_user
                 return False
             else:
                 return False
+        case "pat":
+            if not pat_token:
+                logger.error("PAT token is required for PAT authentication")
+                return False
+            
+            if not pat_token.startswith(config.PAT_STRING_PREFIX):
+                logger.error("Invalid PAT token format")
+                return False
+            
+            # Extract prefix (first 8 chars after PAT_STRING_PREFIX) for lookup
+            token_prefix = pat_token[:len(config.PAT_STRING_PREFIX) + '_' + 8]
+            
+            # Find PAT by prefix
+            pat_doc = db.mongo.pats.find_one({"prefix": token_prefix, "revoked": False})
+            if not pat_doc:
+                logger.error("PAT not found or revoked")
+                return False
+            
+            # Verify the full token hash
+            if not verify_password(pat_token, pat_doc["hashed_token"]):
+                logger.error("Invalid PAT token")
+                return False
+            
+            # Check expiration
+            if pat_doc.get("expires_at") and pat_doc["expires_at"] < datetime.now(timezone.utc):
+                logger.error("PAT token expired")
+                return False
+            
+            # Get the user
+            user = db.mongo.users.find_one({"username": pat_doc["user_id"]})
+            if not user:
+                logger.error(f"User {pat_doc['user_id']} not found for PAT")
+                return False
+            
+            # Update last_used_at
+            db.mongo.pats.update_one(
+                {"_id": pat_doc["_id"]},
+                {"$set": {"last_used_at": datetime.now(timezone.utc)}}
+            )
+            
+            return models.UserInDB(**user)
         case _:
             return False
 
@@ -98,6 +139,15 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Try PAT authentication first
+    if token.startswith(config.PAT_STRING_PREFIX):
+        user = authenticate_user(method="pat", pat_token=token)
+        if not user:
+            raise credentials_exception
+        return user
+    
+    # Fall back to JWT authentication
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")

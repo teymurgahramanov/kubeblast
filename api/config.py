@@ -19,6 +19,7 @@ class Config:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
+    PAT_STRING_PREFIX: str = "kb_pat"
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
     WORKER_WATCH_INTERVAL: int = 3
