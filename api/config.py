@@ -27,6 +27,9 @@ class Config:
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
 
+    # Metrics server URL for capacity data
+    K8S_METRICS_SERVER: str = os.getenv("K8S_METRICS_SERVER", "https://metrics-server.kube-system")
+
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
     MONGODB_PORT: int = int(os.getenv("MONGODB_PORT", 27017))

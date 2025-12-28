@@ -8,7 +8,7 @@ from core.log import logger
 from config import config
 import secrets
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 _oidc_states = {}
 

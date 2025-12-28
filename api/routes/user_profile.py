@@ -3,7 +3,7 @@ from fastapi import Depends, APIRouter
 from core import models
 from services import auth, user_profile
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 @router.get("/profile", response_model=models.User)
 async def get_user(current_user: Annotated[models.User, Depends(auth.check_role([]))]):

@@ -5,7 +5,7 @@ from services import auth, capacity
 from config import config
 
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/stats/capacity")

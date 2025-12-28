@@ -1,21 +1,9 @@
-"""
-Minimal Kubernetes capacity calculator.
-
-Purpose:
-    Show *real remaining* CPU and memory in the SIMPLEST way:
-        remaining = sum(node.allocatable) - sum(all pod requests)
-
-Preserves:
-    - Your existing Pydantic models (core.models)
-    - Your MongoDB storage structure
-    - Node selectors & tolerations filtering
-"""
-
 from datetime import datetime
 from typing import Dict, List
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 import re
+import ssl
+import httpx
+
 from kubernetes import client
 
 from config import config
@@ -26,7 +14,7 @@ from core import db, models
 # CPU & MEMORY PARSING
 # ============================================================================
 
-_CPU_PATTERN = re.compile(r"^(\d+(\.\d+)?)(m?)$")
+_CPU_PATTERN = re.compile(r"^(\d+(\.\d+)?)(m|n|u)?$")
 _MEM_PATTERN = re.compile(r"^(\d+(\.\d+)?)([KMGTP]i?)?$")
 
 _MEM_UNITS = {
@@ -46,16 +34,25 @@ _MEM_UNITS = {
 
 
 def parse_cpu(cpu: str) -> int:
+    """Parse CPU string to millicores."""
     if not cpu:
         return 0
     m = _CPU_PATTERN.match(cpu)
     if not m:
         return 0
     value, _, suffix = m.groups()
-    return int(float(value) * (1 if suffix == "m" else 1000))
+    if suffix == "n":
+        return int(float(value) / 1_000_000)  # nanocores to millicores
+    elif suffix == "u":
+        return int(float(value) / 1_000)  # microcores to millicores
+    elif suffix == "m":
+        return int(float(value))  # already millicores
+    else:
+        return int(float(value) * 1000)  # cores to millicores
 
 
 def parse_mem(mem: str) -> int:
+    """Parse memory string to bytes."""
     if not mem:
         return 0
     m = _MEM_PATTERN.match(mem)
@@ -95,105 +92,155 @@ def node_matches(node: client.V1Node, selector: dict, tolerations: list) -> bool
 
 
 # ============================================================================
-# POD RESOURCE CALCULATION
+# METRICS SERVER CLIENT
 # ============================================================================
 
-def effective_pod_requests(pod) -> (int, int):
-    cpu = mem = 0
-
-    # main containers
-    for c in pod.spec.containers or []:
-        req = (c.resources.requests or {})
-        cpu += parse_cpu(req.get("cpu"))
-        mem += parse_mem(req.get("memory"))
-
-    # init containers (max)
-    init_cpu = init_mem = 0
-    for ic in pod.spec.init_containers or []:
-        req = (ic.resources.requests or {})
-        init_cpu = max(init_cpu, parse_cpu(req.get("cpu")))
-        init_mem = max(init_mem, parse_mem(req.get("memory")))
-
-    cpu = max(cpu, init_cpu)
-    mem = max(mem, init_mem)
-
-    # pod overhead
-    overhead = getattr(pod.spec, "overhead", {}) or {}
-    cpu += parse_cpu(overhead.get("cpu"))
-    mem += parse_mem(overhead.get("memory"))
-
-    return cpu, mem
-
-
-# ============================================================================
-# POD ITERATOR
-# ============================================================================
-
-def _iter_active_pods_on_node(node_name: str):
-    """Yield pods assigned to node and not finished."""
-    v1 = client.CoreV1Api()
-    field_selector = (
-        f"spec.nodeName={node_name},"
-        f"status.phase!=Succeeded,status.phase!=Failed"
+def _get_metrics_client() -> httpx.Client:
+    """Create an HTTP client configured for in-cluster metrics server access."""
+    # Read service account token for authentication
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/token", "r") as f:
+            token = f.read().strip()
+    except FileNotFoundError:
+        token = None
+    
+    # Read CA cert for TLS verification
+    ca_cert_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    
+    # Create SSL context
+    try:
+        ssl_context = ssl.create_default_context(cafile=ca_cert_path)
+    except Exception:
+        ssl_context = False  # Skip verification if CA cert not found
+    
+    return httpx.Client(
+        base_url=config.K8S_METRICS_SERVER,
+        headers=headers,
+        verify=ssl_context,
+        timeout=30.0,
     )
-    token = None
-
-    while True:
-        resp = v1.list_pod_for_all_namespaces(
-            field_selector=field_selector,
-            limit=400,
-            _continue=token,
-            timeout_seconds=15,
-        )
-
-        for pod in resp.items or []:
-            if getattr(pod.metadata, "deletion_timestamp", None):
-                continue
-            yield pod
-
-        token = getattr(resp.metadata, "_continue", None) or getattr(resp.metadata, "continue", None)
-        if not token:
-            break
 
 
-# ============================================================================
-# ALLOCATED RESOURCES (MULTI-NODE)
-# ============================================================================
+def _fetch_node_metrics() -> Dict[str, Dict[str, int]]:
+    """
+    Fetch node metrics from metrics server.
+    Returns: {node_name: {"cpu_m": int, "memory_bytes": int}}
+    """
+    result = {}
+    
+    try:
+        with _get_metrics_client() as client:
+            response = client.get("/apis/metrics.k8s.io/v1beta1/nodes")
+            response.raise_for_status()
+            data = response.json()
+            
+            for item in data.get("items", []):
+                node_name = item.get("metadata", {}).get("name", "")
+                usage = item.get("usage", {})
+                
+                result[node_name] = {
+                    "cpu_m": parse_cpu(usage.get("cpu", "0")),
+                    "memory_bytes": parse_mem(usage.get("memory", "0")),
+                }
+    except Exception:
+        # If metrics server is unavailable, return empty dict
+        pass
+    
+    return result
 
-def allocated_on_node(node_name: str) -> Dict[str, int]:
-    cpu = mem = 0
-    for pod in _iter_active_pods_on_node(node_name):
-        c, m = effective_pod_requests(pod)
-        cpu += c
-        mem += m
-    return {"cpu_m": cpu, "memory_bytes": mem}
+
+def _fetch_pod_metrics() -> Dict[str, Dict[str, int]]:
+    """
+    Fetch pod metrics from metrics server.
+    Returns: {node_name: {"cpu_m": int, "memory_bytes": int}} aggregated by node
+    """
+    result: Dict[str, Dict[str, int]] = {}
+    
+    try:
+        with _get_metrics_client() as client:
+            response = client.get("/apis/metrics.k8s.io/v1beta1/pods")
+            response.raise_for_status()
+            data = response.json()
+            
+            # We need to map pods to nodes - get pod list from k8s API
+            v1 = client.CoreV1Api() if hasattr(client, 'CoreV1Api') else None
+    except Exception:
+        pass
+    
+    return result
 
 
-def allocated_on_nodes(names: List[str]) -> Dict[str, int]:
-    if not names:
+def _fetch_pods_usage_by_node(node_names: List[str]) -> Dict[str, int]:
+    """
+    Fetch pod metrics from metrics server and aggregate usage by matching nodes.
+    Returns: {"cpu_m": total, "memory_bytes": total}
+    """
+    total_cpu = 0
+    total_mem = 0
+    
+    if not node_names:
         return {"cpu_m": 0, "memory_bytes": 0}
-
-    total_cpu = total_mem = 0
-
-    with ThreadPoolExecutor(max_workers=min(8, len(names))) as pool:
-        futures = (pool.submit(allocated_on_node, n) for n in names)
-        for f in as_completed(futures):
-            r = f.result()
-            total_cpu += r["cpu_m"]
-            total_mem += r["memory_bytes"]
-
+    
+    node_set = set(node_names)
+    v1 = client.CoreV1Api()
+    
+    try:
+        with _get_metrics_client() as http_client:
+            response = http_client.get("/apis/metrics.k8s.io/v1beta1/pods")
+            response.raise_for_status()
+            metrics_data = response.json()
+            
+            # Build a map of pod -> node from the k8s API
+            pod_node_map = {}
+            token = None
+            while True:
+                resp = v1.list_pod_for_all_namespaces(
+                    limit=500,
+                    _continue=token,
+                    timeout_seconds=30,
+                )
+                for pod in resp.items or []:
+                    pod_key = f"{pod.metadata.namespace}/{pod.metadata.name}"
+                    node_name = pod.spec.node_name
+                    if node_name:
+                        pod_node_map[pod_key] = node_name
+                
+                token = getattr(resp.metadata, "_continue", None) or getattr(resp.metadata, "continue", None)
+                if not token:
+                    break
+            
+            # Aggregate metrics for pods on matching nodes
+            for item in metrics_data.get("items", []):
+                metadata = item.get("metadata", {})
+                pod_key = f"{metadata.get('namespace', '')}/{metadata.get('name', '')}"
+                node_name = pod_node_map.get(pod_key)
+                
+                if node_name and node_name in node_set:
+                    for container in item.get("containers", []):
+                        usage = container.get("usage", {})
+                        total_cpu += parse_cpu(usage.get("cpu", "0"))
+                        total_mem += parse_mem(usage.get("memory", "0"))
+    
+    except Exception:
+        # If metrics server is unavailable, return zeros
+        pass
+    
     return {"cpu_m": total_cpu, "memory_bytes": total_mem}
 
 
 # ============================================================================
-# MAIN SIMPLE CAPACITY CALCULATION
+# MAIN CAPACITY CALCULATION
 # ============================================================================
 
 def compute_and_store_capacity() -> Dict:
     """
     Compute:
         - total allocatable CPU & memory
-        - total used by pods
+        - total used by pods (from metrics server)
         - remaining = allocatable - used
 
     And store into MongoDB as:
@@ -213,12 +260,12 @@ def compute_and_store_capacity() -> Dict:
     total_alloc_cpu = sum(parse_cpu(n.status.allocatable["cpu"]) for n in matched)
     total_alloc_mem = sum(parse_mem(n.status.allocatable["memory"]) for n in matched)
 
-    # ----- Allocated to pods -----
-    allocated = allocated_on_nodes(matched_names)
+    # ----- Get usage from metrics server -----
+    usage = _fetch_pods_usage_by_node(matched_names)
 
     # ----- Remaining -----
-    remaining_cpu = max(0, total_alloc_cpu - allocated["cpu_m"])
-    remaining_mem = max(0, total_alloc_mem - allocated["memory_bytes"])
+    remaining_cpu = max(0, total_alloc_cpu - usage["cpu_m"])
+    remaining_mem = max(0, total_alloc_mem - usage["memory_bytes"])
 
     # Build your Pydantic model (no 'allocated' in response; 'remaining' instead)
     cap = models.Capacity(
@@ -233,6 +280,7 @@ def compute_and_store_capacity() -> Dict:
     db.mongo.stats.update_one({"_id": "capacity"}, {"$set": cap}, upsert=True)
 
     return cap
+
 
 def get_capacity() -> Dict:
 

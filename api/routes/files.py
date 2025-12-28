@@ -7,7 +7,7 @@ from config import config
 
 from services import files_fs as files
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 @router.get("/files/{job_id}")
 async def get_file(
