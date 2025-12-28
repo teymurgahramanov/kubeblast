@@ -8,7 +8,12 @@ import uvicorn
 import os
 import threading
 
-app = FastAPI()
+app = FastAPI(
+    title="Kubeblast",
+    description="Kubernetes-native load testing platform",
+    version=config.APP_VERSION,
+    openapi_url="/api/v1/openapi.json"
+)
 
 app.add_middleware(
     CORSMiddleware,

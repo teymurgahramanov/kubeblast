@@ -10,6 +10,7 @@ import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
+import ApiDocs from './components/ApiDocs';
 import './App.css';
 
 const AdminRoute = ({ children }) => {
@@ -82,6 +83,16 @@ const App = () => {
           element={
             <PrivateRoute>
               <Settings />
+            </PrivateRoute>
+          }
+        />
+
+        {/* API Documentation route */}
+        <Route
+          path="/api-docs"
+          element={
+            <PrivateRoute>
+              <ApiDocs />
             </PrivateRoute>
           }
         />

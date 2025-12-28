@@ -357,6 +357,7 @@ const Profile = () => {
           
           <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2 }}>
             Personal access tokens can be used to authenticate API requests without using your password.
+            See the <Link to="/api-docs" style={{ color: 'var(--primary-color)' }}>API Documentation</Link> for usage details.
           </Typography>
 
           {pats.length === 0 ? (
