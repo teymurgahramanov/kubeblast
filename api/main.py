@@ -64,9 +64,10 @@ async def initialize():
 @app.on_event("startup")
 async def load_pro_routes():
   if config.LICENSE_VALID:
-    from routes import jobs_extra, users
+    from routes import jobs_extra, users, oidc
     app.include_router(jobs_extra.router, tags=["jobs_extra"])
     app.include_router(users.router, tags=["users"])
+    app.include_router(oidc.router, tags=["oidc"])
 
 @app.on_event("startup")
 async def start_capacity_warmer():
