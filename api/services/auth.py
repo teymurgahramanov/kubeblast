@@ -98,8 +98,13 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
                 logger.error("Invalid PAT token format")
                 return False
             
-            # Extract prefix (first 8 chars after PAT_STRING_PREFIX) for lookup
-            token_prefix = pat_token[:len(config.PAT_STRING_PREFIX) + '_' + 8]
+            # Token format: kb_pat_<8-char-prefix>_<suffix>
+            # Extract the 8-char prefix between the first and second underscore after PAT_STRING_PREFIX
+            parts = pat_token.split('_')
+            if len(parts) < 3:
+                logger.error("Invalid PAT token format")
+                return False
+            token_prefix = parts[2]  # The 8-char prefix is the third part (kb_pat_PREFIX_suffix)
             
             # Find PAT by prefix
             pat_doc = db.mongo.pats.find_one({"prefix": token_prefix, "revoked": False})
@@ -113,9 +118,14 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
                 return False
             
             # Check expiration
-            if pat_doc.get("expires_at") and pat_doc["expires_at"] < datetime.now(timezone.utc):
-                logger.error("PAT token expired")
-                return False
+            expires_at = pat_doc.get("expires_at")
+            if expires_at:
+                # Handle both timezone-aware and naive datetimes
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                if expires_at < datetime.now(timezone.utc):
+                    logger.error("PAT token expired")
+                    return False
             
             # Get the user
             user = db.mongo.users.find_one({"username": pat_doc["user_id"]})
