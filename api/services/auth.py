@@ -63,6 +63,8 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
                 return False
         case "oidc":
             if config.LICENSE_VALID and config.OIDC_ENABLED:
+                from .oidc_auth import OIDCAuth
+                oidc = OIDCAuth()
                 if not oidc_user_data:
                     logger.error("OIDC user data is required for OIDC authentication")
                     return False
