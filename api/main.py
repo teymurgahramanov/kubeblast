@@ -6,6 +6,7 @@ from core.log import logger
 from config import config
 import uvicorn
 import os
+import time
 import threading
 
 app = FastAPI(
@@ -71,41 +72,20 @@ async def load_pro_routes():
     app.include_router(pats.router, tags=["pats"])
 
 @app.on_event("startup")
-async def start_capacity_warmer():
-  stop_event = threading.Event()
-  app.state.capacity_warm_stop_event = stop_event
+async def start_capacity_worker():
+  from services import capacity
 
-  def _warm_loop():
-    try:
-      from services import capacity
+  def loop():
+    interval = int(config.CAPACITY_WARM_INTERVAL)
+    while True:
       try:
         capacity.compute_and_store_capacity()
       except Exception as e:
-        logger.warning(f"Initial capacity warm failed: {e}")
-      interval = int(config.CAPACITY_WARM_INTERVAL)
-      while not stop_event.wait(interval):
-        try:
-          capacity.compute_and_store_capacity()
-        except Exception as e:
-          logger.warning(f"Capacity warm failed: {e}")
-    finally:
-      pass
+        logger.warning(f"Capacity update failed: {e}")
+      time.sleep(interval)
 
-  t = threading.Thread(target=_warm_loop, name="capacity-warm", daemon=True)
-  t.start()
-  app.state.capacity_warm_thread = t
+  threading.Thread(target=loop, daemon=True).start()
 
-@app.on_event("shutdown")
-async def stop_capacity_warmer():
-  stop_event = getattr(app.state, "capacity_warm_stop_event", None)
-  t = getattr(app.state, "capacity_warm_thread", None)
-  if stop_event:
-    stop_event.set()
-  if t and t.is_alive():
-    try:
-      t.join(timeout=5)
-    except Exception:
-      pass
 
 uvicorn.run(
   app,
