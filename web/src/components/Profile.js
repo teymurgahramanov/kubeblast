@@ -22,6 +22,7 @@ const Profile = () => {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
+  const [isAdvanced, setIsAdvanced] = useState(false);
   
   // PAT state
   const [pats, setPats] = useState([]);
@@ -57,7 +58,7 @@ const Profile = () => {
 
   const fetchPats = async () => {
     try {
-      const response = await axiosInstance.get('/profile/pats', {
+      const response = await axiosInstance.get('/pats', {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       setPats(response.data);
@@ -66,11 +67,27 @@ const Profile = () => {
     }
   };
 
-  // Fetch profile and PATs on mount
+  const fetchAppStats = async () => {
+    try {
+      const response = await axiosInstance.get('/stats/app');
+      setIsAdvanced(Boolean(response.data?.LICENSE_VALID));
+    } catch (error) {
+      console.error('Error fetching app stats:', error);
+    }
+  };
+
+  // Fetch profile, PATs and app stats on mount
   useEffect(() => {
     fetchProfile();
-    fetchPats();
+    fetchAppStats();
   }, []);
+
+  // Fetch PATs only if Advanced edition
+  useEffect(() => {
+    if (isAdvanced) {
+      fetchPats();
+    }
+  }, [isAdvanced]);
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -144,7 +161,7 @@ const Profile = () => {
         name: newPatName,
         expires_in_days: newPatExpiry ? parseInt(newPatExpiry) : null
       };
-      const response = await axiosInstance.post('/profile/pats', payload, {
+      const response = await axiosInstance.post('/pats', payload, {
         headers: { 
           Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
           'Content-Type': 'application/json'
@@ -167,7 +184,7 @@ const Profile = () => {
 
   const handleRevokePat = async (patId) => {
     try {
-      await axiosInstance.post(`/profile/pats/${patId}/revoke`, {}, {
+      await axiosInstance.post(`/pats/${patId}/revoke`, {}, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       setMessage({ type: 'success', text: 'PAT revoked successfully' });
@@ -182,7 +199,7 @@ const Profile = () => {
 
   const handleDeletePat = async (patId) => {
     try {
-      await axiosInstance.delete(`/profile/pats/${patId}`, {
+      await axiosInstance.delete(`/pats/${patId}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
       });
       setMessage({ type: 'success', text: 'PAT deleted successfully' });
@@ -337,7 +354,8 @@ const Profile = () => {
           </Button>
         </Box>
 
-        {/* Personal Access Tokens Section */}
+        {/* Personal Access Tokens Section - Advanced Edition Only */}
+        {isAdvanced && (
         <Box sx={{ mt: 6 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Personal Access Tokens</Typography>
@@ -446,6 +464,7 @@ const Profile = () => {
             </TableContainer>
           )}
         </Box>
+        )}
       </Box>
 
       {/* Create PAT Dialog */}

@@ -92,56 +92,59 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
             else:
                 return False
         case "pat":
-            if not pat_token:
-                logger.error("PAT token is required for PAT authentication")
-                return False
-            
-            if not pat_token.startswith(config.PAT_STRING_PREFIX):
-                logger.error("Invalid PAT token format")
-                return False
-            
-            # Token format: kb_pat_<8-char-prefix>_<suffix>
-            # Extract the 8-char prefix between the first and second underscore after PAT_STRING_PREFIX
-            parts = pat_token.split('_')
-            if len(parts) < 3:
-                logger.error("Invalid PAT token format")
-                return False
-            token_prefix = parts[2]  # The 8-char prefix is the third part (kb_pat_PREFIX_suffix)
-            
-            # Find PAT by prefix
-            pat_doc = db.mongo.pats.find_one({"prefix": token_prefix, "revoked": False})
-            if not pat_doc:
-                logger.error("PAT not found or revoked")
-                return False
-            
-            # Verify the full token hash
-            if not verify_password(pat_token, pat_doc["hashed_token"]):
-                logger.error("Invalid PAT token")
-                return False
-            
-            # Check expiration
-            expires_at = pat_doc.get("expires_at")
-            if expires_at:
-                # Handle both timezone-aware and naive datetimes
-                if expires_at.tzinfo is None:
-                    expires_at = expires_at.replace(tzinfo=timezone.utc)
-                if expires_at < datetime.now(timezone.utc):
-                    logger.error("PAT token expired")
+            if config.LICENSE_VALID:
+                if not pat_token:
+                    logger.error("PAT token is required for PAT authentication")
                     return False
-            
-            # Get the user
-            user = db.mongo.users.find_one({"username": pat_doc["user_id"]})
-            if not user:
-                logger.error(f"User {pat_doc['user_id']} not found for PAT")
+                
+                if not pat_token.startswith(config.PAT_STRING_PREFIX):
+                    logger.error("Invalid PAT token format")
+                    return False
+                
+                # Token format: kb_pat_<8-char-prefix>_<suffix>
+                # Extract the 8-char prefix between the first and second underscore after PAT_STRING_PREFIX
+                parts = pat_token.split('_')
+                if len(parts) < 3:
+                    logger.error("Invalid PAT token format")
+                    return False
+                token_prefix = parts[2]  # The 8-char prefix is the third part (kb_pat_PREFIX_suffix)
+                
+                # Find PAT by prefix
+                pat_doc = db.mongo.pats.find_one({"prefix": token_prefix, "revoked": False})
+                if not pat_doc:
+                    logger.error("PAT not found or revoked")
+                    return False
+                
+                # Verify the full token hash
+                if not verify_password(pat_token, pat_doc["hashed_token"]):
+                    logger.error("Invalid PAT token")
+                    return False
+                
+                # Check expiration
+                expires_at = pat_doc.get("expires_at")
+                if expires_at:
+                    # Handle both timezone-aware and naive datetimes
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                    if expires_at < datetime.now(timezone.utc):
+                        logger.error("PAT token expired")
+                        return False
+                
+                # Get the user
+                user = db.mongo.users.find_one({"username": pat_doc["user_id"]})
+                if not user:
+                    logger.error(f"User {pat_doc['user_id']} not found for PAT")
+                    return False
+                
+                # Update last_used_at
+                db.mongo.pats.update_one(
+                    {"_id": pat_doc["_id"]},
+                    {"$set": {"last_used_at": datetime.now(timezone.utc)}}
+                )
+                
+                return models.UserInDB(**user)
+            else:
                 return False
-            
-            # Update last_used_at
-            db.mongo.pats.update_one(
-                {"_id": pat_doc["_id"]},
-                {"$set": {"last_used_at": datetime.now(timezone.utc)}}
-            )
-            
-            return models.UserInDB(**user)
         case _:
             return False
 
