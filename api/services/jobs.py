@@ -200,6 +200,7 @@ def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()
 
     k8s.delete_workload(job_id)
+    k8s.delete_artifacts(job_id)
 
     files.delete_file(job_id)
         

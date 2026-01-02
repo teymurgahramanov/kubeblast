@@ -8,6 +8,7 @@ from pymongo import MongoClient
 from pymongo import UpdateOne
 from config import config
 import time
+from services import k8s as k8s_service
 
 # MongoDB Configuration
 MONGODB_URI = config.MONGODB_URI
@@ -97,6 +98,16 @@ def _bulk_update_statuses(pairs: list[tuple[str, str]]):
     except Exception as e:
         logger.error(f"Bulk Mongo update failed: {e}")
 
+def _cleanup_workload(job_id: str, status: str):
+    if status not in ("completed", "failed"):
+        return
+    try:
+        k8s_service.delete_workload(job_id)
+        logger.info(f"Triggered workload cleanup for terminal job {job_id} (status={status})")
+    except Exception as e:
+        # Best-effort cleanup; don't crash the worker
+        logger.warning(f"Workload cleanup failed for job {job_id} (status={status}): {e}")
+
 def full_resync(batch_v1: client.BatchV1Api) -> str | None:
     """
     Full reconciliation pass:
@@ -110,6 +121,7 @@ def full_resync(batch_v1: client.BatchV1Api) -> str | None:
         logger.debug("Full resync: no Kubeblast jobs found.")
     else:
         updates: list[tuple[str, str]] = []
+        terminal: list[tuple[str, str]] = []
         for job in jobs:
             job_id = _extract_job_id(job)
             if not job_id:
@@ -118,8 +130,13 @@ def full_resync(batch_v1: client.BatchV1Api) -> str | None:
             if status == "unknown":
                 continue
             updates.append((job_id, status))
+            if status in ("completed", "failed"):
+                terminal.append((job_id, status))
         _bulk_update_statuses(updates)
         logger.info(f"Full resync: reconciled {len(updates)} jobs")
+        # After restart / missed events: ensure terminal jobs get cleaned up too
+        for job_id, status in terminal:
+            _cleanup_workload(job_id, status)
 
     md = getattr(resp, "metadata", None)
     return getattr(md, "resource_version", None)
@@ -179,6 +196,7 @@ def process_job_update():
                     continue
 
                 _bulk_update_statuses([(job_id, status)])
+                _cleanup_workload(job_id, status)
 
             # If the watch timed out naturally, loop and continue; keeps resync cadence
             backoff_s = 1.0
