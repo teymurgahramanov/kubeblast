@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace }}
+  labels:
+    {% for key, value in labels.items() %}
+    {{ key }}: "{{ value }}"
+    {% endfor %}
+spec:
+  selector:
+    matchLabels:
+      {% for key, value in labels.items() %}
+      {{ key }}: "{{ value }}"
+      {% endfor %}
+  template:
+    metadata:
+      labels:
+        {% for key, value in labels.items() %}
+        {{ key }}: "{{ value }}"
+        {% endfor %}
+    spec:
+      {% if priority_class %}
+      priorityClassName: {{ priority_class }}
+      {% endif %}
+      {% if image_pull_secrets %}
+      imagePullSecrets:
+      {% for secret in image_pull_secrets %}
+      - name: {{ secret }}
+      {% endfor %}
+      {% endif %}
+      containers:
+      - name: jmeter-slave
+        image: {{ image_job }}
+        imagePullPolicy: {{ image_pull_policy }}
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+        - name: rmi-server
+          containerPort: 50000
+          protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: 50000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 12
+        command: ["sh", "-c"]
+        args:
+          - |
+            jmeter-server \
+              -Jserver.rmi.ssl.disable=true \
+              -Jserver_port=50000 \
+              -Jserver.rmi.localport=50000 \
+              -Djava.rmi.server.hostname=${POD_IP}
+        {% if resources %}
+        resources:
+          {% for key, value in resources.items() %}
+          {{ key }}:
+            {{ value }}
+          {% endfor %}
+        {% endif %}
+      terminationGracePeriodSeconds: 30
+      {% if nodeSelector %}
+      nodeSelector:
+        {% for key, value in nodeSelector.items() %}
+        {{ key }}: "{{ value }}"
+        {% endfor %}
+      {% endif %}
+      {% if tolerations %}
+      tolerations:
+        {% for toleration in tolerations %}
+        - key: "{{ toleration.key | default('') }}"
+          operator: "{{ toleration.operator | default('Exists') }}"
+          value: "{{ toleration.value | default('') }}"
+          effect: "{{ toleration.effect | default('NoExecute') }}"
+        {% endfor %}
+      {% endif %}
+
+

@@ -1,10 +1,12 @@
 from core import k8s
 from kubernetes import client, stream
+from kubernetes.client.rest import ApiException
 from config import config
 from jinja2 import Template
 from fastapi import HTTPException
 import yaml
 import os
+import time
 from core.log import logger
 
 from services import files_fs as files
@@ -18,6 +20,12 @@ def get_namespace():
 
 def gen_resource_name(job_id):
     return f"kb-{job_id}" 
+
+def gen_slave_resource_name(job_id):
+    return f"kb-{job_id}-slave"
+
+def gen_slave_service_name(job_id):
+    return f"kb-{job_id}-slave"
 
 def gen_labels(job_id,job_component):
     return {"kubeblast/job-id": job_id, "kubeblast/job-component": job_component}
@@ -36,8 +44,8 @@ def stream_pod_logs(job_id, job_status):
         )
 
         if not pod_list.items:
-            logger.warning(f"No Pods found for Job: {job_id}")
-            yield "data: No pods found for this job.\n\n"
+            logger.warning(f"Nothing found for Job: {job_id}")
+            yield "data: Nothing found for this job.\n\n"
             return
         
         pod_name = pod_list.items[0].metadata.name
@@ -65,6 +73,129 @@ def stream_pod_logs(job_id, job_status):
         yield f"data: Waiting for logs ...\n\n"
         return
 
+def schedule_slave_daemonset_and_service(job_id: str):
+    """
+    Create (if missing) the slave headless Service and slave DaemonSet.
+    Intentionally minimal: no updates/patching if they already exist.
+    """
+    namespace = get_namespace()
+    labels = gen_labels(job_id, "slave")
+
+    svc_name = gen_slave_service_name(job_id)
+    ds_name = gen_slave_resource_name(job_id)
+
+    v1 = client.CoreV1Api()
+    apps = client.AppsV1Api()
+
+    # Headless Service (create; ignore AlreadyExists)
+    try:
+        svc = client.V1Service(
+            metadata=client.V1ObjectMeta(name=svc_name, labels=labels),
+            spec=client.V1ServiceSpec(
+                cluster_ip="None",
+                selector=labels,
+                ports=[
+                    client.V1ServicePort(name="rmi", port=50000, target_port=50000, protocol="TCP"),
+                ],
+            ),
+        )
+        v1.create_namespaced_service(namespace=namespace, body=svc)
+        logger.info(f"Created slave headless Service: {svc_name}")
+    except ApiException as e:
+        if getattr(e, "status", None) == 409:
+            logger.info(f"Slave headless Service already exists: {svc_name}")
+        else:
+            msg = f"Failed to create slave Service {svc_name}. Handling: abort distributed scheduling."
+            logger.error(f"{msg} Error: {e}")
+            raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
+    except Exception as e:
+        msg = f"Failed to create slave Service {svc_name}. Handling: abort distributed scheduling."
+        logger.error(f"{msg} Error: {e}")
+        raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
+
+    # DaemonSet
+    try:
+        ds_template_path = os.path.join(os.path.dirname(__file__), "../templates/ds.yaml.j2")
+        with open(ds_template_path, "r") as file:
+            ds_template_content = file.read()
+
+        rendered_ds = Template(ds_template_content).render(
+            name=ds_name,
+            namespace=namespace,
+            labels=labels,
+            priority_class=config.K8S_JOB_PRIORITY_CLASS,
+            image_job=config.K8S_JOB_IMAGE,
+            image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
+            image_pull_secrets=config.K8S_JOB_IMAGE_PULL_SECRETS,
+            nodeSelector=config.K8S_JOB_NODE_SELECTOR,
+            tolerations=config.K8S_JOB_TOLERATIONS,
+            resources=config.K8S_JOB_RESOURCES,
+        )
+        ds_manifest = yaml.safe_load(rendered_ds)
+        apps.create_namespaced_daemon_set(namespace=namespace, body=ds_manifest)
+        logger.info(f"Created slave DaemonSet: {ds_name}")
+    except ApiException as e:
+        if getattr(e, "status", None) == 409:
+            logger.info(f"Slave DaemonSet already exists: {ds_name}")
+        else:
+            msg = f"Failed to create slave DaemonSet {ds_name}. Handling: abort distributed scheduling."
+            logger.error(f"{msg} Error: {e}")
+            raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
+    except Exception as e:
+        msg = f"Failed to create slave DaemonSet {ds_name}. Handling: abort distributed scheduling."
+        logger.error(f"{msg} Error: {e}")
+        raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
+
+def watch_daemonset_and_get_slave_endpoints(job_id: str, timeout_s: int = 180, poll_s: int = 2) -> list[str]:
+    """
+    Watch slave DaemonSet until fully ready, then return headless Service endpoints
+    formatted for JMeter `-R` (ip:port).
+    """
+    namespace = get_namespace()
+    svc_name = gen_slave_service_name(job_id)
+    ds_name = gen_slave_resource_name(job_id)
+
+    apps = client.AppsV1Api()
+    v1 = client.CoreV1Api()
+
+    start = time.time()
+    last_desired = 0
+    last_ready = 0
+    while time.time() - start < timeout_s:
+        ds = apps.read_namespaced_daemon_set(name=ds_name, namespace=namespace)
+        st = ds.status
+        last_desired = int(getattr(st, "desired_number_scheduled", 0) or 0)
+        last_ready = int(getattr(st, "number_ready", 0) or 0)
+
+        if last_desired > 0 and last_ready >= last_desired:
+            # DS is ready; fetch endpoints
+            try:
+                eps = v1.read_namespaced_endpoints(name=svc_name, namespace=namespace)
+            except ApiException as e:
+                if e.status == 404:
+                    time.sleep(poll_s)
+                    continue
+                raise
+
+            ips: list[str] = []
+            if eps.subsets:
+                for subset in eps.subsets:
+                    if subset.addresses:
+                        for addr in subset.addresses:
+                            if addr and addr.ip:
+                                ips.append(addr.ip)
+
+            ips = sorted(set(ips))
+            if ips:
+                return [f"{ip}:50000" for ip in ips]
+
+        time.sleep(poll_s)
+
+    raise HTTPException(
+        status_code=504,
+        detail=f"Timed out waiting for slaves (ds_ready={last_ready}/{last_desired}, endpoints=empty)"
+    )
+
 def schedule_workload(job_id,distributed):
     name = gen_resource_name(job_id)
     namespace = get_namespace()
@@ -84,14 +215,14 @@ def schedule_workload(job_id,distributed):
         client.CoreV1Api().create_namespaced_config_map(namespace=namespace, body=configmap_manifest)
         logger.info(f"Created ConfigMap for job {job_id}")
         
-        #if config.LICENSE_VALID and distributed:
-        #    try:
-        #        from services import k8s_extra
-        #         slaves = k8s_extra.create_slaves(job_id)
-        #    except Exception as e:
-        #        logger.error(f"Failed to create slaves for job {job_id}: {e}")
-        #        delete_workload(job_id)
-        #        raise HTTPException(status_code=500, detail=f"Error creating slaves: {str(e)}")
+        if distributed:
+            try:
+                schedule_slave_daemonset_and_service(job_id)
+                slaves = watch_daemonset_and_get_slave_endpoints(job_id)
+            except Exception as e:
+                logger.error(f"Failed to create distributed slaves for job {job_id}: {e}")
+                delete_workload(job_id)
+                raise
 
         # Create Job
         with open(job_template_path, 'r') as file:
@@ -109,7 +240,7 @@ def schedule_workload(job_id,distributed):
             slaves=slaves,
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
-            resources=config.K8S_JOB_RESOURCES,
+            resources=config.K8S_JOB_RESOURCES_MASTER if distributed else config.K8S_JOB_RESOURCES,
             storage_pvc_name=config.STORAGE_PVC_NAME
         )
 
@@ -238,6 +369,20 @@ def delete_workload(job_id):
                 name=cm_name
             )
             logger.info(f"ConfigMap {cm_name} deleted")
+
+        logger.info(f"Deleting Services with label selector: {label_selector}")
+        services = client.CoreV1Api().list_namespaced_service(
+            namespace=namespace,
+            label_selector=label_selector
+        )
+        logger.info(f"Found {len(services.items)} Services to delete")
+        for svc in services.items:
+            svc_name = svc.metadata.name
+            try:
+                client.CoreV1Api().delete_namespaced_service(namespace=namespace, name=svc_name)
+                logger.info(f"Service {svc_name} deleted")
+            except Exception as e:
+                logger.warning(f"Failed to delete Service {svc_name}: {e}")
     except Exception as e:
         logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")

@@ -20,6 +20,8 @@ class Config:
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
     PAT_STRING_PREFIX: str = "kb_pat"
+
+    MODE_DISTRIBUTED: bool = os.getenv("MODE_DISTRIBUTED", "false").lower() == "true"
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
     WORKER_WATCH_INTERVAL: int = 3
@@ -83,6 +85,15 @@ class Config:
             K8S_JOB_RESOURCES = json.loads(job_resources_env)
         except json.JSONDecodeError:
             K8S_JOB_RESOURCES = None
+
+    # load Kubernetes Job Resources for Jmeter Master in distributed mode
+    K8S_JOB_RESOURCES_MASTER: dict = {}
+    job_resources_master_env = os.getenv("K8S_JOB_RESOURCES_MASTER", None)
+    if job_resources_master_env:
+        try:
+            K8S_JOB_RESOURCES_MASTER = json.loads(job_resources_master_env)
+        except json.JSONDecodeError:
+            K8S_JOB_RESOURCES_MASTER = None
 
     # LDAP Configuration
     LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "false").lower() == "true"
