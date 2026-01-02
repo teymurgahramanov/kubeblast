@@ -5,7 +5,6 @@ from routes import token, user_profile, jobs, logs, files, stats
 from core.log import logger
 from config import config
 import uvicorn
-import os
 import time
 import threading
 
@@ -85,6 +84,30 @@ async def start_capacity_worker():
       time.sleep(interval)
 
   threading.Thread(target=loop, daemon=True).start()
+
+_job_status_worker_started = False
+
+@app.on_event("startup")
+async def start_job_status_worker():
+  """
+  Starts the Kubernetes->Mongo job status sync loop inside the API process.
+  Always enabled.
+  """
+  global _job_status_worker_started
+
+  if _job_status_worker_started:
+    return
+
+  def loop():
+    try:
+      from worker import process_job_update
+      process_job_update()
+    except Exception as e:
+      # In daemon thread; just log and let supervisor restart the container if needed
+      logger.error(f"Job status worker crashed: {e}")
+
+  threading.Thread(target=loop, daemon=True).start()
+  _job_status_worker_started = True
 
 
 uvicorn.run(

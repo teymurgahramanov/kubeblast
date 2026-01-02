@@ -24,7 +24,11 @@ class Config:
     MODE_DISTRIBUTED: bool = os.getenv("MODE_DISTRIBUTED", "false").lower() == "true"
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
-    WORKER_WATCH_INTERVAL: int = 3
+    # Worker job status sync:
+    # - Uses Kubernetes watch (event-driven) as primary mechanism
+    # - Periodically does a full resync as a safety net (missed events / restarts)
+    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", 300))  # seconds (full resync interval)
+    WORKER_WATCH_TIMEOUT: int = int(os.getenv("WORKER_WATCH_TIMEOUT", 60))    # seconds (watch stream timeout)
 
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
