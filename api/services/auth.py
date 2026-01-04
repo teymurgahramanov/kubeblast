@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from core import db, models
 from config import config
+from services import users
 
 SECRET_KEY = config.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -63,15 +64,23 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
                 return False
         case "oidc":
             if config.LICENSE_VALID and config.OIDC_ENABLED:
-                from .oidc_auth import OIDCAuth
-                oidc = OIDCAuth()
                 if not oidc_user_data:
                     logger.error("OIDC user data is required for OIDC authentication")
                     return False
                 
-                username = oidc_user_data.get("username")
+                # Always normalize the incoming OIDC payload through OIDCAuth, so we don't
+                # rely on callers to pre-shape the dict correctly.
+                from services.oidc_auth import OIDCAuth
+                oidc = OIDCAuth()
+                try:
+                    normalized_user = oidc.map_oidc_user_to_db_user(oidc_user_data)
+                except Exception as e:
+                    logger.error(f"Failed to map OIDC user data: {str(e)}")
+                    return False
+                
+                username = normalized_user.username
                 if not username:
-                    logger.error("No username in OIDC user data")
+                    logger.error("No username resolved from OIDC user data")
                     return False
                 
                 user = get_user(username)
@@ -81,10 +90,9 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
                 # Create new user if auto-create is enabled
                 if config.OIDC_AUTO_CREATE_USERS:
                     try:
-                        new_user = models.UserInDB(**oidc_user_data)
-                        db.mongo.users.insert_one(new_user.dict())
+                        db.mongo.users.insert_one(normalized_user.dict())
                         logger.info(f"Created new OIDC user: {username}")
-                        return new_user
+                        return users.get_user(username)
                     except Exception as e:
                         logger.error(f"Failed to create OIDC user: {str(e)}")
                         return False
@@ -265,7 +273,14 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="OIDC user data is required",
             )
-        username = oidc_user_data.get("username")
+        # Don't assume the payload already contains `username`; OIDC providers vary.
+        username = (
+            oidc_user_data.get("username") or
+            oidc_user_data.get("preferred_username") or
+            oidc_user_data.get("login") or
+            (oidc_user_data.get("email", "").split("@")[0] if oidc_user_data.get("email") else None) or
+            oidc_user_data.get("sub")
+        )
         password = None
     else:
         if not form_data:
