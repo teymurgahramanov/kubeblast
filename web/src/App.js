@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Jobs from './components/Jobs';
+import JobDetail from './components/JobDetail';
 import Users from './components/Users';
 import PrivateRoute from './components/PrivateRoute';
 import { getUserRole } from './utils/auth';
@@ -45,6 +46,15 @@ const App = () => {
           element={
             <PrivateRoute>
               <Jobs />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/jobs/:jobId"
+          element={
+            <PrivateRoute>
+              <JobDetail />
             </PrivateRoute>
           }
         />

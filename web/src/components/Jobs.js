@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel, Pagination } from '@mui/material';
 import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
@@ -10,6 +10,7 @@ import ErrorMessage from './ErrorMessage';
 import config from '../config.json';
 
 const Jobs = () => {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(5);
@@ -1074,13 +1075,26 @@ const Jobs = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
+                    cursor: 'pointer',
+                    transition: 'transform 120ms ease, box-shadow 120ms ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 10px 0 rgb(0 0 0 / 0.08)',
+                    },
                   }}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       {job.job_name}
                     </Typography>
-                    <IconButton onClick={(e) => handleMenuOpen(e, job.id)} size="small">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuOpen(e, job.id);
+                      }}
+                      size="small"
+                    >
                       <MoreVert />
                     </IconButton>
                     <Menu
@@ -1090,51 +1104,51 @@ const Jobs = () => {
                     >
                       {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
                         <>
-                          <MenuItem onClick={() => approveJob(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); approveJob(job.id); }}>
                             <CheckCircle sx={{ mr: 1 }} /> Approve
                           </MenuItem>
-                          <MenuItem onClick={() => declineJob(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); declineJob(job.id); }}>
                             <Cancel sx={{ mr: 1 }} /> Decline
                           </MenuItem>
                         </>
                       )}
                       {job.status === 'ready' && (
-                        <MenuItem onClick={() => startJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); startJob(job.id); }}>
                           <PlayArrow sx={{ mr: 1 }} /> Start
                         </MenuItem>
                       )}
                       {job.status === 'running' && (
-                        <MenuItem onClick={() => stopJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); stopJob(job.id); }}>
                           <Stop sx={{ mr: 1 }} /> Stop
                         </MenuItem>
                       )}
                       {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
-                        <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); viewLogs(job.id, job.status); }}>
                           <Visibility sx={{ mr: 1 }} /> Logs
                         </MenuItem>
                       )}
-                      <MenuItem onClick={() => viewEvents(job.id)}>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); viewEvents(job.id); }}>
                         <ListAlt sx={{ mr: 1 }} /> Events
                       </MenuItem>
-                      <MenuItem onClick={() => openPlanFile(job.id)}>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); openPlanFile(job.id); }}>
                         <Description sx={{ mr: 1 }} /> Plan
                       </MenuItem>
                       {(job.status === 'failed' || job.status === 'completed') && (
-                        <MenuItem onClick={() => rescheduleJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); rescheduleJob(job.id); }}>
                           <Autorenew sx={{ mr: 1 }} /> Retry
                         </MenuItem>
                       )}
                       {job.status === 'completed' && (
                         <>
-                          <MenuItem onClick={() => downloadResult(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); downloadResult(job.id); }}>
                             <Download sx={{ mr: 1 }} /> Result
                           </MenuItem>
-                          <MenuItem onClick={() => openReport(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); openReport(job.id); }}>
                             <Dashboard sx={{ mr: 1 }} /> Report
                           </MenuItem>
                         </>
                       )}
-                      <MenuItem onClick={() => deleteJob(job.id)}>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); deleteJob(job.id); }}>
                         <Delete sx={{ mr: 1 }} /> Delete
                       </MenuItem>
                     </Menu>
