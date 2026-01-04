@@ -357,6 +357,21 @@ def delete_workload(job_id):
             )
             logger.info(f"DaemonSet {ds_name} deleted")
 
+        logger.info(f"Deleting ConfigMaps with label selector: {label_selector}")
+        config_maps = client.CoreV1Api().list_namespaced_config_map(
+            namespace=namespace,
+            label_selector=label_selector
+        )
+
+        logger.info(f"Found {len(config_maps.items)} ConfigMaps to delete")
+        for cm in config_maps.items:
+            cm_name = cm.metadata.name
+            client.CoreV1Api().delete_namespaced_config_map(
+                namespace=namespace,
+                name=cm_name
+            )
+            logger.info(f"ConfigMap {cm_name} deleted")
+
         logger.info(f"Deleting Services with label selector: {label_selector}")
         services = client.CoreV1Api().list_namespaced_service(
             namespace=namespace,
@@ -373,25 +388,3 @@ def delete_workload(job_id):
     except Exception as e:
         logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")
-
-def delete_artifacts(job_id):
-    namespace = get_namespace()
-    label_selector = f"kubeblast/job-id={job_id}"
-    try:
-        logger.info(f"Deleting ConfigMaps with label selector: {label_selector}")
-        config_maps = client.CoreV1Api().list_namespaced_config_map(
-            namespace=namespace,
-            label_selector=label_selector
-        )
-
-        logger.info(f"Found {len(config_maps.items)} ConfigMaps to delete")
-        for cm in config_maps.items:
-            cm_name = cm.metadata.name
-            client.CoreV1Api().delete_namespaced_config_map(
-                namespace=namespace,
-                name=cm_name
-            )
-            logger.info(f"ConfigMap {cm_name} deleted")
-    except Exception as e:
-        logger.error(f"Failed to delete artifacts {job_id}: {e}")
-        raise HTTPException(status_code=500, detail="Error deleting artifacts")
