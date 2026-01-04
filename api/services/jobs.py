@@ -6,7 +6,7 @@ import hashlib
 from config import config
 from datetime import datetime
 from core.log import logger
-from services import k8s
+from services import k8s, events
 
 from services import files_fs as files
 
@@ -117,15 +117,20 @@ def create_job(current_user, job_data):
     job_to_db = models.Job(**job)
 
     try:
+        job_id = None
         result = db.mongo.jobs.insert_one(job_to_db.dict())
         job_id = str(result.inserted_id)
+        logger.info(f"Job {job_id} inserted into Mongo")
+        events.create_event(job_id, "Job created")
         file_name = "plan.jmx"
         files.create_file(job_id, job_data.file_content, file_name)
         job = get_job(current_user, job_id)
         return job
     except Exception as e:
         logger.error(e)
-        delete_job(current_user, job_id)
+        if "job_id" in locals() and job_id:
+            events.create_event(job_id, f"Job creation failed: {e}")
+            delete_job(current_user, job_id)
         raise HTTPException(status_code=500, detail="Failed to create job")
 
 
@@ -138,10 +143,14 @@ def start_job(current_user, job_id):
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "starting"}}
         )
-        k8s.schedule_workload(job_id, job["distributed"])
+        logger.info(f"Scheduling workload for job {job_id}")
+        events.create_event(job_id, "Workload scheduling started")
+        k8s.schedule_workload(job_id, job["distributed"])   
+        events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} started"}
     except Exception as e:
         logger.error(f"Failed to schedule workload for job {job_id}: {e}")
+        events.create_event(job_id, f"Workload scheduling failed: {e}")
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "failed"}}
@@ -160,14 +169,17 @@ def retry_job(current_user, job_id):
             {"$set": {"status": "retrying"}}
         )
         k8s.delete_workload(job_id)
+        events.create_event(job_id, "Workload deleted")
         sleep(10)
         k8s.schedule_workload(job_id,job["distributed"])
+        events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} retried"}
     except Exception as e:
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "failed"}}
         )
+        events.create_event(job_id, f"Workload scheduling failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to retry job")
 
 def stop_job(current_user, job_id):
@@ -182,6 +194,7 @@ def stop_job(current_user, job_id):
             {"$set": {"status": "stopping"}}
         )
         k8s.stop_workload(job_id)
+        events.create_event(job_id, "Workload stopped")
         logger.info(f"Job {job_id} stopped gracefully")
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
@@ -190,6 +203,7 @@ def stop_job(current_user, job_id):
         return {"message": f"Job {job_id} stopped"}
     except Exception as e:
         logger.error(f"Failed to stop job {job_id}: {e}")
+        events.create_event(job_id, f"Workload stopping failed: {e}")
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "failed"}}
@@ -203,6 +217,12 @@ def delete_job(current_user, job_id):
     k8s.delete_artifacts(job_id)
 
     files.delete_file(job_id)
+
+    # Clean up associated job events
+    try:
+        events.delete_events_for_job(job_id)
+    except Exception as e:
+        logger.warning(f"Failed to delete job events for {job_id}: {e}")
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     

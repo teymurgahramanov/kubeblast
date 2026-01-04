@@ -147,3 +147,8 @@ class PatCreate(BaseModel):
 
 class PatCreatedResponse(BaseModel):
     token: str
+
+class JobEvent(BaseModel):
+    job_id: str = Field(..., description="Job identifier")
+    ts: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp (UTC)")
+    msg: str = Field(..., min_length=1, description="Event message")

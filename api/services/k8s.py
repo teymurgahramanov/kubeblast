@@ -10,6 +10,7 @@ import time
 from core.log import logger
 
 from services import files_fs as files
+from services import events
 
 def get_namespace():
     try:
@@ -221,6 +222,7 @@ def schedule_workload(job_id,distributed):
                 slaves = watch_daemonset_and_get_slave_endpoints(job_id)
             except Exception as e:
                 logger.error(f"Failed to create distributed slaves for job {job_id}: {e}")
+                events.create_event(job_id, f"Failed to create distributed slaves: {e}")
                 delete_workload(job_id)
                 raise
 
