@@ -108,7 +108,11 @@ class JobCreate(Job):
             raise HTTPException(status_code=400, detail=f"Invalid file type. Received: {file.content_type}")
         else:
             file_content = await file.read()
-            return cls(description=description, file_content=file_content, created_at=datetime.now())
+            return cls(
+                description=description,
+                file_content=file_content,
+                created_at=datetime.now(),
+            )
 
 class CapacityResources(BaseModel):
     cpu_m: int = 0
@@ -119,4 +123,32 @@ class Capacity(BaseModel):
     nodesMatching: int = 0
     capacity: CapacityResources = Field(default_factory=CapacityResources)
     remaining: CapacityResources = Field(default_factory=CapacityResources)
+    # Diagnostics: what the scheduler cares about (requests) vs actual usage (metrics.k8s.io)
+    usedRequests: CapacityResources = Field(default_factory=CapacityResources)
+    usedUsage: CapacityResources = Field(default_factory=CapacityResources)
     updatedAt: Optional[datetime] = None
+
+class Pat(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    name: str
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    revoked: bool = False
+    last_used_at: Optional[datetime] = None
+
+class PatInDB(Pat):
+    prefix: str
+    hashed_token: str
+
+class PatCreate(BaseModel):
+    name: str = Field(min_length=3, max_length=20)
+    expires_in_days: Optional[int] = Field(default=None, ge=1, le=3650)
+
+class PatCreatedResponse(BaseModel):
+    token: str
+
+class JobEvent(BaseModel):
+    job_id: str = Field(..., description="Job identifier")
+    ts: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp (UTC)")
+    msg: str = Field(..., min_length=1, description="Event message")

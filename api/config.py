@@ -19,12 +19,22 @@ class Config:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
+    PAT_STRING_PREFIX: str = "kb_pat"
+
+    MODE_DISTRIBUTED: bool = os.getenv("MODE_DISTRIBUTED", "false").lower() == "true"
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
-    WORKER_WATCH_INTERVAL: int = 3
+    # Worker job status sync:
+    # - Uses Kubernetes watch (event-driven) as primary mechanism
+    # - Periodically does a full resync as a safety net (missed events / restarts)
+    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", 300))  # seconds (full resync interval)
+    WORKER_WATCH_TIMEOUT: int = int(os.getenv("WORKER_WATCH_TIMEOUT", 60))    # seconds (watch stream timeout)
 
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
+
+    # Metrics server URL for capacity data
+    K8S_METRICS_SERVER: str = os.getenv("K8S_METRICS_SERVER", "https://metrics-server.kube-system")
 
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
@@ -79,6 +89,15 @@ class Config:
             K8S_JOB_RESOURCES = json.loads(job_resources_env)
         except json.JSONDecodeError:
             K8S_JOB_RESOURCES = None
+
+    # load Kubernetes Job Resources for Jmeter Master in distributed mode
+    K8S_JOB_RESOURCES_MASTER: dict = {}
+    job_resources_master_env = os.getenv("K8S_JOB_RESOURCES_MASTER", None)
+    if job_resources_master_env:
+        try:
+            K8S_JOB_RESOURCES_MASTER = json.loads(job_resources_master_env)
+        except json.JSONDecodeError:
+            K8S_JOB_RESOURCES_MASTER = None
 
     # LDAP Configuration
     LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "false").lower() == "true"

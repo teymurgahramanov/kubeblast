@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from core import db, models
 from config import config
+from services import users
 
 SECRET_KEY = config.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -32,7 +33,7 @@ def get_user(username: str):
     else:
         return None
 
-def authenticate_user(username: str, plain_password: str, method: str, oidc_user_data: dict = None):
+def authenticate_user(username: str = None, plain_password: str = None, method: str = "local", oidc_user_data: dict = None, pat_token: str = None):
     match method:
         case "local":
             user = get_user(username)
@@ -67,9 +68,19 @@ def authenticate_user(username: str, plain_password: str, method: str, oidc_user
                     logger.error("OIDC user data is required for OIDC authentication")
                     return False
                 
-                username = oidc_user_data.get("username")
+                # Always normalize the incoming OIDC payload through OIDCAuth, so we don't
+                # rely on callers to pre-shape the dict correctly.
+                from services.oidc_auth import OIDCAuth
+                oidc = OIDCAuth()
+                try:
+                    normalized_user = oidc.map_oidc_user_to_db_user(oidc_user_data)
+                except Exception as e:
+                    logger.error(f"Failed to map OIDC user data: {str(e)}")
+                    return False
+                
+                username = normalized_user.username
                 if not username:
-                    logger.error("No username in OIDC user data")
+                    logger.error("No username resolved from OIDC user data")
                     return False
                 
                 user = get_user(username)
@@ -79,14 +90,67 @@ def authenticate_user(username: str, plain_password: str, method: str, oidc_user
                 # Create new user if auto-create is enabled
                 if config.OIDC_AUTO_CREATE_USERS:
                     try:
-                        new_user = models.UserInDB(**oidc_user_data)
-                        db.mongo.users.insert_one(new_user.dict())
+                        db.mongo.users.insert_one(normalized_user.dict())
                         logger.info(f"Created new OIDC user: {username}")
-                        return new_user
+                        return users.get_user(username)
                     except Exception as e:
                         logger.error(f"Failed to create OIDC user: {str(e)}")
                         return False
                 return False
+            else:
+                return False
+        case "pat":
+            if config.LICENSE_VALID:
+                if not pat_token:
+                    logger.error("PAT token is required for PAT authentication")
+                    return False
+                
+                if not pat_token.startswith(config.PAT_STRING_PREFIX):
+                    logger.error("Invalid PAT token format")
+                    return False
+                
+                # Token format: kb_pat_<8-char-prefix>_<suffix>
+                # Extract the 8-char prefix between the first and second underscore after PAT_STRING_PREFIX
+                parts = pat_token.split('_')
+                if len(parts) < 3:
+                    logger.error("Invalid PAT token format")
+                    return False
+                token_prefix = parts[2]  # The 8-char prefix is the third part (kb_pat_PREFIX_suffix)
+                
+                # Find PAT by prefix
+                pat_doc = db.mongo.pats.find_one({"prefix": token_prefix, "revoked": False})
+                if not pat_doc:
+                    logger.error("PAT not found or revoked")
+                    return False
+                
+                # Verify the full token hash
+                if not verify_password(pat_token, pat_doc["hashed_token"]):
+                    logger.error("Invalid PAT token")
+                    return False
+                
+                # Check expiration
+                expires_at = pat_doc.get("expires_at")
+                if expires_at:
+                    # Handle both timezone-aware and naive datetimes
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                    if expires_at < datetime.now(timezone.utc):
+                        logger.error("PAT token expired")
+                        return False
+                
+                # Get the user
+                user = db.mongo.users.find_one({"username": pat_doc["user_id"]})
+                if not user:
+                    logger.error(f"User {pat_doc['user_id']} not found for PAT")
+                    return False
+                
+                # Update last_used_at
+                db.mongo.pats.update_one(
+                    {"_id": pat_doc["_id"]},
+                    {"$set": {"last_used_at": datetime.now(timezone.utc)}}
+                )
+                
+                return models.UserInDB(**user)
             else:
                 return False
         case _:
@@ -98,6 +162,15 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Try PAT authentication first
+    if token.startswith(config.PAT_STRING_PREFIX):
+        user = authenticate_user(method="pat", pat_token=token)
+        if not user:
+            raise credentials_exception
+        return user
+    
+    # Fall back to JWT authentication
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
@@ -200,7 +273,14 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="OIDC user data is required",
             )
-        username = oidc_user_data.get("username")
+        # Don't assume the payload already contains `username`; OIDC providers vary.
+        username = (
+            oidc_user_data.get("username") or
+            oidc_user_data.get("preferred_username") or
+            oidc_user_data.get("login") or
+            (oidc_user_data.get("email", "").split("@")[0] if oidc_user_data.get("email") else None) or
+            oidc_user_data.get("sub")
+        )
         password = None
     else:
         if not form_data:

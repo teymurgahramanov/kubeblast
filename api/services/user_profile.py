@@ -1,6 +1,12 @@
 from core import models, db
 from services import auth
+from config import config
 from fastapi import HTTPException
+from datetime import datetime, timedelta, timezone
+from typing import List
+from bson import ObjectId
+import secrets
+import string
 
 def get_profile(username: str):
     user = db.mongo.users.find_one({"username": username})
@@ -16,5 +22,3 @@ def update_profile(username: str, user_data: dict):
       return get_profile(username)
     else:
       raise HTTPException(status_code=400, detail="Can't update external user")
-
-

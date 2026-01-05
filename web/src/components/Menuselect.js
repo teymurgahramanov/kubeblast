@@ -123,14 +123,12 @@ const Menuselect = () => {
           <ListItemText>{mode === 'dark' ? 'Light theme' : 'Dark theme'}</ListItemText>
         </MenuItem>
 
-        {userRole === 'admin' && (
-          <MenuItem onClick={isPro ? () => handleNavigation('/users') : handleProFeature}>
+        {userRole === 'admin' && isPro && (
+          <MenuItem onClick={() => handleNavigation('/users')}>
             <ListItemIcon>
               <People fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {isPro ? 'Users' : renderProFeature('Users')}
-            </ListItemText>
+            <ListItemText>Users</ListItemText>
           </MenuItem>
         )}
 

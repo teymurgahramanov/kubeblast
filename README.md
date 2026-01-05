@@ -23,6 +23,10 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
    kubectl port-forward svc/kubeblast 8080:80
    ```
 
+## 👍 Get more
+Kubeblast is built to scale from quick, single-click load tests to full team workflows on Kubernetes.
+For the complete list of **Base** and **Advanced** features, visit [kubeblast.io](https://kubeblast.io).
+
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
 You can define them directly using Helm values or store in a Kubernetes Secret.
@@ -36,6 +40,11 @@ Below is the list of supported environment variables:
 | `LOG_LEVEL` | string | Logging level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `SECRET_KEY` | string | Secret key for JWT tokens and encryption | Random string | `your-secret-key` |
 | `PER_USER_CURRENT_JOBS_LIMIT` | int | Maximum number of current jobs per user | `3` |  |
+| `TIMEZONE` | string | Application timezone (used for API/UI datetime rendering) | `UTC` | `Europe/Berlin` |
+| `MODE_DISTRIBUTED` | bool | Enable distributed load testing (JMeter master/slave mode) | `false` | `true` |
+| `WORKER_WATCH_INTERVAL` | int | Worker full resync interval (seconds) | `300` | `120` |
+| `WORKER_WATCH_TIMEOUT` | int | Kubernetes watch stream timeout (seconds) | `60` | `30` |
+| `K8S_METRICS_SERVER` | string | Metrics Server URL used for capacity data retrieval | `https://metrics-server.kube-system` | `https://metrics-server.kube-system` |
 | `MONGODB_HOST` | string | MongoDB host address | `localhost` |  |
 | `MONGODB_PORT` | int | MongoDB port number | `27017` |  |
 | `MONGODB_USER` | string | MongoDB username | `kubeblast` |  |
@@ -50,6 +59,7 @@ Below is the list of supported environment variables:
 | `K8S_JOB_NODE_SELECTOR` | JSON | Node selector for job placement (JSON) | `{}` | `{"nodeType": "worker"}` |
 | `K8S_JOB_TOLERATIONS` | JSON | Tolerations for job scheduling (JSON array) | `[]` | `[{"key": "dedicated", "operator": "Equal", "value": "loadtest", "effect": "NoSchedule"}]` |
 | `K8S_JOB_RESOURCES` | JSON | Resource requests/limits (JSON) | `{}` | `{"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}` |
+| `K8S_JOB_RESOURCES_MASTER` | JSON | Resource requests/limits for the JMeter master job in distributed mode (JSON) | `{}` | `{"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}` |
 | `LDAP_ENABLED` | bool | Enable LDAP authentication | `false` |  |
 | `LDAP_SERVER` | string | LDAP server address |  | `ldap://ldap.example.com:389` |
 | `LDAP_BASE_DN` | string | LDAP base distinguished name |  | `DC=example,DC=com` |

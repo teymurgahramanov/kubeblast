@@ -1,14 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import token, user_profile, jobs, logs, files, stats
+from routes import token, user_profile, jobs, logs, events, files, stats
 from core.log import logger
 from config import config
 import uvicorn
-import os
+import time
 import threading
 
-app = FastAPI()
+app = FastAPI(
+    title="Kubeblast",
+    description="Kubernetes-native load testing platform",
+    version=config.APP_VERSION,
+    openapi_url="/api/v1/openapi.json"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +27,7 @@ app.include_router(token.router,tags=["token"])
 app.include_router(user_profile.router,tags=["profile"])
 app.include_router(jobs.router,tags=["jobs"])
 app.include_router(logs.router,tags=["logs"])
+app.include_router(events.router,tags=["events"])
 app.include_router(files.router,tags=["files"])
 app.include_router(stats.router,tags=["stats"])
 
@@ -59,46 +65,51 @@ async def initialize():
 @app.on_event("startup")
 async def load_pro_routes():
   if config.LICENSE_VALID:
-    from routes import jobs_extra, users
+    from routes import jobs_extra, users, oidc, pats
     app.include_router(jobs_extra.router, tags=["jobs_extra"])
     app.include_router(users.router, tags=["users"])
+    app.include_router(oidc.router, tags=["oidc"])
+    app.include_router(pats.router, tags=["pats"])
 
 @app.on_event("startup")
-async def start_capacity_warmer():
-  stop_event = threading.Event()
-  app.state.capacity_warm_stop_event = stop_event
+async def start_capacity_worker():
+  from services import capacity
 
-  def _warm_loop():
-    try:
-      from services import capacity
+  def loop():
+    interval = int(config.CAPACITY_WARM_INTERVAL)
+    while True:
       try:
         capacity.compute_and_store_capacity()
       except Exception as e:
-        logger.warning(f"Initial capacity warm failed: {e}")
-      interval = int(config.CAPACITY_WARM_INTERVAL)
-      while not stop_event.wait(interval):
-        try:
-          capacity.compute_and_store_capacity()
-        except Exception as e:
-          logger.warning(f"Capacity warm failed: {e}")
-    finally:
-      pass
+        logger.warning(f"Capacity update failed: {e}")
+      time.sleep(interval)
 
-  t = threading.Thread(target=_warm_loop, name="capacity-warm", daemon=True)
-  t.start()
-  app.state.capacity_warm_thread = t
+  threading.Thread(target=loop, daemon=True).start()
 
-@app.on_event("shutdown")
-async def stop_capacity_warmer():
-  stop_event = getattr(app.state, "capacity_warm_stop_event", None)
-  t = getattr(app.state, "capacity_warm_thread", None)
-  if stop_event:
-    stop_event.set()
-  if t and t.is_alive():
+_job_status_worker_started = False
+
+@app.on_event("startup")
+async def start_job_status_worker():
+  """
+  Starts the Kubernetes->Mongo job status sync loop inside the API process.
+  Always enabled.
+  """
+  global _job_status_worker_started
+
+  if _job_status_worker_started:
+    return
+
+  def loop():
     try:
-      t.join(timeout=5)
-    except Exception:
-      pass
+      from worker import process_job_update
+      process_job_update()
+    except Exception as e:
+      # In daemon thread; just log and let supervisor restart the container if needed
+      logger.error(f"Job status worker crashed: {e}")
+
+  threading.Thread(target=loop, daemon=True).start()
+  _job_status_worker_started = True
+
 
 uvicorn.run(
   app,
