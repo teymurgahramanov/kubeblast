@@ -23,6 +23,10 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
    kubectl port-forward svc/kubeblast 8080:80
    ```
 
+## 👍 Get more
+Kubeblast is built to scale from quick, single-click load tests to full team workflows on Kubernetes.
+For the complete list of **Base** and **Advanced** features, visit [kubeblast.io](https://kubeblast.io).
+
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
 You can define them directly using Helm values or store in a Kubernetes Secret.
