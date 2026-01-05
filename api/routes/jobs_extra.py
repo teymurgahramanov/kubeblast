@@ -3,7 +3,7 @@ from typing import Annotated
 from core import models
 from services import auth, jobs_extra
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 @router.put("/jobs/approve/{job_id}", response_model=models.Job)
 async def approve_job(

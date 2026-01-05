@@ -5,7 +5,7 @@ from core import models
 from services import auth, k8s, jobs
 import asyncio
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api/v1")
 
 @router.get(
     "/logs/{job_id}",

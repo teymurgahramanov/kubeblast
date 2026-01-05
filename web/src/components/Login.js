@@ -4,6 +4,7 @@ import { Box, Typography, TextField, Button, FormControl, InputLabel, Select, Me
 import { Login as LoginIcon } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
+import Footer from './Footer';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -265,6 +266,7 @@ const Login = () => {
           )}
         </Box>
       </Box>
+      <Footer />
     </Box>
   );
 };

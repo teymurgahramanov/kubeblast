@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip, TextField, Select, FormControl, InputLabel, Pagination } from '@mui/material';
 import { Delete, MoreVert, CheckCircle, Cancel, Visibility, Description, Autorenew, Download, Add, Star, PlayArrow, ListAlt, Stop, Dashboard, Search } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
@@ -10,6 +10,7 @@ import ErrorMessage from './ErrorMessage';
 import config from '../config.json';
 
 const Jobs = () => {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(5);
@@ -18,9 +19,8 @@ const Jobs = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [logs, setLogs] = useState(null);
+  const [events, setEvents] = useState(null);
   const [openAddJob, setOpenAddJob] = useState(false);
-  const [openDetails, setOpenDetails] = useState(false);
-  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
   const [resources, setResources] = useState(null);
   const [resourcesError, setResourcesError] = useState('');
   const [searchText, setSearchText] = useState('');
@@ -478,6 +478,83 @@ const Jobs = () => {
     }
   };
 
+  const viewEvents = async (job_id) => {
+    try {
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
+        setError('Unauthorized: Please log in');
+        return;
+      }
+
+      // Use fetch for streaming with authorization
+      const response = await fetch(`${axiosInstance.defaults.baseURL}/events/${job_id}`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let eventsContent = '';
+
+      const readStream = async () => {
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+              // Ignore heartbeat/comments (": ping") and empty lines
+              if (!line || line.startsWith(':')) continue;
+
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                // Backend sends JSON payloads; fall back to raw data on parse errors
+                try {
+                  const obj = JSON.parse(data);
+                  const tsRaw = obj.ts ? String(obj.ts) : '';
+                  const ts = tsRaw ? formatDate(tsRaw) : '';
+                  const msg = obj.msg ? String(obj.msg) : String(data);
+                  eventsContent += `${ts ? `[${ts}] ` : ''}${msg}\n`;
+                } catch {
+                  eventsContent += data + '\n';
+                }
+              } else if (line.startsWith('event: ')) {
+                // Optional: show named events (e.g. "end")
+                const evt = line.slice(7);
+                eventsContent += `\n[${evt}]\n`;
+              }
+            }
+
+            setEvents(eventsContent);
+          }
+        } catch (error) {
+          console.error('Stream reading error:', error);
+          if (!eventsContent) {
+            setError(error.message || 'Error reading events. Please try again.');
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      };
+
+      readStream();
+      handleMenuClose();
+    } catch (error) {
+      setError(error.message || 'Error fetching events');
+    }
+  };
+
   const openPlanFile = async (job_id) => {
     try {
       if (!job_id) {
@@ -576,12 +653,6 @@ const Jobs = () => {
     } catch (error) {
       setError(error.response?.data?.detail || error.message);
     }
-  };
-
-  const handleDetailsClick = (job) => {
-    setSelectedJobDetails(job);
-    setOpenDetails(true);
-    handleMenuClose();
   };
 
   const getStatusColor = (status) => {
@@ -1004,13 +1075,26 @@ const Jobs = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
+                    cursor: 'pointer',
+                    transition: 'transform 120ms ease, box-shadow 120ms ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 10px 0 rgb(0 0 0 / 0.08)',
+                    },
                   }}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       {job.job_name}
                     </Typography>
-                    <IconButton onClick={(e) => handleMenuOpen(e, job.id)} size="small">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuOpen(e, job.id);
+                      }}
+                      size="small"
+                    >
                       <MoreVert />
                     </IconButton>
                     <Menu
@@ -1020,51 +1104,51 @@ const Jobs = () => {
                     >
                       {job.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
                         <>
-                          <MenuItem onClick={() => approveJob(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); approveJob(job.id); }}>
                             <CheckCircle sx={{ mr: 1 }} /> Approve
                           </MenuItem>
-                          <MenuItem onClick={() => declineJob(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); declineJob(job.id); }}>
                             <Cancel sx={{ mr: 1 }} /> Decline
                           </MenuItem>
                         </>
                       )}
                       {job.status === 'ready' && (
-                        <MenuItem onClick={() => startJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); startJob(job.id); }}>
                           <PlayArrow sx={{ mr: 1 }} /> Start
                         </MenuItem>
                       )}
                       {job.status === 'running' && (
-                        <MenuItem onClick={() => stopJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); stopJob(job.id); }}>
                           <Stop sx={{ mr: 1 }} /> Stop
                         </MenuItem>
                       )}
-                      <MenuItem onClick={() => handleDetailsClick(job)}>
-                        <ListAlt sx={{ mr: 1 }} /> Details
-                      </MenuItem>
                       {(job.status === 'running' || job.status === 'completed' || job.status === 'failed') && (
-                        <MenuItem onClick={() => viewLogs(job.id, job.status)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); viewLogs(job.id, job.status); }}>
                           <Visibility sx={{ mr: 1 }} /> Logs
                         </MenuItem>
                       )}
-                      <MenuItem onClick={() => openPlanFile(job.id)}>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); viewEvents(job.id); }}>
+                        <ListAlt sx={{ mr: 1 }} /> Events
+                      </MenuItem>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); openPlanFile(job.id); }}>
                         <Description sx={{ mr: 1 }} /> Plan
                       </MenuItem>
                       {(job.status === 'failed' || job.status === 'completed') && (
-                        <MenuItem onClick={() => rescheduleJob(job.id)}>
+                        <MenuItem onClick={(e) => { e.stopPropagation(); rescheduleJob(job.id); }}>
                           <Autorenew sx={{ mr: 1 }} /> Retry
                         </MenuItem>
                       )}
                       {job.status === 'completed' && (
                         <>
-                          <MenuItem onClick={() => downloadResult(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); downloadResult(job.id); }}>
                             <Download sx={{ mr: 1 }} /> Result
                           </MenuItem>
-                          <MenuItem onClick={() => openReport(job.id)}>
+                          <MenuItem onClick={(e) => { e.stopPropagation(); openReport(job.id); }}>
                             <Dashboard sx={{ mr: 1 }} /> Report
                           </MenuItem>
                         </>
                       )}
-                      <MenuItem onClick={() => deleteJob(job.id)}>
+                      <MenuItem onClick={(e) => { e.stopPropagation(); deleteJob(job.id); }}>
                         <Delete sx={{ mr: 1 }} /> Delete
                       </MenuItem>
                     </Menu>
@@ -1097,7 +1181,7 @@ const Jobs = () => {
                   )}
 
                   <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                    Created: {formatDate(job.created_at)}
+                    Created at {formatDate(job.created_at)}
                   </Typography>
                 </Box>
               );
@@ -1170,9 +1254,9 @@ const Jobs = () => {
         </Modal>
 
         <Modal
-          open={openDetails}
-          onClose={() => setOpenDetails(false)}
-          aria-labelledby="job-details-modal"
+          open={Boolean(events)}
+          onClose={() => setEvents(null)}
+          aria-labelledby="events-modal"
         >
           <Box sx={{
             position: 'absolute',
@@ -1189,58 +1273,29 @@ const Jobs = () => {
             overflow: 'auto'
           }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Details</span>
+              <span>Events</span>
               <Button 
-                onClick={() => setOpenDetails(false)}
+                onClick={() => setEvents(null)}
                 variant="outlined"
                 size="small"
               >
                 Close
               </Button>
             </Typography>
-            {selectedJobDetails && (
-              <Box sx={{ 
-                whiteSpace: 'pre-wrap',
-                backgroundColor: 'var(--background-light)',
-                padding: '1rem',
-                borderRadius: '4px',
-                border: '1px solid var(--border-color)',
-                maxHeight: 'calc(80vh - 120px)',
-                overflow: 'auto',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                lineHeight: 1.5
-              }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Job Name</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.job_name}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Status</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.status.charAt(0).toUpperCase() + selectedJobDetails.status.slice(1)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Owner</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.owner}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Description</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{selectedJobDetails.description || 'N/A'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>Created At</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)' }}>{formatDate(selectedJobDetails.created_at)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontWeight: 600, padding: '8px', borderBottom: '1px solid var(--border-color)' }}>ID</td>
-                      <td style={{ padding: '8px', borderBottom: '1px solid var(--border-color)', fontFamily: 'monospace' }}>{selectedJobDetails.id}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </Box>
-            )}
+            <Box sx={{ 
+              whiteSpace: 'pre-wrap',
+              backgroundColor: 'var(--background-light)',
+              padding: '1rem',
+              borderRadius: '4px',
+              border: '1px solid var(--border-color)',
+              maxHeight: 'calc(80vh - 120px)',
+              overflow: 'auto',
+              fontFamily: 'monospace',
+              fontSize: '0.875rem',
+              lineHeight: 1.5
+            }}>
+              {events}
+            </Box>
           </Box>
         </Modal>
 

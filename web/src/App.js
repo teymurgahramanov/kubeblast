@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Jobs from './components/Jobs';
+import JobDetail from './components/JobDetail';
 import Users from './components/Users';
 import PrivateRoute from './components/PrivateRoute';
 import { getUserRole } from './utils/auth';
@@ -10,7 +11,7 @@ import FormEditUser from './components/EditUser';
 import AddJobForm from './components/AddJob';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
-import Footer from './components/Footer';
+import ApiDocs from './components/ApiDocs';
 import './App.css';
 
 const AdminRoute = ({ children }) => {
@@ -45,6 +46,15 @@ const App = () => {
           element={
             <PrivateRoute>
               <Jobs />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/jobs/:jobId"
+          element={
+            <PrivateRoute>
+              <JobDetail />
             </PrivateRoute>
           }
         />
@@ -86,10 +96,17 @@ const App = () => {
             </PrivateRoute>
           }
         />
-      </Routes>
 
-      {/* Footer - appears on all pages */}
-      <Footer />
+        {/* API Documentation route */}
+        <Route
+          path="/api-docs"
+          element={
+            <PrivateRoute>
+              <ApiDocs />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
 
       {/* Add User Modal */}
       {addUser && (

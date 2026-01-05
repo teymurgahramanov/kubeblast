@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api`,
+  baseURL: process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api/v1`,
 });
 
 // Flag to prevent multiple simultaneous refresh requests
@@ -64,7 +64,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Request new access token
         const response = await axios.post(
-          `${process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api`}/token/refresh`,
+          `${process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api/v1`}/token/refresh`,
           { refresh_token: refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         );

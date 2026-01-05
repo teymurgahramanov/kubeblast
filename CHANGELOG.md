@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.2.0]
+
+### Added
+
+- Distributed load testing with JMeter master/slave architecture.
+- Personal Access Tokens (PATs) in the user profile, with a new `/api/v1/pats` API endpoint (Advanced edition only).
+- In-app API documentation, accessible directly from the Profile page.
+- Dedicated Job page for improved job visibility.
+- Job events: server-side event logging plus Server-Sent Events (SSE) streaming endpoint, surfaced in the Jobs UI.
+- Automatic workload cleanup after jobs complete or fail.
+
+### Changed
+
+- API routes moved to versioned prefix `/api/v1`; updated frontend base URL, Nginx routing, Helm readiness probe, and docs links.
+- Capacity retrieval now uses Kubernetes Metrics Server (configurable URL) and improved capacity warming.
+- OIDC: routes separated and authentication flow refactored with normalized user data and improved username mapping/error handling.
+- Job status synchronization refactored (Kubernetes watch + periodic full resync) with new worker watch/timeout settings.
+- Jobs UI: resource label changed from "Requests / Limit" to "Min / Max".
+
+### Fixed
+
+- Patched React2Shell vulnerability (frontend dependencies).
+
 ## [1.1.5]
 
 ### Changed

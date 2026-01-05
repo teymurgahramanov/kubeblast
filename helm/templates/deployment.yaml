@@ -38,7 +38,7 @@ spec:
               protocol: TCP
           readinessProbe:
             httpGet:
-              path: /api/stats/app
+              path: /api/v1/stats/app
               port: api
               scheme: HTTP
             initialDelaySeconds: 5
