@@ -108,7 +108,7 @@ def create_job(current_user, job_data):
     job = {
         "name": job_name,
         "owner": current_user.username,
-        "distributed": bool(getattr(config, "MODE_DISTRIBUTED", False)),
+        "distributed": config.JMETER_MODE == "distributed",
         "description": job_data.description,
         "status": job_status,
         "created_at": job_data.created_at

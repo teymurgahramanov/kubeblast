@@ -21,7 +21,12 @@ class Config:
     TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
     PAT_STRING_PREFIX: str = "kb_pat"
 
-    MODE_DISTRIBUTED: bool = os.getenv("MODE_DISTRIBUTED", "false").lower() == "true"
+    # JMeter execution mode
+    # Values: "standalone" (default) or "distributed"
+    JMETER_MODE: str = os.getenv("JMETER_MODE", "standalone")
+    JMETER_MODE = JMETER_MODE.lower().strip()
+    if JMETER_MODE not in ("standalone", "distributed"):
+        JMETER_MODE = "standalone"
     
     PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
     # Worker job status sync:
