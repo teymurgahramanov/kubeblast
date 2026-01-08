@@ -41,7 +41,7 @@ Below is the list of supported environment variables:
 | `SECRET_KEY` | string | Secret key for JWT tokens and encryption | Random string | `your-secret-key` |
 | `PER_USER_CURRENT_JOBS_LIMIT` | int | Maximum number of current jobs per user | `3` |  |
 | `TIMEZONE` | string | Application timezone (used for API/UI datetime rendering) | `UTC` | `Europe/Berlin` |
-| `MODE_DISTRIBUTED` | bool | Enable distributed load testing (JMeter master/slave mode) | `false` | `true` |
+| `JMETER_MODE` | string | JMeter mode: `standalone` or `distributed` | `standalone` | `distributed` |
 | `WORKER_WATCH_INTERVAL` | int | Worker full resync interval (seconds) | `300` | `120` |
 | `WORKER_WATCH_TIMEOUT` | int | Kubernetes watch stream timeout (seconds) | `60` | `30` |
 | `K8S_METRICS_SERVER` | string | Metrics Server URL used for capacity data retrieval | `https://metrics-server.kube-system` | `https://metrics-server.kube-system` |
