@@ -1,67 +1,60 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Button,
-  Skeleton,
-  Tabs,
-  Tab,
+  Box, Typography, Button, Skeleton, Tooltip, IconButton, Modal,
 } from '@mui/material';
 import {
-  ArrowBack,
-  CheckCircle,
-  Cancel,
-  Visibility,
-  Description,
-  Autorenew,
-  Download,
-  PlayArrow,
-  ListAlt,
-  Stop,
-  Dashboard,
-  Delete,
+  ArrowBack, CheckCircle, Cancel, Visibility, Description,
+  Autorenew, Download, PlayArrow, ListAlt, Stop, Dashboard,
+  Delete, AccessTime, Person, ContentCopy,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
-import Menuselect from './Menuselect';
+import AppHeader from './AppHeader';
 import ErrorMessage from './ErrorMessage';
 
+/* ─── Tab definitions ─────────────────────────────────────────── */
+const TABS = [
+  { label: 'Logs',   Icon: Visibility,  dotColor: '#7ee787' },
+  { label: 'Events', Icon: ListAlt,     dotColor: '#79c0ff' },
+  { label: 'Plan',   Icon: Description, dotColor: '#e3b341' },
+];
+
+/* ══════════════════════════════════════════════════════════════ */
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const userRole = getUserRole();
 
-  const [job, setJob] = useState(null);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState(0); // 0 logs | 1 events | 2 plan
-  const [logs, setLogs] = useState('');
-  const [events, setEvents] = useState('');
-  const [planText, setPlanText] = useState('');
-  const [logsStreaming, setLogsStreaming] = useState(false);
+  /* ── State ─────────────────────────────────────────────────── */
+  const [job, setJob]                       = useState(null);
+  const [error, setError]                   = useState('');
+  const [activeTab, setActiveTab]           = useState(0);
+  const [logs, setLogs]                     = useState('');
+  const [events, setEvents]                 = useState('');
+  const [planText, setPlanText]             = useState('');
+  const [logsStreaming, setLogsStreaming]   = useState(false);
   const [eventsStreaming, setEventsStreaming] = useState(false);
-  const [planLoading, setPlanLoading] = useState(false);
-  const [isPro, setIsPro] = useState(false);
-  const [timezone, setTimezone] = useState('UTC');
-  const logsAbortRef = useRef(null);
+  const [planLoading, setPlanLoading]       = useState(false);
+  const [isPro, setIsPro]                   = useState(false);
+  const [timezone, setTimezone]             = useState('UTC');
+  const [confirmDelete, setConfirmDelete]   = useState(false);
+  const logsAbortRef   = useRef(null);
   const eventsAbortRef = useRef(null);
 
+  /* ── App stats ─────────────────────────────────────────────── */
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
         const res = await axiosInstance.get('/stats/app');
         setIsPro(Boolean(res.data?.LICENSE_VALID));
-        if (res.data?.TIMEZONE) {
-          setTimezone(res.data.TIMEZONE);
-        }
-      } catch (err) {
-        console.error('Error fetching app stats:', err);
-        setIsPro(false);
-      }
+        if (res.data?.TIMEZONE) setTimezone(res.data.TIMEZONE);
+      } catch { setIsPro(false); }
     };
     fetchAppStats();
   }, []);
 
+  /* ── Fetch job ─────────────────────────────────────────────── */
   const fetchJob = useCallback(async () => {
     if (!jobId) return;
     try {
@@ -73,50 +66,23 @@ const JobDetail = () => {
     }
   }, [jobId]);
 
+  useEffect(() => { fetchJob(); }, [fetchJob]);
   useEffect(() => {
-    fetchJob();
+    const id = setInterval(fetchJob, 5000);
+    return () => clearInterval(id);
   }, [fetchJob]);
 
-  // Poll for updates (status changes)
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      fetchJob();
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, [fetchJob]);
-
+  /* ── Helpers ───────────────────────────────────────────────── */
   const getStatusColor = (status) => {
     switch ((status || '').toLowerCase()) {
-      // Neutral/gray
-      case 'pending':
+      case 'pending': case 'starting': case 'stopping': case 'retrying':
         return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
-      case 'starting':
-        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
-      case 'stopping':
-        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
-      case 'retrying':
-        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
-
-      // Positive
-      case 'completed':
-        return { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' };
-
-      // Progress
-      case 'running':
-        return { bg: '#BFDBFE', text: '#1E40AF', border: '#93C5FD' };
-
-      // Attention
-      case 'ready':
-        return { bg: '#FDE68A', text: '#92400E', border: '#F59E0B' };
-
-      // Negative
-      case 'failed':
+      case 'completed': return { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' };
+      case 'running':   return { bg: '#BFDBFE', text: '#1E40AF', border: '#93C5FD' };
+      case 'ready':     return { bg: '#FDE68A', text: '#92400E', border: '#F59E0B' };
+      case 'failed': case 'declined':
         return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' };
-      case 'declined':
-        return { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' };
-
-      default:
-        return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
+      default: return { bg: '#E5E7EB', text: '#111827', border: '#9CA3AF' };
     }
   };
 
@@ -126,307 +92,198 @@ const JobDetail = () => {
     const normalized = hasTimezone ? dateString : `${dateString}Z`;
     try {
       const date = new Date(normalized);
-      if (isNaN(date.getTime())) {
-        return dateString;
-      }
-      const tz = timezone || 'UTC';
+      if (isNaN(date.getTime())) return dateString;
       return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-        timeZone: tz,
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, timeZone: timezone || 'UTC',
       });
-    } catch {
-      return dateString;
-    }
+    } catch { return dateString; }
   }, [timezone]);
 
-  const approveJob = async (job_id) => {
+  /* ── Job actions ───────────────────────────────────────────── */
+  const approveJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=true`, {});
-      setJob((prev) => (prev && prev.id === job_id ? { ...prev, status: 'ready' } : prev));
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+      await axiosInstance.put(`/jobs/approve/${id}?approved=true`, {});
+      setJob((p) => p?.id === id ? { ...p, status: 'ready' } : p);
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
-  const declineJob = async (job_id) => {
+  const declineJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=false`, {});
-      setJob((prev) => (prev && prev.id === job_id ? { ...prev, status: 'declined' } : prev));
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+      await axiosInstance.put(`/jobs/approve/${id}?approved=false`, {});
+      setJob((p) => p?.id === id ? { ...p, status: 'declined' } : p);
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
-  const startJob = async (job_id) => {
+  const startJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/start/${job_id}`, {});
-      setJob((prev) => (prev && prev.id === job_id ? { ...prev, status: 'running' } : prev));
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+      await axiosInstance.put(`/jobs/start/${id}`, {});
+      setJob((p) => p?.id === id ? { ...p, status: 'running' } : p);
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
-  const stopJob = async (job_id) => {
+  const stopJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/stop/${job_id}`, {});
-      setJob((prev) => (prev && prev.id === job_id ? { ...prev, status: 'stopping' } : prev));
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+      await axiosInstance.put(`/jobs/stop/${id}`, {});
+      setJob((p) => p?.id === id ? { ...p, status: 'stopping' } : p);
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
-  const rescheduleJob = async (job_id) => {
+  const rescheduleJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/retry/${job_id}`, {});
-      setJob((prev) => (prev && prev.id === job_id ? { ...prev, status: 'retrying' } : prev));
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+      await axiosInstance.put(`/jobs/retry/${id}`, {});
+      setJob((p) => p?.id === id ? { ...p, status: 'retrying' } : p);
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
-  const deleteJob = async (job_id) => {
+  const deleteJob = async (id) => {
     try {
-      await axiosInstance.delete(`/jobs/${job_id}`);
+      await axiosInstance.delete(`/jobs/${id}`);
       navigate('/jobs');
-    } catch (err) {
-      setError(err?.response?.data?.detail || err?.message);
-    }
+    } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
+  /* ── Stream helpers ────────────────────────────────────────── */
   const stopLogsStream = () => {
-    try {
-      if (logsAbortRef.current) logsAbortRef.current.abort();
-    } catch {}
+    try { if (logsAbortRef.current) logsAbortRef.current.abort(); } catch {}
     logsAbortRef.current = null;
     setLogsStreaming(false);
   };
 
   const stopEventsStream = () => {
-    try {
-      if (eventsAbortRef.current) eventsAbortRef.current.abort();
-    } catch {}
+    try { if (eventsAbortRef.current) eventsAbortRef.current.abort(); } catch {}
     eventsAbortRef.current = null;
     setEventsStreaming(false);
   };
 
-  useEffect(() => {
-    // Stop streaming when leaving the page
-    return () => {
-      stopLogsStream();
-      stopEventsStream();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => () => { stopLogsStream(); stopEventsStream(); }, []); // eslint-disable-line
 
+  /* ── View logs ─────────────────────────────────────────────── */
   const viewLogs = async (job_id, job_status) => {
-    if (job_status !== 'running' && job_status !== 'completed' && job_status !== 'failed') {
-      setError('Logs are only available for running, completed, or failed jobs.');
-      return;
+    if (!['running', 'completed', 'failed'].includes(job_status)) {
+      setError('Logs are only available for running, completed, or failed jobs.'); return;
     }
     try {
       const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        setError('Unauthorized: Please log in');
-        return;
-      }
+      if (!token) { setError('Unauthorized: Please log in'); return; }
       stopLogsStream();
       const controller = new AbortController();
       logsAbortRef.current = controller;
       setLogsStreaming(true);
       const response = await fetch(`${axiosInstance.defaults.baseURL}/logs/${job_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'text/event-stream',
-          'Cache-Control': 'no-cache',
-        },
+        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
         signal: controller.signal,
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) { const d = await response.json(); throw new Error(d.detail || `HTTP ${response.status}`); }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let logContent = '';
+      let content = '';
       const readStream = async () => {
         try {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            const text = decoder.decode(value);
-            const lines = text.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                logContent += line.slice(6) + '\n';
-              }
+            for (const line of decoder.decode(value).split('\n')) {
+              if (line.startsWith('data: ')) content += line.slice(6) + '\n';
             }
-            setLogs(logContent);
+            setLogs(content);
           }
         } catch (err) {
-          // Ignore abort errors
-          if (err?.name !== 'AbortError') {
-            console.error('Stream reading error:', err);
-            if (!logContent) {
-              setError(err?.message || 'Error reading logs. Please try again.');
-            }
-          }
-        } finally {
-          reader.releaseLock();
-          setLogsStreaming(false);
-        }
+          if (err?.name !== 'AbortError' && !content) setError(err?.message || 'Error reading logs.');
+        } finally { reader.releaseLock(); setLogsStreaming(false); }
       };
       readStream();
-    } catch (err) {
-      setLogsStreaming(false);
-      setError(err?.message || 'Error fetching logs');
-    }
+    } catch (err) { setLogsStreaming(false); setError(err?.message || 'Error fetching logs'); }
   };
 
+  /* ── View events ───────────────────────────────────────────── */
   const viewEvents = async (job_id) => {
     try {
       const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        setError('Unauthorized: Please log in');
-        return;
-      }
+      if (!token) { setError('Unauthorized: Please log in'); return; }
       stopEventsStream();
       const controller = new AbortController();
       eventsAbortRef.current = controller;
       setEventsStreaming(true);
       const response = await fetch(`${axiosInstance.defaults.baseURL}/events/${job_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'text/event-stream',
-          'Cache-Control': 'no-cache',
-        },
+        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
         signal: controller.signal,
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) { const d = await response.json(); throw new Error(d.detail || `HTTP ${response.status}`); }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let eventsContent = '';
+      let content = '';
       const readStream = async () => {
         try {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            const text = decoder.decode(value);
-            const lines = text.split('\n');
-            for (const line of lines) {
+            for (const line of decoder.decode(value).split('\n')) {
               if (!line || line.startsWith(':')) continue;
               if (line.startsWith('data: ')) {
                 const data = line.slice(6);
                 try {
                   const obj = JSON.parse(data);
-                  const tsRaw = obj.ts ? String(obj.ts) : '';
-                  const ts = tsRaw ? formatDate(tsRaw) : '';
-                  const msg = obj.msg ? String(obj.msg) : String(data);
-                  eventsContent += `${ts ? `[${ts}] ` : ''}${msg}\n`;
-                } catch {
-                  eventsContent += data + '\n';
-                }
+                  const ts = obj.ts ? formatDate(String(obj.ts)) : '';
+                  content += `${ts ? `[${ts}] ` : ''}${obj.msg ? String(obj.msg) : data}\n`;
+                } catch { content += data + '\n'; }
               } else if (line.startsWith('event: ')) {
-                const evt = line.slice(7);
-                eventsContent += `\n[${evt}]\n`;
+                content += `\n[${line.slice(7)}]\n`;
               }
             }
-            setEvents(eventsContent);
+            setEvents(content);
           }
         } catch (err) {
-          if (err?.name !== 'AbortError') {
-            console.error('Stream reading error:', err);
-            if (!eventsContent) {
-              setError(err?.message || 'Error reading events. Please try again.');
-            }
-          }
-        } finally {
-          reader.releaseLock();
-          setEventsStreaming(false);
-        }
+          if (err?.name !== 'AbortError' && !content) setError(err?.message || 'Error reading events.');
+        } finally { reader.releaseLock(); setEventsStreaming(false); }
       };
       readStream();
-    } catch (err) {
-      setEventsStreaming(false);
-      setError(err?.message || 'Error fetching events');
-    }
+    } catch (err) { setEventsStreaming(false); setError(err?.message || 'Error fetching events'); }
   };
 
+  /* ── Fetch plan ────────────────────────────────────────────── */
   const fetchPlanText = async (job_id) => {
     try {
-      if (!job_id) {
-        setError('No job available.');
-        return;
-      }
+      if (!job_id) { setError('No job available.'); return; }
       setPlanLoading(true);
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
-          Accept: 'application/xml',
-        },
-        params: { type: 'plan' },
-        responseType: 'text',
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'application/xml' },
+        params: { type: 'plan' }, responseType: 'text',
       });
-      const text = typeof response.data === 'string' ? response.data : String(response.data || '');
-      setPlanText(text);
+      setPlanText(typeof response.data === 'string' ? response.data : String(response.data || ''));
     } catch (err) {
-      const errorDetail =
-        err.response?.data instanceof Blob
-          ? await err.response.data.text()
-          : err.response?.data?.detail || err.message;
-      setError(errorDetail);
-    } finally {
-      setPlanLoading(false);
-    }
+      const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
+      setError(d);
+    } finally { setPlanLoading(false); }
   };
 
+  /* ── Download result ───────────────────────────────────────── */
   const downloadResult = async (job_id) => {
     try {
-      if (!job_id) {
-        setError('No job available.');
-        return;
-      }
+      if (!job_id) { setError('No job available.'); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-        params: { type: 'result' },
-        responseType: 'blob',
+        params: { type: 'result' }, responseType: 'blob',
       });
       const blob = new Blob([response.data], { type: 'text/plain' });
-      const fileURL = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = fileURL;
+      link.href = window.URL.createObjectURL(blob);
       link.download = `kubeblast_${job?.name || job_id}.jtl`;
       link.click();
     } catch (err) {
-      const errorDetail =
-        err.response?.data instanceof Blob
-          ? await err.response.data.text()
-          : err.response?.data?.detail || err.message;
-      setError(errorDetail);
+      const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
+      setError(d);
     }
   };
 
+  /* ── Open report ───────────────────────────────────────────── */
   const openReport = async (job_id) => {
     try {
-      if (!job_id) {
-        setError('No job available.');
-        return;
-      }
+      if (!job_id) { setError('No job available.'); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
-          Accept: 'text/html',
-        },
-        params: { type: 'report' },
-        responseType: 'text',
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'text/html' },
+        params: { type: 'report' }, responseType: 'text',
       });
       const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
 
@@ -437,15 +294,13 @@ const JobDetail = () => {
         const normalizePath = (baseDir, relPath) => {
           const dummy = 'http://x/';
           const base = new URL(baseDir ? dummy + baseDir : dummy);
-          const resolved = new URL(relPath, base);
-          return resolved.pathname.replace(/^\//, '');
+          return new URL(relPath, base).pathname.replace(/^\//, '');
         };
         const fetchText = async (relPath) => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
             headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-            params: { type: 'report', path },
-            responseType: 'text',
+            params: { type: 'report', path }, responseType: 'text',
           });
           return typeof res.data === 'string' ? res.data : String(res.data || '');
         };
@@ -453,8 +308,7 @@ const JobDetail = () => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
             headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
-            params: { type: 'report', path },
-            responseType: 'arraybuffer',
+            params: { type: 'report', path }, responseType: 'arraybuffer',
           });
           return res.data;
         };
@@ -473,215 +327,120 @@ const JobDetail = () => {
         const toDataUrl = (arrayBuffer, mime) => {
           const bytes = new Uint8Array(arrayBuffer);
           let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const base64 = btoa(binary);
-          return `data:${mime};base64,${base64}`;
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          return `data:${mime};base64,${btoa(binary)}`;
         };
-
-        const linkEls = toArray(doc.querySelectorAll('link[rel="stylesheet"][href]'));
-        await Promise.all(
-          linkEls.map(async (link) => {
-            const href = link.getAttribute('href');
-            try {
-              const cssText = await fetchText(href);
-              const styleEl = doc.createElement('style');
-              styleEl.textContent = cssText;
-              link.parentNode.replaceChild(styleEl, link);
-            } catch {}
-          })
-        );
-
-        const scriptEls = toArray(doc.querySelectorAll('script[src]'));
-        await Promise.all(
-          scriptEls.map(async (script) => {
-            const src = script.getAttribute('src');
-            try {
-              const jsText = await fetchText(src);
-              const inlineScript = doc.createElement('script');
-              inlineScript.textContent = jsText;
-              const typeAttr = script.getAttribute('type');
-              if (typeAttr) inlineScript.setAttribute('type', typeAttr);
-              script.parentNode.replaceChild(inlineScript, script);
-            } catch {}
-          })
-        );
-
-        const imgEls = toArray(doc.querySelectorAll('img[src]'));
-        await Promise.all(
-          imgEls.map(async (img) => {
+        await Promise.all(toArray(doc.querySelectorAll('link[rel="stylesheet"][href]')).map(async (link) => {
+          try {
+            const styleEl = doc.createElement('style');
+            styleEl.textContent = await fetchText(link.getAttribute('href'));
+            link.parentNode.replaceChild(styleEl, link);
+          } catch {}
+        }));
+        await Promise.all(toArray(doc.querySelectorAll('script[src]')).map(async (script) => {
+          try {
+            const inlineScript = doc.createElement('script');
+            inlineScript.textContent = await fetchText(script.getAttribute('src'));
+            const typeAttr = script.getAttribute('type');
+            if (typeAttr) inlineScript.setAttribute('type', typeAttr);
+            script.parentNode.replaceChild(inlineScript, script);
+          } catch {}
+        }));
+        await Promise.all(toArray(doc.querySelectorAll('img[src]')).map(async (img) => {
+          try {
             const src = img.getAttribute('src');
-            try {
-              const data = await fetchBinary(src);
-              const mime = guessMime(src);
-              const url = toDataUrl(data, mime);
-              img.setAttribute('src', url);
-            } catch {}
-          })
-        );
-
-        const iconLinks = toArray(
-          doc.querySelectorAll('link[rel="icon"][href], link[rel="shortcut icon"][href]')
-        );
-        await Promise.all(
-          iconLinks.map(async (link) => {
+            img.setAttribute('src', toDataUrl(await fetchBinary(src), guessMime(src)));
+          } catch {}
+        }));
+        await Promise.all(toArray(doc.querySelectorAll('link[rel="icon"][href],link[rel="shortcut icon"][href]')).map(async (link) => {
+          try {
             const href = link.getAttribute('href');
-            try {
-              const data = await fetchBinary(href);
-              const mime = guessMime(href);
-              const url = toDataUrl(data, mime);
-              link.setAttribute('href', url);
-            } catch {}
-          })
-        );
-
+            link.setAttribute('href', toDataUrl(await fetchBinary(href), guessMime(href)));
+          } catch {}
+        }));
         return '<!doctype html>\n' + doc.documentElement.outerHTML;
       };
 
-      const getDir = (p) => {
-        if (!p) return '';
-        const idx = p.lastIndexOf('/');
-        return idx === -1 ? '' : p.slice(0, idx + 1);
-      };
-
+      const getDir = (p) => { if (!p) return ''; const idx = p.lastIndexOf('/'); return idx === -1 ? '' : p.slice(0, idx + 1); };
       const navigateTo = async (win, path) => {
         const res = await axiosInstance.get(`/files/${job_id}`, {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
-            Accept: 'text/html',
-          },
-          params: { type: 'report', path },
-          responseType: 'text',
+          headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'text/html' },
+          params: { type: 'report', path }, responseType: 'text',
         });
         const html = typeof res.data === 'string' ? res.data : String(res.data || '');
         const inlined = await inlineAssets(html, getDir(path));
-        win.document.open();
-        win.document.write(inlined);
-        win.document.close();
+        win.document.open(); win.document.write(inlined); win.document.close();
         bindLinkHandlers(win, getDir(path));
       };
-
       const bindLinkHandlers = (win, currentDir) => {
-        win.document.addEventListener(
-          'click',
-          async (e) => {
-            const anchor = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-            if (!anchor) return;
-            const href = anchor.getAttribute('href') || '';
-            const lower = href.toLowerCase();
-            if (
-              lower.startsWith('http://') ||
-              lower.startsWith('https://') ||
-              lower.startsWith('mailto:') ||
-              lower.startsWith('javascript:') ||
-              lower.startsWith('#')
-            ) {
-              return;
-            }
-            e.preventDefault();
-            const dummy = 'http://x/';
-            const base = new URL(currentDir ? dummy + currentDir : dummy);
-            const resolved = new URL(href, base);
-            const relPath = resolved.pathname.replace(/^\//, '');
-            try {
-              await navigateTo(win, relPath);
-            } catch (err) {
-              const msg =
-                (err && (err.response?.data?.detail || err.message)) || 'Failed to load report page';
-              setError(msg);
-            }
-          },
-          { capture: true }
-        );
+        win.document.addEventListener('click', async (e) => {
+          const anchor = e.target?.closest?.('a[href]');
+          if (!anchor) return;
+          const href = anchor.getAttribute('href') || '';
+          const scheme = href.split(':')[0].toLowerCase();
+          if (['http', 'https', 'mailto', 'javascript'].includes(scheme) || href.startsWith('#')) return;
+          e.preventDefault();
+          const dummy = 'http://x/';
+          const resolved = new URL(href, new URL(currentDir ? dummy + currentDir : dummy));
+          try { await navigateTo(win, resolved.pathname.replace(/^\//, '')); }
+          catch (err) { setError((err?.response?.data?.detail || err?.message) || 'Failed to load report page'); }
+        }, { capture: true });
       };
-
       const inlinedHtml = await inlineAssets(rawHtml, '');
       const reportWindow = window.open('', '_blank');
       if (reportWindow) {
-        reportWindow.document.open();
-        reportWindow.document.write(inlinedHtml);
-        reportWindow.document.close();
+        reportWindow.document.open(); reportWindow.document.write(inlinedHtml); reportWindow.document.close();
         bindLinkHandlers(reportWindow, '');
-      } else {
-        setError('Popup blocked. Please allow popups for this site.');
-      }
+      } else { setError('Popup blocked. Please allow popups for this site.'); }
     } catch (err) {
-      const errorDetail =
-        err.response?.data instanceof Blob
-          ? await err.response.data.text()
-          : err.response?.data?.detail || err.message;
-      setError(errorDetail);
+      const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
+      setError(d);
     }
   };
 
-  const statusColors = useMemo(() => getStatusColor(job?.status), [job?.status]);
-  const ownerVisible = (userRole === 'admin' || userRole === 'moderator') && isPro;
-  const canModerate = (userRole === 'admin' || userRole === 'moderator') && isPro;
+  /* ── Derived ───────────────────────────────────────────────── */
+  const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
+  const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
+  const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
+  const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : planText;
+  const isStreaming    = logsStreaming || eventsStreaming || planLoading;
 
-  const showLogsTab = Boolean(job);
-  const showEventsTab = Boolean(job);
-  const showPlanTab = Boolean(job);
-
-  const handleTabChange = (_event, newValue) => {
+  const handleTabChange = (_, newValue) => {
     setActiveTab(newValue);
     if (!job) return;
-    if (newValue === 0) {
-      viewLogs(job.id, job.status);
-    } else if (newValue === 1) {
-      viewEvents(job.id);
-    } else if (newValue === 2) {
-      // Fetch plan on demand if not loaded yet
-      if (!planText) {
-        fetchPlanText(job.id);
-      }
-    }
+    if (newValue === 0) viewLogs(job.id, job.status);
+    else if (newValue === 1) viewEvents(job.id);
+    else if (newValue === 2 && !planText) fetchPlanText(job.id);
   };
 
+  const handleRefresh = () => {
+    if (!job) return;
+    if (activeTab === 0) { setLogs(''); viewLogs(job.id, job.status); }
+    else if (activeTab === 1) { setEvents(''); viewEvents(job.id); }
+    else { fetchPlanText(job.id); }
+  };
+
+  /* ── Action button styles ──────────────────────────────────── */
+  const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.86rem', px: 2 };
+  const dangerBtn = { ...btnBase, color: '#ef4444', borderColor: '#ef4444', '&:hover': { bgcolor: '#fee2e2', borderColor: '#dc2626' } };
+  const amberBtn  = { ...btnBase, color: '#d97706', borderColor: '#f59e0b', '&:hover': { bgcolor: '#fef3c7', borderColor: '#d97706' } };
+
+  /* ════════════════════════════════════════════════════════════ */
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box
-        sx={{
-          borderBottom: '1px solid var(--border-color)',
-          backgroundColor: 'background.paper',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1100,
-          px: 3,
-          py: 1,
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr',
-          alignItems: 'center',
-        }}
-      >
-        <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
-          <Box
-            component="img"
-            src="/logo.svg"
-            alt="KubeBlast"
-            sx={{
-              height: 36,
-              width: 'auto',
-              '&:hover': { opacity: 0.8 },
-            }}
-          />
-        </Link>
-        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
-          Job
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
-          <Menuselect />
-        </Box>
-      </Box>
+      <AppHeader title="Job Detail" />
 
       <Box className="page-container fade-in">
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        {/* ── Back button ───────────────────────────────────── */}
+        <Box sx={{ mb: 2 }}>
           <Button
-            variant="text"
-            startIcon={<ArrowBack />}
+            startIcon={<ArrowBack sx={{ fontSize: 16 }} />}
             onClick={() => navigate('/jobs')}
-            sx={{ color: 'var(--text-secondary)' }}
+            sx={{
+              color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 500,
+              fontSize: '0.85rem', borderRadius: '9px', px: 1.5, py: 0.6,
+              '&:hover': { color: 'var(--text-primary)', bgcolor: 'var(--background-light)' },
+            }}
           >
             Back to Jobs
           </Button>
@@ -689,257 +448,353 @@ const JobDetail = () => {
 
         <ErrorMessage message={error} />
 
-        <Box
-          sx={{
-            backgroundColor: 'background.paper',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
-            p: 2,
-            mb: 2,
-          }}
-        >
-          {!job ? (
-            <Box sx={{ display: 'grid', gap: 1 }}>
-              <Skeleton variant="text" width="40%" height={36} />
-              <Skeleton variant="text" width="70%" />
-              <Skeleton variant="rounded" height={44} />
-            </Box>
-          ) : (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'flex-start' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {job.name}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Box
-                      sx={{
-                        backgroundColor: statusColors.bg,
-                        color: statusColors.text,
-                        borderRadius: '6px',
-                        px: 1.5,
-                        py: 0.5,
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        width: 'fit-content',
-                        border: `1px solid ${statusColors.border}`,
-                      }}
-                    >
-                      {String(job.status || '').charAt(0).toUpperCase() + String(job.status || '').slice(1)}
-                    </Box>
-                    {ownerVisible && job.owner && (
-                      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
-                        • {job.owner}
-                      </Typography>
-                    )}
-                  </Box>
+        {/* ── Hero Card ─────────────────────────────────────── */}
+        <Box sx={{
+          position: 'relative', overflow: 'hidden',
+          backgroundColor: 'background.paper',
+          borderRadius: '20px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
+          mb: 2.5,
+        }}>
+          {/* Status accent bar */}
+          {job && (
+            <Box sx={{
+              position: 'absolute', left: 0, top: 0, bottom: 0, width: 5,
+              bgcolor: statusColors.border,
+              borderTopLeftRadius: '20px', borderBottomLeftRadius: '20px',
+              transition: 'background-color 0.4s',
+            }} />
+          )}
+
+          {/* Subtle background gradient */}
+          {job && (
+            <Box sx={{
+              position: 'absolute', top: -40, right: -40, width: 200, height: 200,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${statusColors.bg} 0%, transparent 70%)`,
+              opacity: 0.35, pointerEvents: 'none',
+              transition: 'background 0.4s',
+            }} />
+          )}
+
+          <Box sx={{ p: 3.5, pl: 4.5 }}>
+            {!job ? (
+              <Box sx={{ display: 'grid', gap: 2 }}>
+                <Skeleton variant="text" width="42%" height={44} sx={{ borderRadius: '8px' }} />
+                <Skeleton variant="text" width="60%" height={22} />
+                <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5 }}>
+                  <Skeleton variant="text" width={140} height={20} />
+                  <Skeleton variant="text" width={100} height={20} />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  {[80, 70, 90, 80].map((w, i) => (
+                    <Skeleton key={i} variant="rounded" width={w} height={36} sx={{ borderRadius: '10px' }} />
+                  ))}
                 </Box>
               </Box>
+            ) : (
+              <>
+                {/* Name + Status badge */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.2, letterSpacing: '-0.4px' }}>
+                    {job.name}
+                  </Typography>
+                  <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.8,
+                    px: 1.8, py: 0.6,
+                    bgcolor: statusColors.bg, color: statusColors.text,
+                    borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700,
+                    border: `1.5px solid ${statusColors.border}`,
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                    transition: 'all 0.3s',
+                  }}>
+                    <Box sx={{
+                      width: 7, height: 7, borderRadius: '50%', bgcolor: statusColors.border,
+                      ...(job.status === 'running' && {
+                        animation: 'jdPulse 1.5s ease-in-out infinite',
+                        '@keyframes jdPulse': {
+                          '0%,100%': { opacity: 1, transform: 'scale(1)' },
+                          '50%': { opacity: 0.3, transform: 'scale(1.8)' },
+                        },
+                      }),
+                    }} />
+                    {String(job.status || '').charAt(0).toUpperCase() + String(job.status || '').slice(1)}
+                  </Box>
+                </Box>
 
-              {job.description && (
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mt: 1 }}>
-                  {job.description}
-                </Typography>
-              )}
+                {/* Description */}
+                {job.description && (
+                  <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.8, lineHeight: 1.65, maxWidth: 680 }}>
+                    {job.description}
+                  </Typography>
+                )}
 
-              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', mt: 1, display: 'block' }}>
-                Created at {formatDate(job.created_at)}
-              </Typography>
-            </>
-          )}
+                {/* Metadata row */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap', mb: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, color: 'var(--text-secondary)' }}>
+                    <AccessTime sx={{ fontSize: 13 }} />
+                    <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{formatDate(job.created_at)}</Typography>
+                  </Box>
+                  {ownerVisible && job.owner && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, color: 'var(--text-secondary)' }}>
+                      <Person sx={{ fontSize: 13 }} />
+                      <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{job.owner}</Typography>
+                    </Box>
+                  )}
+                  {/* <Box sx={{
+                    display: 'flex', alignItems: 'center',
+                    bgcolor: 'var(--background-light)', px: 1, py: 0.3,
+                    borderRadius: '6px', border: '1px solid var(--border-color)',
+                  }}>
+                    <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                      ID: {job.id}
+                    </Typography>
+                  </Box> */}
+                </Box>
+
+                {/* Action buttons */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                  {job.status === 'pending' && canModerate && (
+                    <>
+                      <Button variant="contained" startIcon={<CheckCircle sx={{ fontSize: 16 }} />}
+                        onClick={() => approveJob(job.id)}
+                        sx={{ ...btnBase, background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: '0 3px 12px rgba(16,185,129,0.3)', '&:hover': { background: 'linear-gradient(135deg,#047857,#059669)' } }}
+                      >Approve</Button>
+                      <Button variant="outlined" startIcon={<Cancel sx={{ fontSize: 16 }} />}
+                        onClick={() => declineJob(job.id)} sx={dangerBtn}
+                      >Decline</Button>
+                    </>
+                  )}
+                  {job.status === 'ready' && (
+                    <Button variant="contained" startIcon={<PlayArrow sx={{ fontSize: 16 }} />}
+                      onClick={() => startJob(job.id)}
+                      sx={{ ...btnBase, background: 'linear-gradient(135deg,#326CE5,#1e40af)', boxShadow: '0 3px 12px rgba(50,108,229,0.3)', '&:hover': { background: 'linear-gradient(135deg,#2563eb,#1e3a8a)' } }}
+                    >Start</Button>
+                  )}
+                  {job.status === 'running' && (
+                    <Button variant="outlined" startIcon={<Stop sx={{ fontSize: 16 }} />}
+                      onClick={() => stopJob(job.id)} sx={dangerBtn}
+                    >Stop</Button>
+                  )}
+                  {(job.status === 'failed' || job.status === 'completed') && (
+                    <Button variant="outlined" startIcon={<Autorenew sx={{ fontSize: 16 }} />}
+                      onClick={() => rescheduleJob(job.id)} sx={amberBtn}
+                    >Retry</Button>
+                  )}
+                  {job.status === 'completed' && (
+                    <>
+                      <Button variant="outlined" startIcon={<Download sx={{ fontSize: 16 }} />}
+                        onClick={() => downloadResult(job.id)} sx={btnBase}
+                      >Result</Button>
+                      <Button variant="outlined" startIcon={<Dashboard sx={{ fontSize: 16 }} />}
+                        onClick={() => openReport(job.id)} sx={btnBase}
+                      >Report</Button>
+                    </>
+                  )}
+                  <Box sx={{ flex: 1 }} />
+                  <Button variant="outlined" startIcon={<Delete sx={{ fontSize: 16 }} />}
+                    onClick={() => setConfirmDelete(true)} sx={dangerBtn}
+                  >Delete</Button>
+                </Box>
+              </>
+            )}
+          </Box>
         </Box>
 
-        {/* Quick actions */}
+        {/* ── Terminal Panel ────────────────────────────────── */}
         {job && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 1,
-              mb: 2,
-              alignItems: 'center',
-            }}
-          >
-            {job.status === 'pending' && canModerate && (
-              <>
-                <Button variant="contained" startIcon={<CheckCircle />} onClick={() => approveJob(job.id)}>
-                  Approve
-                </Button>
-                <Button variant="outlined" startIcon={<Cancel />} onClick={() => declineJob(job.id)}>
-                  Decline
-                </Button>
-              </>
-            )}
-            {job.status === 'ready' && (
-              <Button variant="contained" startIcon={<PlayArrow />} onClick={() => startJob(job.id)}>
-                Start
-              </Button>
-            )}
-            {job.status === 'running' && (
-              <Button variant="outlined" startIcon={<Stop />} onClick={() => stopJob(job.id)}>
-                Stop
-              </Button>
-            )}
-            {(job.status === 'failed' || job.status === 'completed') && (
-              <Button variant="outlined" startIcon={<Autorenew />} onClick={() => rescheduleJob(job.id)}>
-                Retry
-              </Button>
-            )}
-            {job.status === 'completed' && (
-              <>
-                <Button variant="outlined" startIcon={<Download />} onClick={() => downloadResult(job.id)}>
-                  Result
-                </Button>
-                <Button variant="outlined" startIcon={<Dashboard />} onClick={() => openReport(job.id)}>
-                  Report
-                </Button>
-              </>
-            )}
-            <Button
-              variant="outlined"
-              startIcon={<Delete />}
-              onClick={() => deleteJob(job.id)}
-              sx={{ color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}
-            >
-              Delete
-            </Button>
-          </Box>
-        )}
+          <Box sx={{
+            bgcolor: '#0d1117',
+            borderRadius: '18px',
+            border: '1px solid #30363d',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+            overflow: 'hidden',
+          }}>
 
-        {/* Tabs: Logs / Events / Plan */}
-        {job && (
-          <Box
-            sx={{
-              backgroundColor: 'background.paper',
-              borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
-              overflow: 'hidden',
-            }}
-          >
-            <Tabs
-              value={activeTab}
-              onChange={handleTabChange}
-              variant="fullWidth"
-              sx={{ borderBottom: '1px solid var(--border-color)' }}
-            >
-              {showLogsTab && <Tab icon={<Visibility />} iconPosition="start" label="Logs" />}
-              {showEventsTab && <Tab icon={<ListAlt />} iconPosition="start" label="Events" />}
-              {showPlanTab && <Tab icon={<Description />} iconPosition="start" label="Plan" />}
-            </Tabs>
+            {/* Terminal title bar */}
+            <Box sx={{
+              display: 'flex', alignItems: 'center', gap: 0.5,
+              px: 2.5, py: 1.3,
+              borderBottom: '1px solid #21262d',
+              bgcolor: '#161b22',
+            }}>
+              {/* macOS traffic lights */}
+              <Box sx={{ display: 'flex', gap: 0.6, mr: 2 }}>
+                {['#ff5f57', '#febc2e', '#28c840'].map((c) => (
+                  <Box key={c} sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: c }} />
+                ))}
+              </Box>
 
-            <Box sx={{ p: 2 }}>
-              {activeTab === 0 && (
-                <>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Autorenew />}
-                      onClick={() => {
-                        setLogs('');
-                        viewLogs(job.id, job.status);
-                      }}
-                    >
-                      Refresh
-                    </Button>
-                  </Box>
-                  <Box
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      backgroundColor: 'var(--background-light)',
-                      padding: '1rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      minHeight: 240,
-                      maxHeight: '60vh',
-                      overflow: 'auto',
-                      fontFamily: 'monospace',
-                      fontSize: '0.875rem',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {logs || 'No logs yet.'}
-                  </Box>
-                </>
+              {/* Tabs */}
+              {TABS.map(({ label, Icon, dotColor }, idx) => (
+                <Box
+                  key={idx}
+                  onClick={() => handleTabChange(null, idx)}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.7,
+                    px: 1.6, py: 0.55,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: activeTab === idx ? 600 : 400,
+                    color: activeTab === idx ? dotColor : '#8b949e',
+                    bgcolor: activeTab === idx ? 'rgba(255,255,255,0.07)' : 'transparent',
+                    border: activeTab === idx ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                    transition: 'all 0.15s',
+                    userSelect: 'none',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      color: activeTab === idx ? dotColor : '#c9d1d9',
+                    },
+                  }}
+                >
+                  <Icon sx={{ fontSize: 14 }} />
+                  {label}
+                  {activeTab === idx && (
+                    <Box sx={{
+                      width: 5, height: 5, borderRadius: '50%',
+                      bgcolor: dotColor, boxShadow: `0 0 6px ${dotColor}`, ml: 0.3,
+                    }} />
+                  )}
+                </Box>
+              ))}
+
+              <Box sx={{ flex: 1 }} />
+
+              {/* Streaming indicator */}
+              {isStreaming && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mr: 1 }}>
+                  <Box sx={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    bgcolor: TABS[activeTab].dotColor,
+                    animation: 'termPulse 1s ease-in-out infinite',
+                    '@keyframes termPulse': {
+                      '0%,100%': { opacity: 1 },
+                      '50%': { opacity: 0.2 },
+                    },
+                  }} />
+                  <Typography sx={{ color: '#8b949e', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+                    {activeTab === 2 ? 'loading…' : 'streaming…'}
+                  </Typography>
+                </Box>
               )}
 
-              {activeTab === 1 && (
-                <>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Autorenew />}
-                      onClick={() => {
-                        setEvents('');
-                        viewEvents(job.id);
-                      }}
-                    >
-                      Refresh
-                    </Button>
-                  </Box>
-                  <Box
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      backgroundColor: 'var(--background-light)',
-                      padding: '1rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      minHeight: 240,
-                      maxHeight: '60vh',
-                      overflow: 'auto',
-                      fontFamily: 'monospace',
-                      fontSize: '0.875rem',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {events || 'No events yet.'}
-                  </Box>
-                </>
-              )}
+              {/* Refresh */}
+              <Tooltip title="Refresh" placement="top">
+                <IconButton
+                  size="small" onClick={handleRefresh}
+                  sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}
+                >
+                  <Autorenew sx={{ fontSize: 15 }} />
+                </IconButton>
+              </Tooltip>
 
-              {activeTab === 2 && (
-                <>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Description />}
-                      onClick={() => fetchPlanText(job.id)}
-                      disabled={planLoading}
-                    >
-                      {planLoading ? 'Loading…' : 'Refresh'}
-                    </Button>
-                  </Box>
-                  <Box
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      backgroundColor: 'var(--background-light)',
-                      padding: '1rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      minHeight: 240,
-                      maxHeight: '60vh',
-                      overflow: 'auto',
-                      fontFamily: 'monospace',
-                      fontSize: '0.875rem',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {planText || (planLoading ? 'Loading plan…' : 'No plan loaded yet.')}
-                  </Box>
-                </>
+              {/* Copy */}
+              <Tooltip title="Copy to clipboard" placement="top">
+                <IconButton
+                  size="small"
+                  onClick={() => navigator.clipboard.writeText(currentContent || '')}
+                  sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}
+                >
+                  <ContentCopy sx={{ fontSize: 15 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {/* Terminal content */}
+            <Box sx={{
+              px: 3, py: 2.5,
+              fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
+              fontSize: '0.8rem',
+              lineHeight: 1.9,
+              color: TABS[activeTab].dotColor,
+              minHeight: 320,
+              maxHeight: '65vh',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}>
+              {currentContent || (
+                <Typography sx={{ color: '#484f58', fontFamily: 'inherit', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                  {activeTab === 0
+                    ? '# Click ↻ Refresh to stream logs for this job…'
+                    : activeTab === 1
+                    ? '# Click ↻ Refresh to load Kubernetes events…'
+                    : '# Click ↻ Refresh to load the JMX plan file…'}
+                </Typography>
               )}
             </Box>
           </Box>
         )}
+
+        {/* ── Delete confirmation modal ──────────────────────── */}
+        <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%', maxWidth: 420,
+            bgcolor: 'background.paper',
+            borderRadius: '20px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
+            outline: 'none', p: 4,
+            border: '1px solid var(--border-color)',
+          }}>
+            {/* Icon */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
+              <Box sx={{
+                width: 64, height: 64, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '3px solid #fca5a5',
+              }}>
+                <Delete sx={{ fontSize: 30, color: '#ef4444' }} />
+              </Box>
+            </Box>
+            {/* Title */}
+            <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1, color: 'text.primary' }}>
+              Delete Job?
+            </Typography>
+            {/* Job name */}
+            {job && (
+              <Typography variant="body2" sx={{ textAlign: 'center', mb: 1, color: 'var(--text-secondary)' }}>
+                <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                  {job.name}
+                </Box>
+              </Typography>
+            )}
+            {/* Warning */}
+            <Typography variant="body2" sx={{ textAlign: 'center', color: 'var(--text-secondary)', mb: 3.5, lineHeight: 1.6 }}>
+              This action cannot be undone. The job and all associated data will be permanently removed.
+            </Typography>
+            {/* Buttons */}
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Button
+                fullWidth variant="outlined"
+                onClick={() => setConfirmDelete(false)}
+                sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                fullWidth variant="contained"
+                onClick={() => { setConfirmDelete(false); deleteJob(job.id); }}
+                sx={{
+                  borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2,
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  boxShadow: '0 4px 14px rgba(239,68,68,0.35)',
+                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', boxShadow: '0 6px 18px rgba(239,68,68,0.45)' },
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Modal>
+
       </Box>
     </Box>
   );
 };
 
 export default JobDetail;
-
-
