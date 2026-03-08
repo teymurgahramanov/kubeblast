@@ -24,7 +24,7 @@ const App = () => {
   const [addJob, setAddJob] = useState(false);
 
   const isAuthenticated = () => {
-    return !!sessionStorage.getItem('access_token');
+    return !!localStorage.getItem('access_token');
   };
 
   return (

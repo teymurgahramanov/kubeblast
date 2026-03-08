@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Typography, TextField, Button, FormControl,
@@ -15,69 +15,201 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import ErrorMessage from './ErrorMessage';
-import Footer from './Footer';
 
-/* ─── Floating pod card shown on the left brand panel ─── */
-const FloatingPod = ({ name, status, sx, delay }) => (
-  <Box
-    sx={{
-      position: 'absolute',
-      background: 'rgba(255,255,255,0.07)',
-      border: '1px solid rgba(255,255,255,0.13)',
-      borderRadius: '12px',
-      px: 1.5,
-      py: 1,
-      backdropFilter: 'blur(10px)',
-      minWidth: 130,
-      animationName: 'kbFloat',
-      animationDuration: `${3.8 + delay}s`,
-      animationTimingFunction: 'ease-in-out',
-      animationIterationCount: 'infinite',
-      animationDelay: `${delay}s`,
-      ...sx,
-    }}
-  >
-    <Typography
-      sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.58rem', mb: 0.5, fontFamily: 'monospace' }}
+/* ─── Animated network canvas for the brand panel ─── */
+const BrandPanel = () => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId;
+    let w, h;
+    const dpr = window.devicePixelRatio || 1;
+    const NODE_COUNT = 45;
+    const CONNECT_DIST = 170;
+    let nodes = [];
+    let packets = [];
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      w = parent.offsetWidth;
+      h = parent.offsetHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const initNodes = () => {
+      nodes = [];
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const isHub = i < 5;
+        nodes.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * (isHub ? 0.15 : 0.35),
+          vy: (Math.random() - 0.5) * (isHub ? 0.15 : 0.35),
+          r: isHub ? 2.5 + Math.random() * 1.5 : 1 + Math.random() * 1.5,
+          alpha: isHub ? 0.5 + Math.random() * 0.3 : 0.12 + Math.random() * 0.28,
+          phase: Math.random() * Math.PI * 2,
+          isHub,
+        });
+      }
+    };
+
+    const tick = () => {
+      ctx.clearRect(0, 0, w, h);
+      const t = performance.now() * 0.001;
+
+      for (const n of nodes) {
+        n.x += n.vx;
+        n.y += n.vy;
+        if (n.x < -30) n.x = w + 30;
+        if (n.x > w + 30) n.x = -30;
+        if (n.y < -30) n.y = h + 30;
+        if (n.y > h + 30) n.y = -30;
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[j].x - nodes[i].x;
+          const dy = nodes[j].y - nodes[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            const strength = 1 - dist / CONNECT_DIST;
+            const lineAlpha = strength * 0.09;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(110,140,255,${lineAlpha})`;
+            ctx.lineWidth = strength * 0.8;
+            ctx.stroke();
+
+            if (Math.random() < 0.0015 * strength) {
+              const forward = Math.random() > 0.5;
+              packets.push({
+                fi: forward ? i : j,
+                ti: forward ? j : i,
+                p: 0,
+                speed: 0.006 + Math.random() * 0.014,
+                size: 1 + Math.random() * 1.5,
+              });
+            }
+          }
+        }
+      }
+
+      const alive = [];
+      for (const pk of packets) {
+        pk.p += pk.speed;
+        if (pk.p >= 1) continue;
+        alive.push(pk);
+        const a = nodes[pk.fi];
+        const b = nodes[pk.ti];
+        const px = a.x + (b.x - a.x) * pk.p;
+        const py = a.y + (b.y - a.y) * pk.p;
+        const fade = Math.sin(pk.p * Math.PI);
+
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, 8);
+        grd.addColorStop(0, `rgba(100,170,255,${fade * 0.35})`);
+        grd.addColorStop(1, 'rgba(100,170,255,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(px - 8, py - 8, 16, 16);
+
+        ctx.beginPath();
+        ctx.arc(px, py, pk.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,220,255,${fade * 0.9})`;
+        ctx.fill();
+      }
+      packets = alive;
+
+      for (const n of nodes) {
+        const pulse = Math.sin(t * 1.2 + n.phase) * 0.2 + 0.8;
+        const a = n.alpha * pulse;
+
+        if (n.isHub) {
+          const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 6);
+          grd.addColorStop(0, `rgba(50,108,229,${a * 0.25})`);
+          grd.addColorStop(1, 'rgba(50,108,229,0)');
+          ctx.fillStyle = grd;
+          ctx.fillRect(n.x - n.r * 6, n.y - n.r * 6, n.r * 12, n.r * 12);
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = n.isHub
+          ? `rgba(140,180,255,${a})`
+          : `rgba(110,140,255,${a * 0.7})`;
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    resize();
+    initNodes();
+    tick();
+    const onResize = () => { resize(); initNodes(); packets = []; };
+    window.addEventListener('resize', onResize);
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', onResize); };
+  }, []);
+
+  return (
+    <Box
+      sx={{
+        display: { xs: 'none', md: 'flex' },
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(160deg, #020617 0%, #060d24 30%, #0a1230 60%, #0c1636 100%)',
+      }}
     >
-      {name}
-    </Typography>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
       <Box
-        sx={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          backgroundColor: status === 'Running' ? '#4ade80' : '#fbbf24',
-          boxShadow: status === 'Running' ? '0 0 7px #4ade80' : '0 0 7px #fbbf24',
-          animationName: status === 'Running' ? 'kbPulse' : 'none',
-          animationDuration: '2s',
-          animationIterationCount: 'infinite',
-        }}
+        component="canvas"
+        ref={canvasRef}
+        sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       />
-      <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.68rem', fontWeight: 500 }}>
-        {status}
-      </Typography>
-    </Box>
-  </Box>
-);
 
-/* ─── Feature pill shown on left panel ─── */
-const FeaturePill = ({ label }) => (
-  <Box
-    sx={{
-      px: 1.5, py: 0.5,
-      background: 'rgba(255,255,255,0.08)',
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: '20px',
-      backdropFilter: 'blur(6px)',
-    }}
-  >
-    <Typography sx={{ color: 'rgba(255,255,255,0.88)', fontSize: '0.72rem', fontWeight: 500 }}>
-      {label}
-    </Typography>
-  </Box>
-);
+      {/* Brand content */}
+      <Box className="login-brand-animate" sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <Box
+          component="img"
+          src="/logo.svg"
+          alt="KubeBlast"
+          sx={{ height: 96, width: 'auto', mb: 5 }}
+        />
+        <Typography
+          sx={{
+            color: 'rgba(255,255,255,0.30)',
+            fontWeight: 600,
+            fontSize: '0.68rem',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            mb: 1.2,
+          }}
+        >
+          Kubernetes Native
+        </Typography>
+        <Typography
+          sx={{
+            color: 'rgba(255,255,255,0.65)',
+            fontWeight: 300,
+            fontSize: '1.35rem',
+            letterSpacing: '0.12em',
+          }}
+        >
+          Load Testing Platform
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
 
 /* ═══════════════════════════════════════════════════════ */
 const Login = () => {
@@ -88,6 +220,8 @@ const Login = () => {
   const [isPro, setIsPro]               = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
+  const [appVersion, setAppVersion]     = useState('');
+  const [edition, setEdition]           = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -100,14 +234,16 @@ const Login = () => {
         setOidcEnabled(res.data.enabled);
       } catch { /* silent */ }
     };
-    const checkLicense = async () => {
+    const fetchAppStats = async () => {
       try {
         const res = await axiosInstance.get('/stats/app');
         setIsPro(Boolean(res.data?.LICENSE_VALID));
+        if (res.data?.APP_VERSION) setAppVersion(res.data.APP_VERSION);
+        if (res.data?.EDITION) setEdition(res.data.EDITION);
       } catch { setIsPro(false); }
     };
     checkOIDCConfig();
-    checkLicense();
+    fetchAppStats();
   }, []);
 
   /* ── Handle OIDC callback params ── */
@@ -126,10 +262,10 @@ const Login = () => {
       if (code && state) {
         try {
           const res = await axiosInstance.get(`/oidc/callback?code=${code}&state=${state}`);
-          sessionStorage.setItem('access_token',  res.data.access_token);
-          sessionStorage.setItem('refresh_token', res.data.refresh_token);
-          sessionStorage.setItem('username',      res.data.username);
-          sessionStorage.setItem('user_role',     res.data.role);
+          localStorage.setItem('access_token',  res.data.access_token);
+          localStorage.setItem('refresh_token', res.data.refresh_token);
+          localStorage.setItem('username',      res.data.username);
+          localStorage.setItem('user_role',     res.data.role);
           navigate('/jobs');
         } catch (e) {
           setError(e.response?.data?.detail || 'OIDC authentication failed');
@@ -158,16 +294,16 @@ const Login = () => {
       const res   = await axiosInstance.post(`/token?method=${authMethod.toLowerCase()}`, form);
       const token = res.data.access_token;
 
-      sessionStorage.setItem('access_token',  token);
-      sessionStorage.setItem('refresh_token', res.data.refresh_token);
-      sessionStorage.setItem('username',      credentials.username);
+      localStorage.setItem('access_token',  token);
+      localStorage.setItem('refresh_token', res.data.refresh_token);
+      localStorage.setItem('username',      credentials.username);
 
       try {
         const b64     = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
         const payload = decodeURIComponent(
           atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
         );
-        sessionStorage.setItem('user_role', JSON.parse(payload).role);
+        localStorage.setItem('user_role', JSON.parse(payload).role);
       } catch { /* token decode failed silently */ }
 
       navigate('/jobs');
@@ -181,7 +317,7 @@ const Login = () => {
   const handleOIDCLogin = async () => {
     try {
       const res = await axiosInstance.get('/oidc/authorize');
-      sessionStorage.setItem('oidc_state', res.data.state);
+      localStorage.setItem('oidc_state', res.data.state);
       window.location.href = res.data.authorization_url;
     } catch (e) {
       setError(e.response?.data?.detail || 'Failed to initiate OIDC login');
@@ -193,107 +329,7 @@ const Login = () => {
     <Box sx={{ minHeight: '100vh', display: 'flex' }}>
 
       {/* ── LEFT: Brand panel (hidden on mobile) ── */}
-      <Box
-        sx={{
-          display: { xs: 'none', md: 'flex' },
-          flex: 1,
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          background: 'linear-gradient(145deg, #0c1740 0%, #0f2060 30%, #1a3080 60%, #1e40af 85%, #2553c7 100%)',
-          p: 6,
-        }}
-      >
-        {/* Ambient glow blobs */}
-        <Box sx={{
-          position: 'absolute', width: 560, height: 560, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(50,108,229,0.28) 0%, transparent 70%)',
-          top: -160, left: -180, pointerEvents: 'none',
-        }} />
-        <Box sx={{
-          position: 'absolute', width: 420, height: 420, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(30,64,175,0.22) 0%, transparent 70%)',
-          bottom: -120, right: -120, pointerEvents: 'none',
-        }} />
-        <Box sx={{
-          position: 'absolute', width: 280, height: 280, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(50,108,229,0.15) 0%, transparent 70%)',
-          top: '55%', left: '15%', pointerEvents: 'none',
-        }} />
-
-        {/* Dot grid */}
-        <Box sx={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-          pointerEvents: 'none',
-        }} />
-
-        {/* Floating JMeter pods */}
-        <FloatingPod name="jmeter-master"      status="Running" delay={0}   sx={{ top: '13%',    left: '6%'  }} />
-        <FloatingPod name="jmeter-slave-1"     status="Running" delay={1.3} sx={{ top: '28%',    right: '5%' }} />
-        <FloatingPod name="jmeter-slave-2"     status="Running" delay={0.8} sx={{ bottom: '32%', left: '4%' }} />
-        <FloatingPod name="loadtest-scenario"  status="Pending" delay={2.1} sx={{ bottom: '18%', right: '7%' }} />
-        <FloatingPod name="jmeter-slave-3"     status="Running" delay={2.6} sx={{ top: '54%',    left: '10%' }} />
-
-        {/* Main brand content */}
-        <Box
-          className="login-brand-animate"
-          sx={{ textAlign: 'center', position: 'relative', zIndex: 1, maxWidth: 400 }}
-        >
-          <Box
-            component="img"
-            src="/logo.svg"
-            alt="KubeBlast"
-            sx={{ height: 88, width: 'auto', mb: 3, filter: 'drop-shadow(0 4px 24px rgba(50,108,229,0.5))' }}
-          />
-
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'rgba(255,255,255,0.45)', letterSpacing: '0.18em',
-              fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', mb: 1,
-            }}
-          >
-            Kubernetes Native
-          </Typography>
-
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 800, color: '#fff', mb: 1, letterSpacing: '-0.5px',
-              textShadow: '0 2px 24px rgba(0,0,0,0.35)',
-            }}
-          >
-            KubeBlast
-          </Typography>
-
-          <Typography
-            variant="body2"
-            sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500, mb: 2, fontSize: '0.82rem' }}
-          >
-            Load Testing Platform
-          </Typography>
-
-          <Typography
-            variant="body1"
-            sx={{ color: 'rgba(255,255,255,0.62)', lineHeight: 1.8, mb: 4, fontSize: '0.93rem' }}
-          >
-            Turn your Kubernetes cluster into a collaborative
-            <br />load testing platform. Run JMeter tests at scale —
-            <br />simple, efficient, and team-ready.
-          </Typography>
-
-          {/* Feature pills */}
-          <Box sx={{ display: 'flex', gap: 1.2, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {['Distributed JMeter', 'Moderation', 'CI/CD API', 'LDAP / SSO', 'JMeter Native'].map(f => (
-              <FeaturePill key={f} label={f} />
-            ))}
-          </Box>
-        </Box>
-      </Box>
+      <BrandPanel />
 
       {/* ── RIGHT: Login form panel ── */}
       <Box
@@ -323,10 +359,7 @@ const Login = () => {
               variant="h5"
               sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5, letterSpacing: '-0.3px' }}
             >
-              Welcome back
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Sign in to start running load tests on your cluster
+              Welcome!
             </Typography>
           </Box>
 
@@ -422,16 +455,13 @@ const Login = () => {
                 fontWeight: 600,
                 letterSpacing: '0.01em',
                 background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-                boxShadow: '0 4px 18px rgba(50,108,229,0.38)',
+                boxShadow: 'none',
                 borderRadius: '10px',
                 textTransform: 'none',
                 transition: 'all 0.22s ease',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #2558cc 0%, #1a37a0 100%)',
-                  boxShadow: '0 6px 22px rgba(50,108,229,0.52)',
-                  transform: 'translateY(-1px)',
                 },
-                '&:active': { transform: 'translateY(0)' },
                 '&.Mui-disabled': { opacity: 0.7 },
               }}
             >
@@ -474,7 +504,6 @@ const Login = () => {
                     '&:hover': {
                       borderColor: '#326CE5',
                       backgroundColor: 'rgba(50,108,229,0.05)',
-                      transform: 'translateY(-1px)',
                     },
                   }}
                 >
@@ -486,7 +515,15 @@ const Login = () => {
           </Box>
         </Box>
 
-        <Footer />
+        {/* Version & Edition */}
+        {(appVersion || edition) && (
+          <Typography sx={{
+            position: 'absolute', bottom: 20,
+            color: 'var(--text-secondary)', fontSize: '0.8rem',
+          }}>
+            {appVersion}{appVersion && edition ? ' · ' : ''}{edition}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

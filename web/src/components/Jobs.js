@@ -48,8 +48,6 @@ const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor
     justifyContent: 'space-between',
     minHeight: 110,
   }}>
-    {/* Subtle top-right gradient blob */}
-    <Box sx={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: iconBg, opacity: 0.08, pointerEvents: 'none' }} />
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: (sub || progress !== undefined) ? 1.5 : 0 }}>
       <Box sx={{ width: 44, height: 44, borderRadius: '12px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {icon}
@@ -174,7 +172,7 @@ const Jobs = () => {
     try {
       if (!job_id) { setError("No job available."); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, 'Accept': 'text/html' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'text/html' },
         params: { type: "report" },
         responseType: 'text',
       });
@@ -193,7 +191,7 @@ const Jobs = () => {
         const fetchText = async (relPath) => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
             params: { type: "report", path }, responseType: 'text',
           });
           return typeof res.data === 'string' ? res.data : String(res.data || '');
@@ -201,7 +199,7 @@ const Jobs = () => {
         const fetchBinary = async (relPath) => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
             params: { type: "report", path }, responseType: 'arraybuffer',
           });
           return res.data;
@@ -269,7 +267,7 @@ const Jobs = () => {
 
       const navigateTo = async (win, path) => {
         const res = await axiosInstance.get(`/files/${job_id}`, {
-          headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, 'Accept': 'text/html' },
+          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'text/html' },
           params: { type: "report", path }, responseType: 'text',
         });
         const html = typeof res.data === 'string' ? res.data : String(res.data || '');
@@ -312,7 +310,7 @@ const Jobs = () => {
 
   /* ── Fetch jobs ────────────────────────────────────────────── */
   const fetchJobs = useCallback(async () => {
-    const token = sessionStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
     if (!token) { setError('Unauthorized: Please log in'); return; }
     try {
       const params = { page, page_size: pageSize, sort_by: sortBy === 'created_asc' ? 'created_asc' : 'created_desc' };
@@ -366,7 +364,7 @@ const Jobs = () => {
 
   const approveJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=true`, {}, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/approve/${job_id}?approved=true`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'ready' } : j));
       handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
@@ -374,7 +372,7 @@ const Jobs = () => {
 
   const declineJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=false`, {}, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/approve/${job_id}?approved=false`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'declined' } : j));
       handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
@@ -398,7 +396,7 @@ const Jobs = () => {
       setError('Logs are only available for running, completed, or failed jobs.'); return;
     }
     try {
-      const token = sessionStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token');
       if (!token) { setError('Unauthorized: Please log in'); return; }
       stopLogsStream();
       const controller = new AbortController();
@@ -430,7 +428,7 @@ const Jobs = () => {
 
   const viewEvents = async (job_id) => {
     try {
-      const token = sessionStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token');
       if (!token) { setError('Unauthorized: Please log in'); return; }
       stopEventsStream();
       const controller = new AbortController();
@@ -474,7 +472,7 @@ const Jobs = () => {
     try {
       if (!job_id) { setError("No job available."); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, 'Accept': 'application/xml' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'application/xml' },
         params: { type: "plan" }, responseType: 'blob',
       });
       const blob = new Blob([response.data], { type: 'application/xml' });
@@ -489,7 +487,7 @@ const Jobs = () => {
     try {
       if (!job_id) { setError("No job available."); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
         params: { type: "result" }, responseType: 'blob',
       });
       const blob = new Blob([response.data], { type: 'text/plain' });
@@ -505,28 +503,28 @@ const Jobs = () => {
 
   const deleteJob = async (job_id) => {
     try {
-      await axiosInstance.delete(`/jobs/${job_id}`, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.delete(`/jobs/${job_id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.filter(j => j.id !== job_id)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
   const rescheduleJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/retry/${job_id}`, {}, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/retry/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'retrying' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
   const startJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/start/${job_id}`, {}, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/start/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'running' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
   const stopJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/stop/${job_id}`, {}, { headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/stop/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'stopping' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
@@ -602,12 +600,6 @@ const Jobs = () => {
       <Typography variant="body2" sx={{ color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 380 }}>
         Create a load test job to get started. Status, logs, and results will appear here.
       </Typography>
-      <Button
-        variant="contained" onClick={handleAddJob} startIcon={<Add />}
-        sx={{ mt: 1, background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)', boxShadow: '0 4px 14px rgba(50,108,229,0.35)', borderRadius: '10px', textTransform: 'none', fontWeight: 600, px: 3 }}
-      >
-        Create First Job
-      </Button>
     </Box>
   );
 
@@ -624,11 +616,8 @@ const Jobs = () => {
           border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', p: 2.5,
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: '9px', background: 'linear-gradient(135deg, #326CE5, #7aa2f7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Dashboard sx={{ fontSize: 17, color: '#fff' }} />
-            </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              Cluster Capacity
+              Capacity
             </Typography>
             {resourcesError && (
               <Typography variant="caption" sx={{ color: 'var(--danger-color)', ml: 'auto' }}>
@@ -684,27 +673,45 @@ const Jobs = () => {
                       iconBg="linear-gradient(135deg, #10b981, #34d399)"
                       label="Nodes"
                       value={`${resources.nodesMatching ?? resources.nodesTotal ?? 0} / ${resources.nodesTotal ?? 0}`}
-                      sub="Selected / Total"
+                      sub="Available / Total"
                     />
                   </span>
                 </Tooltip>
 
-                {/* 4. Per-job Resources */}
+                {/* 4a. CPU Quota */}
                 {resources.jobResources && (() => {
                   const jr = resources.jobResources || {};
-                  const cpuReq = jr.requests?.cpu !== undefined ? String(jr.requests.cpu) : (jr.requests?.cpu_m !== undefined ? `${formatCores(jr.requests.cpu_m)}c` : '-');
-                  const cpuLim = jr.limits?.cpu   !== undefined ? String(jr.limits.cpu)   : (jr.limits?.cpu_m   !== undefined ? `${formatCores(jr.limits.cpu_m)}c`   : '-');
-                  const memReq = jr.requests?.memory !== undefined ? String(jr.requests.memory) : (jr.requests?.memory_bytes !== undefined ? `${formatGiB(jr.requests.memory_bytes)}G` : '-');
-                  const memLim = jr.limits?.memory   !== undefined ? String(jr.limits.memory)   : (jr.limits?.memory_bytes   !== undefined ? `${formatGiB(jr.limits.memory_bytes)}G`   : '-');
+                  const cpuReq = jr.requests?.cpu !== undefined ? String(jr.requests.cpu) : (jr.requests?.cpu_m !== undefined ? `${formatCores(jr.requests.cpu_m)}c` : '-/');
+                  const cpuLim = jr.limits?.cpu   !== undefined ? String(jr.limits.cpu)   : (jr.limits?.cpu_m   !== undefined ? `${formatCores(jr.limits.cpu_m)}c`   : '-/');
                   return (
-                    <Tooltip title="Default resource requests/limits per job" arrow>
+                    <Tooltip title="Default CPU requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
                         <CapacityCard
                           icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
                           iconBg="linear-gradient(135deg, #8b5cf6, #a78bfa)"
-                          label="Job Quota"
-                          value={`CPU ${cpuReq}–${cpuLim}`}
-                          sub={`RAM ${memReq}–${memLim}`}
+                          label="CPU Quota"
+                          value={`${cpuReq} / ${cpuLim}`}
+                          sub="Min / Max"
+                        />
+                      </span>
+                    </Tooltip>
+                  );
+                })()}
+
+                {/* 4b. RAM Quota */}
+                {resources.jobResources && (() => {
+                  const jr = resources.jobResources || {};
+                  const memReq = jr.requests?.memory !== undefined ? String(jr.requests.memory) : (jr.requests?.memory_bytes !== undefined ? `${formatGiB(jr.requests.memory_bytes)}G` : '-/');
+                  const memLim = jr.limits?.memory   !== undefined ? String(jr.limits.memory)   : (jr.limits?.memory_bytes   !== undefined ? `${formatGiB(jr.limits.memory_bytes)}G`   : '-/');
+                  return (
+                    <Tooltip title="Default RAM requests/limits per job" arrow>
+                      <span style={{ display: 'block', height: '100%' }}>
+                        <CapacityCard
+                          icon={<Memory sx={{ fontSize: 20, color: '#fff' }} />}
+                          iconBg="linear-gradient(135deg, #ec4899, #f472b6)"
+                          label="RAM Quota"
+                          value={`${memReq} / ${memLim}`}
+                          sub="Min / Max"
                         />
                       </span>
                     </Tooltip>
@@ -725,7 +732,7 @@ const Jobs = () => {
                         <CapacityCard
                           icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
                           iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#326CE5,#7aa2f7'})`}
-                          label="CPU"
+                          label="Cluster CPU"
                           value={`${avail} / ${total} cores`}
                           sub="Available / Total"
                           progress={pct}
@@ -750,7 +757,7 @@ const Jobs = () => {
                         <CapacityCard
                           icon={<Memory sx={{ fontSize: 20, color: '#fff' }} />}
                           iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#10b981,#34d399'})`}
-                          label="Memory"
+                          label="Cluster Memory"
                           value={`${avail} / ${total} GiB`}
                           sub="Available / Total"
                           progress={pct}
@@ -835,7 +842,7 @@ const Jobs = () => {
               onClick={handleAddJob}
               sx={{
                 background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-                boxShadow: '0 4px 14px rgba(50,108,229,0.28)',
+                boxShadow: 'none',
                 borderRadius: '10px',
                 textTransform: 'none',
                 fontWeight: 600,
@@ -844,7 +851,6 @@ const Jobs = () => {
                 flexShrink: 0,
                 '&:hover': {
                   background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)',
-                  boxShadow: '0 6px 18px rgba(50,108,229,0.38)',
                 },
               }}
             >
@@ -1289,8 +1295,8 @@ const Jobs = () => {
                 sx={{
                   borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2,
                   background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  boxShadow: '0 4px 14px rgba(239,68,68,0.35)',
-                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', boxShadow: '0 6px 18px rgba(239,68,68,0.45)' },
+                  boxShadow: 'none',
+                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
                 }}
               >
                 Delete

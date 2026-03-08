@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0]
+
+### Changed
+- Redesigned login page and improved the overall UI
+
+### Fixed
+- Users are now logged out automatically when the browser is closed
+
+
 ## [1.2.0]
 
 ### Added

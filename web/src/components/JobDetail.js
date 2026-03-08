@@ -165,7 +165,7 @@ const JobDetail = () => {
       setError('Logs are only available for running, completed, or failed jobs.'); return;
     }
     try {
-      const token = sessionStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token');
       if (!token) { setError('Unauthorized: Please log in'); return; }
       stopLogsStream();
       const controller = new AbortController();
@@ -200,7 +200,7 @@ const JobDetail = () => {
   /* ── View events ───────────────────────────────────────────── */
   const viewEvents = async (job_id) => {
     try {
-      const token = sessionStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token');
       if (!token) { setError('Unauthorized: Please log in'); return; }
       stopEventsStream();
       const controller = new AbortController();
@@ -248,7 +248,7 @@ const JobDetail = () => {
       if (!job_id) { setError('No job available.'); return; }
       setPlanLoading(true);
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'application/xml' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'application/xml' },
         params: { type: 'plan' }, responseType: 'text',
       });
       setPlanText(typeof response.data === 'string' ? response.data : String(response.data || ''));
@@ -263,7 +263,7 @@ const JobDetail = () => {
     try {
       if (!job_id) { setError('No job available.'); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
         params: { type: 'result' }, responseType: 'blob',
       });
       const blob = new Blob([response.data], { type: 'text/plain' });
@@ -282,7 +282,7 @@ const JobDetail = () => {
     try {
       if (!job_id) { setError('No job available.'); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'text/html' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'text/html' },
         params: { type: 'report' }, responseType: 'text',
       });
       const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
@@ -299,7 +299,7 @@ const JobDetail = () => {
         const fetchText = async (relPath) => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
             params: { type: 'report', path }, responseType: 'text',
           });
           return typeof res.data === 'string' ? res.data : String(res.data || '');
@@ -307,7 +307,7 @@ const JobDetail = () => {
         const fetchBinary = async (relPath) => {
           const path = normalizePath(currentDir, relPath);
           const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
             params: { type: 'report', path }, responseType: 'arraybuffer',
           });
           return res.data;
@@ -364,7 +364,7 @@ const JobDetail = () => {
       const getDir = (p) => { if (!p) return ''; const idx = p.lastIndexOf('/'); return idx === -1 ? '' : p.slice(0, idx + 1); };
       const navigateTo = async (win, path) => {
         const res = await axiosInstance.get(`/files/${job_id}`, {
-          headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}`, Accept: 'text/html' },
+          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'text/html' },
           params: { type: 'report', path }, responseType: 'text',
         });
         const html = typeof res.data === 'string' ? res.data : String(res.data || '');
@@ -398,6 +398,25 @@ const JobDetail = () => {
     }
   };
 
+  /* ── XML syntax highlighting ──────────────────────────────── */
+  const highlightXml = useCallback((xml) => {
+    if (!xml) return null;
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = esc(xml).replace(
+      /(&lt;!--[\s\S]*?--&gt;)|(&lt;\?[\s\S]*?\?&gt;)|(&lt;\/?)([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*&quot;[^&]*?&quot;|\s+[\w:.-]+\s*=\s*'[^']*?')*)(\/?\s*&gt;)/g,
+      (match, comment, pi, open, tag, attrs, close) => {
+        if (comment) return `<span style="color:#6a9955;font-style:italic">${comment}</span>`;
+        if (pi) return `<span style="color:#c586c0">${pi}</span>`;
+        const coloredAttrs = (attrs || '').replace(
+          /([\w:.-]+)(\s*=\s*)(&quot;[^&]*?&quot;|'[^']*?')/g,
+          '<span style="color:#9cdcfe">$1</span>$2<span style="color:#ce9178">$3</span>'
+        );
+        return `<span style="color:#808080">${open}</span><span style="color:#569cd6">${tag}</span>${coloredAttrs}<span style="color:#808080">${close}</span>`;
+      }
+    );
+    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  }, []);
+
   /* ── Derived ───────────────────────────────────────────────── */
   const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
@@ -421,7 +440,7 @@ const JobDetail = () => {
   };
 
   /* ── Action button styles ──────────────────────────────────── */
-  const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.86rem', px: 2 };
+  const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', px: 2.2, boxShadow: 'none' };
   const dangerBtn = { ...btnBase, color: '#ef4444', borderColor: '#ef4444', '&:hover': { bgcolor: '#fee2e2', borderColor: '#dc2626' } };
   const amberBtn  = { ...btnBase, color: '#d97706', borderColor: '#f59e0b', '&:hover': { bgcolor: '#fef3c7', borderColor: '#d97706' } };
 
@@ -467,16 +486,6 @@ const JobDetail = () => {
             }} />
           )}
 
-          {/* Subtle background gradient */}
-          {job && (
-            <Box sx={{
-              position: 'absolute', top: -40, right: -40, width: 200, height: 200,
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${statusColors.bg} 0%, transparent 70%)`,
-              opacity: 0.35, pointerEvents: 'none',
-              transition: 'background 0.4s',
-            }} />
-          )}
 
           <Box sx={{ p: 3.5, pl: 4.5 }}>
             {!job ? (
@@ -559,7 +568,7 @@ const JobDetail = () => {
                     <>
                       <Button variant="contained" startIcon={<CheckCircle sx={{ fontSize: 16 }} />}
                         onClick={() => approveJob(job.id)}
-                        sx={{ ...btnBase, background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: '0 3px 12px rgba(16,185,129,0.3)', '&:hover': { background: 'linear-gradient(135deg,#047857,#059669)' } }}
+                        sx={{ ...btnBase, background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: 'none', '&:hover': { background: 'linear-gradient(135deg,#047857,#059669)' } }}
                       >Approve</Button>
                       <Button variant="outlined" startIcon={<Cancel sx={{ fontSize: 16 }} />}
                         onClick={() => declineJob(job.id)} sx={dangerBtn}
@@ -569,7 +578,7 @@ const JobDetail = () => {
                   {job.status === 'ready' && (
                     <Button variant="contained" startIcon={<PlayArrow sx={{ fontSize: 16 }} />}
                       onClick={() => startJob(job.id)}
-                      sx={{ ...btnBase, background: 'linear-gradient(135deg,#326CE5,#1e40af)', boxShadow: '0 3px 12px rgba(50,108,229,0.3)', '&:hover': { background: 'linear-gradient(135deg,#2563eb,#1e3a8a)' } }}
+                      sx={{ ...btnBase, background: 'linear-gradient(135deg,#326CE5,#1e40af)', boxShadow: 'none', '&:hover': { background: 'linear-gradient(135deg,#2563eb,#1e3a8a)' } }}
                     >Start</Button>
                   )}
                   {job.status === 'running' && (
@@ -619,13 +628,6 @@ const JobDetail = () => {
               borderBottom: '1px solid #21262d',
               bgcolor: '#161b22',
             }}>
-              {/* macOS traffic lights */}
-              <Box sx={{ display: 'flex', gap: 0.6, mr: 2 }}>
-                {['#ff5f57', '#febc2e', '#28c840'].map((c) => (
-                  <Box key={c} sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: c }} />
-                ))}
-              </Box>
-
               {/* Tabs */}
               {TABS.map(({ label, Icon, dotColor }, idx) => (
                 <Box
@@ -708,14 +710,16 @@ const JobDetail = () => {
               fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
               fontSize: '0.8rem',
               lineHeight: 1.9,
-              color: TABS[activeTab].dotColor,
+              color: activeTab === 2 ? '#d4d4d4' : TABS[activeTab].dotColor,
               minHeight: 320,
               maxHeight: '65vh',
               overflow: 'auto',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',
             }}>
-              {currentContent || (
+              {currentContent
+                ? (activeTab === 2 ? highlightXml(currentContent) : currentContent)
+                : (
                 <Typography sx={{ color: '#484f58', fontFamily: 'inherit', fontSize: '0.8rem', fontStyle: 'italic' }}>
                   {activeTab === 0
                     ? '# Click ↻ Refresh to stream logs for this job…'
@@ -782,8 +786,8 @@ const JobDetail = () => {
                 sx={{
                   borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2,
                   background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  boxShadow: '0 4px 14px rgba(239,68,68,0.35)',
-                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', boxShadow: '0 6px 18px rgba(239,68,68,0.45)' },
+                  boxShadow: 'none',
+                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
                 }}
               >
                 Delete

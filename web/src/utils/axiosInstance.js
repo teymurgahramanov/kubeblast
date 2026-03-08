@@ -21,7 +21,7 @@ const processQueue = (error, token = null) => {
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem("access_token");
+    const token = localStorage.getItem("access_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -52,11 +52,11 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = sessionStorage.getItem("refresh_token");
+      const refreshToken = localStorage.getItem("refresh_token");
       
       if (!refreshToken) {
         // No refresh token, redirect to login
-        sessionStorage.clear();
+        localStorage.clear();
         window.location.href = "/login";
         return Promise.reject(error);
       }
@@ -72,9 +72,9 @@ axiosInstance.interceptors.response.use(
         const { access_token, refresh_token: newRefreshToken } = response.data;
         
         // Store new tokens
-        sessionStorage.setItem("access_token", access_token);
+        localStorage.setItem("access_token", access_token);
         if (newRefreshToken) {
-          sessionStorage.setItem("refresh_token", newRefreshToken);
+          localStorage.setItem("refresh_token", newRefreshToken);
         }
 
         // Update authorization header
@@ -91,7 +91,7 @@ axiosInstance.interceptors.response.use(
         // Refresh failed, clear session and redirect to login
         processQueue(refreshError, null);
         isRefreshing = false;
-        sessionStorage.clear();
+        localStorage.clear();
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }
