@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import token, user_profile, jobs, logs, events, files, stats
+from routes import token, user_profile, jobs, logs, events, files, stats, metrics
 from core.log import logger
 from config import config
 import uvicorn
@@ -30,6 +30,7 @@ app.include_router(logs.router,tags=["logs"])
 app.include_router(events.router,tags=["events"])
 app.include_router(files.router,tags=["files"])
 app.include_router(stats.router,tags=["stats"])
+app.include_router(metrics.router,tags=["metrics"])
 
 @app.on_event("startup")
 async def initialize():

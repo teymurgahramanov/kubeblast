@@ -1188,31 +1188,10 @@ const Jobs = () => {
                 <Stop sx={{ fontSize: 17, color: '#ef4444' }} /> Stop
               </MenuItem>
             )}
-            {(selectedJob.status === 'running' || selectedJob.status === 'completed' || selectedJob.status === 'failed') && (
-              <MenuItem onClick={(e) => { e.stopPropagation(); viewLogs(selectedJob.id, selectedJob.status); }}>
-                <Visibility sx={{ fontSize: 17, color: '#326CE5' }} /> Logs
-              </MenuItem>
-            )}
-            <MenuItem onClick={(e) => { e.stopPropagation(); viewEvents(selectedJob.id); }}>
-              <ListAlt sx={{ fontSize: 17, color: '#6366f1' }} /> Events
-            </MenuItem>
-            <MenuItem onClick={(e) => { e.stopPropagation(); openPlanFile(selectedJob.id); }}>
-              <Description sx={{ fontSize: 17, color: '#8b5cf6' }} /> Plan File
-            </MenuItem>
             {(selectedJob.status === 'failed' || selectedJob.status === 'completed') && (
               <MenuItem onClick={(e) => { e.stopPropagation(); rescheduleJob(selectedJob.id); }}>
                 <Autorenew sx={{ fontSize: 17, color: '#f59e0b' }} /> Retry
               </MenuItem>
-            )}
-            {selectedJob.status === 'completed' && (
-              <>
-                <MenuItem onClick={(e) => { e.stopPropagation(); downloadResult(selectedJob.id); }}>
-                  <Download sx={{ fontSize: 17, color: '#10b981' }} /> Download Result
-                </MenuItem>
-                <MenuItem onClick={(e) => { e.stopPropagation(); openReport(selectedJob.id); }}>
-                  <Dashboard sx={{ fontSize: 17, color: '#3b82f6' }} /> View Report
-                </MenuItem>
-              </>
             )}
             <Divider sx={{ my: 0.5 }} />
             <MenuItem

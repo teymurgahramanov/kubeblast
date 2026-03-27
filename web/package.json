@@ -22,6 +22,7 @@
     "formik": "^2.4.6",
     "jspdf": "^3.0.0",
     "jspdf-autotable": "^5.0.2",
+    "recharts": "^2.15.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-redux": "^9.2.0",

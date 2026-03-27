@@ -203,6 +203,11 @@ def schedule_workload(job_id,distributed):
     labels = gen_labels(job_id,"master")
     file_name = "plan.jmx"
     file_content = files.read_file(job_id, file_name)
+
+    if config.INFLUXDB_ENABLED:
+        from services.jmx import inject_backend_listener
+        file_content = inject_backend_listener(file_content, job_id)
+
     slaves=[]
 
     job_template_path = os.path.join(os.path.dirname(__file__), "../templates/job.yaml.j2")

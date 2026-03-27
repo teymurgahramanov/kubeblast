@@ -41,6 +41,11 @@ class Config:
     # Metrics server URL for capacity data
     K8S_METRICS_SERVER: str = os.getenv("K8S_METRICS_SERVER", "https://metrics-server.kube-system")
 
+    # InfluxDB (JMeter real-time metrics)
+    INFLUXDB_ENABLED: bool = os.getenv("INFLUXDB_ENABLED", "false").lower() == "true"
+    INFLUXDB_URL: str = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+    INFLUXDB_DATABASE: str = os.getenv("INFLUXDB_DATABASE", "jmeter")
+
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
     MONGODB_PORT: int = int(os.getenv("MONGODB_PORT", 27017))

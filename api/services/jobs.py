@@ -164,17 +164,24 @@ def retry_job(current_user, job_id):
         raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
 
     try:
+        logger.info(f"Rescheduling job {job_id}")
+        events.create_event(job_id, "Workload rescheduling started")
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "retrying"}}
         )
+        logger.info(f"Deleting workload for job {job_id}")
+        events.create_event(job_id, "Workload deletion started")
         k8s.delete_workload(job_id)
         events.create_event(job_id, "Workload deleted")
         sleep(10)
+        logger.info(f"Scheduling workload for job {job_id}")
+        events.create_event(job_id, "Workload scheduling started")
         k8s.schedule_workload(job_id,job["distributed"])
         events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} retried"}
     except Exception as e:
+        logger.error(f"Failed to reschedule job {job_id}: {e}")
         db.mongo.jobs.update_one(
             {"_id": bson.objectid.ObjectId(job_id)},
             {"$set": {"status": "failed"}}
@@ -222,6 +229,14 @@ def delete_job(current_user, job_id):
         events.delete_events_for_job(job_id)
     except Exception as e:
         logger.warning(f"Failed to delete job events for {job_id}: {e}")
+
+    # Clean up associated InfluxDB metrics
+    if config.INFLUXDB_ENABLED:
+        try:
+            from services.influxdb import delete_job_metrics
+            delete_job_metrics(job_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete InfluxDB metrics for {job_id}: {e}")
         
     db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
     

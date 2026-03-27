@@ -8,7 +8,6 @@ metadata:
   labels:
     {{- include "kubeblast.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/resource-policy": keep
     {{- with .Values.pvc.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

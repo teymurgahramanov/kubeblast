@@ -5,20 +5,22 @@ import {
 } from '@mui/material';
 import {
   ArrowBack, CheckCircle, Cancel, Visibility, Description,
-  Autorenew, Download, PlayArrow, ListAlt, Stop, Dashboard,
-  Delete, AccessTime, Person, ContentCopy,
+  Autorenew, Download, PlayArrow, ListAlt, Stop,
+  Delete, AccessTime, Person, ContentCopy, ShowChart,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
 import AppHeader from './AppHeader';
 import ErrorMessage from './ErrorMessage';
+import LiveMetrics from './LiveMetrics';
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
-const TABS = [
+const BASE_TABS = [
   { label: 'Logs',   Icon: Visibility,  dotColor: '#7ee787' },
   { label: 'Events', Icon: ListAlt,     dotColor: '#79c0ff' },
   { label: 'Plan',   Icon: Description, dotColor: '#e3b341' },
 ];
+const METRICS_TAB = { label: 'Metrics', Icon: ShowChart, dotColor: '#a371f7' };
 
 /* ══════════════════════════════════════════════════════════════ */
 const JobDetail = () => {
@@ -37,6 +39,7 @@ const JobDetail = () => {
   const [eventsStreaming, setEventsStreaming] = useState(false);
   const [planLoading, setPlanLoading]       = useState(false);
   const [isPro, setIsPro]                   = useState(false);
+  const [influxdbEnabled, setInfluxdbEnabled] = useState(false);
   const [timezone, setTimezone]             = useState('UTC');
   const [confirmDelete, setConfirmDelete]   = useState(false);
   const logsAbortRef   = useRef(null);
@@ -48,6 +51,7 @@ const JobDetail = () => {
       try {
         const res = await axiosInstance.get('/stats/app');
         setIsPro(Boolean(res.data?.LICENSE_VALID));
+        setInfluxdbEnabled(Boolean(res.data?.INFLUXDB_ENABLED));
         if (res.data?.TIMEZONE) setTimezone(res.data.TIMEZONE);
       } catch { setIsPro(false); }
     };
@@ -269,7 +273,7 @@ const JobDetail = () => {
       const blob = new Blob([response.data], { type: 'text/plain' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `kubeblast_${job?.name || job_id}.jtl`;
+      link.download = `kb-${job?.name || job_id}-result.jtl`;
       link.click();
     } catch (err) {
       const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
@@ -277,121 +281,19 @@ const JobDetail = () => {
     }
   };
 
-  /* ── Open report ───────────────────────────────────────────── */
-  const openReport = async (job_id) => {
+  /* ── Download report ──────────────────────────────────────── */
+  const downloadReport = async (job_id) => {
     try {
       if (!job_id) { setError('No job available.'); return; }
       const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'text/html' },
-        params: { type: 'report' }, responseType: 'text',
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+        params: { type: 'report' }, responseType: 'blob',
       });
-      const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
-
-      const inlineAssets = async (html, currentDir = '') => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const toArray = (list) => Array.prototype.slice.call(list || []);
-        const normalizePath = (baseDir, relPath) => {
-          const dummy = 'http://x/';
-          const base = new URL(baseDir ? dummy + baseDir : dummy);
-          return new URL(relPath, base).pathname.replace(/^\//, '');
-        };
-        const fetchText = async (relPath) => {
-          const path = normalizePath(currentDir, relPath);
-          const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-            params: { type: 'report', path }, responseType: 'text',
-          });
-          return typeof res.data === 'string' ? res.data : String(res.data || '');
-        };
-        const fetchBinary = async (relPath) => {
-          const path = normalizePath(currentDir, relPath);
-          const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-            params: { type: 'report', path }, responseType: 'arraybuffer',
-          });
-          return res.data;
-        };
-        const guessMime = (p) => {
-          const lower = String(p || '').toLowerCase();
-          if (lower.endsWith('.png')) return 'image/png';
-          if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-          if (lower.endsWith('.gif')) return 'image/gif';
-          if (lower.endsWith('.svg')) return 'image/svg+xml';
-          if (lower.endsWith('.webp')) return 'image/webp';
-          if (lower.endsWith('.ico')) return 'image/x-icon';
-          if (lower.endsWith('.css')) return 'text/css';
-          if (lower.endsWith('.js')) return 'text/javascript';
-          return 'application/octet-stream';
-        };
-        const toDataUrl = (arrayBuffer, mime) => {
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-          return `data:${mime};base64,${btoa(binary)}`;
-        };
-        await Promise.all(toArray(doc.querySelectorAll('link[rel="stylesheet"][href]')).map(async (link) => {
-          try {
-            const styleEl = doc.createElement('style');
-            styleEl.textContent = await fetchText(link.getAttribute('href'));
-            link.parentNode.replaceChild(styleEl, link);
-          } catch {}
-        }));
-        await Promise.all(toArray(doc.querySelectorAll('script[src]')).map(async (script) => {
-          try {
-            const inlineScript = doc.createElement('script');
-            inlineScript.textContent = await fetchText(script.getAttribute('src'));
-            const typeAttr = script.getAttribute('type');
-            if (typeAttr) inlineScript.setAttribute('type', typeAttr);
-            script.parentNode.replaceChild(inlineScript, script);
-          } catch {}
-        }));
-        await Promise.all(toArray(doc.querySelectorAll('img[src]')).map(async (img) => {
-          try {
-            const src = img.getAttribute('src');
-            img.setAttribute('src', toDataUrl(await fetchBinary(src), guessMime(src)));
-          } catch {}
-        }));
-        await Promise.all(toArray(doc.querySelectorAll('link[rel="icon"][href],link[rel="shortcut icon"][href]')).map(async (link) => {
-          try {
-            const href = link.getAttribute('href');
-            link.setAttribute('href', toDataUrl(await fetchBinary(href), guessMime(href)));
-          } catch {}
-        }));
-        return '<!doctype html>\n' + doc.documentElement.outerHTML;
-      };
-
-      const getDir = (p) => { if (!p) return ''; const idx = p.lastIndexOf('/'); return idx === -1 ? '' : p.slice(0, idx + 1); };
-      const navigateTo = async (win, path) => {
-        const res = await axiosInstance.get(`/files/${job_id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'text/html' },
-          params: { type: 'report', path }, responseType: 'text',
-        });
-        const html = typeof res.data === 'string' ? res.data : String(res.data || '');
-        const inlined = await inlineAssets(html, getDir(path));
-        win.document.open(); win.document.write(inlined); win.document.close();
-        bindLinkHandlers(win, getDir(path));
-      };
-      const bindLinkHandlers = (win, currentDir) => {
-        win.document.addEventListener('click', async (e) => {
-          const anchor = e.target?.closest?.('a[href]');
-          if (!anchor) return;
-          const href = anchor.getAttribute('href') || '';
-          const scheme = href.split(':')[0].toLowerCase();
-          if (['http', 'https', 'mailto', 'javascript'].includes(scheme) || href.startsWith('#')) return;
-          e.preventDefault();
-          const dummy = 'http://x/';
-          const resolved = new URL(href, new URL(currentDir ? dummy + currentDir : dummy));
-          try { await navigateTo(win, resolved.pathname.replace(/^\//, '')); }
-          catch (err) { setError((err?.response?.data?.detail || err?.message) || 'Failed to load report page'); }
-        }, { capture: true });
-      };
-      const inlinedHtml = await inlineAssets(rawHtml, '');
-      const reportWindow = window.open('', '_blank');
-      if (reportWindow) {
-        reportWindow.document.open(); reportWindow.document.write(inlinedHtml); reportWindow.document.close();
-        bindLinkHandlers(reportWindow, '');
-      } else { setError('Popup blocked. Please allow popups for this site.'); }
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `kb-${job?.name || job_id}-report.zip`;
+      link.click();
     } catch (err) {
       const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
       setError(d);
@@ -418,10 +320,16 @@ const JobDetail = () => {
   }, []);
 
   /* ── Derived ───────────────────────────────────────────────── */
+  const TABS = useMemo(
+    () => influxdbEnabled ? [...BASE_TABS, METRICS_TAB] : BASE_TABS,
+    [influxdbEnabled],
+  );
+  const metricsTabIndex = influxdbEnabled ? 3 : -1;
   const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
-  const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : planText;
+  const isMetricsTab  = activeTab === metricsTabIndex;
+  const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : activeTab === 2 ? planText : '';
   const isStreaming    = logsStreaming || eventsStreaming || planLoading;
 
   const handleTabChange = (_, newValue) => {
@@ -434,9 +342,10 @@ const JobDetail = () => {
 
   const handleRefresh = () => {
     if (!job) return;
+    if (isMetricsTab) return;
     if (activeTab === 0) { setLogs(''); viewLogs(job.id, job.status); }
     else if (activeTab === 1) { setEvents(''); viewEvents(job.id); }
-    else { fetchPlanText(job.id); }
+    else if (activeTab === 2) { fetchPlanText(job.id); }
   };
 
   /* ── Action button styles ──────────────────────────────────── */
@@ -596,8 +505,8 @@ const JobDetail = () => {
                       <Button variant="outlined" startIcon={<Download sx={{ fontSize: 16 }} />}
                         onClick={() => downloadResult(job.id)} sx={btnBase}
                       >Result</Button>
-                      <Button variant="outlined" startIcon={<Dashboard sx={{ fontSize: 16 }} />}
-                        onClick={() => openReport(job.id)} sx={btnBase}
+                      <Button variant="outlined" startIcon={<Download sx={{ fontSize: 16 }} />}
+                        onClick={() => downloadReport(job.id)} sx={btnBase}
                       >Report</Button>
                     </>
                   )}
@@ -705,12 +614,15 @@ const JobDetail = () => {
             </Box>
 
             {/* Terminal content */}
+            {isMetricsTab ? (
+              <LiveMetrics jobId={job.id} jobStatus={job.status} />
+            ) : (
             <Box sx={{
               px: 3, py: 2.5,
               fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
               fontSize: '0.8rem',
               lineHeight: 1.9,
-              color: activeTab === 2 ? '#d4d4d4' : TABS[activeTab].dotColor,
+              color: activeTab === 2 ? '#d4d4d4' : '#e6edf3',
               minHeight: 320,
               maxHeight: '65vh',
               overflow: 'auto',
@@ -729,6 +641,7 @@ const JobDetail = () => {
                 </Typography>
               )}
             </Box>
+            )}
           </Box>
         )}
 

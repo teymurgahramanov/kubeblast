@@ -182,7 +182,7 @@ const BrandPanel = () => {
           component="img"
           src="/logo.svg"
           alt="KubeBlast"
-          sx={{ height: 96, width: 'auto', mb: 5 }}
+          sx={{ height: 120, width: 'auto', mb: 5 }}
         />
         <Typography
           sx={{
@@ -341,23 +341,41 @@ const Login = () => {
           alignItems: 'center',
           px: { xs: 3, sm: 5 },
           py: 5,
-          backgroundColor: 'background.default',
+          backgroundColor: '#0f172a',
           minHeight: '100vh',
           position: 'relative',
+          '& .MuiTextField-root': {
+            '& .MuiOutlinedInput-root': {
+              color: '#e2e8f0',
+              '& fieldset': { borderColor: 'rgba(148,163,184,0.25)' },
+              '&:hover fieldset': { borderColor: 'rgba(148,163,184,0.45)' },
+              '&.Mui-focused fieldset': { borderColor: '#326CE5' },
+            },
+            '& .MuiInputLabel-root': { color: 'rgba(148,163,184,0.7)' },
+            '& .MuiInputLabel-root.Mui-focused': { color: '#326CE5' },
+          },
+          '& .MuiFormControl-root .MuiOutlinedInput-root': {
+            color: '#e2e8f0',
+            '& fieldset': { borderColor: 'rgba(148,163,184,0.25)' },
+            '&:hover fieldset': { borderColor: 'rgba(148,163,184,0.45)' },
+            '&.Mui-focused fieldset': { borderColor: '#326CE5' },
+          },
+          '& .MuiFormControl-root .MuiInputLabel-root': { color: 'rgba(148,163,184,0.7)' },
+          '& .MuiSelect-icon': { color: 'rgba(148,163,184,0.7)' },
         }}
       >
         <Box className="login-form-animate" sx={{ width: '100%', maxWidth: 380 }}>
 
           {/* Mobile-only logo */}
           <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 4 }}>
-            <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 60 }} />
+            <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 76 }} />
           </Box>
 
           {/* Greeting */}
           <Box sx={{ mb: 4 }}>
             <Typography
               variant="h5"
-              sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5, letterSpacing: '-0.3px' }}
+              sx={{ fontWeight: 700, color: '#f1f5f9', mb: 0.5, letterSpacing: '-0.3px' }}
             >
               Welcome!
             </Typography>
@@ -398,7 +416,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <PersonIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
+                      <PersonIcon sx={{ color: 'rgba(148,163,184,0.5)', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                 },
@@ -421,7 +439,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
+                      <LockIcon sx={{ color: 'rgba(148,163,184,0.5)', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -431,7 +449,7 @@ const Login = () => {
                         edge="end"
                         size="small"
                         tabIndex={-1}
-                        sx={{ color: 'text.disabled' }}
+                        sx={{ color: 'rgba(148,163,184,0.5)' }}
                       >
                         {showPassword
                           ? <VisibilityOff fontSize="small" />
@@ -479,12 +497,12 @@ const Login = () => {
             {/* OIDC / SSO */}
             {oidcEnabled && isPro && (
               <>
-                <Divider sx={{ my: 3 }}>
+                <Divider sx={{ my: 3, borderColor: 'rgba(148,163,184,0.15)' }}>
                   <Typography
                     variant="caption"
-                    sx={{ color: 'text.disabled', px: 1, fontSize: '0.72rem', letterSpacing: '0.08em' }}
+                    sx={{ color: 'rgba(148,163,184,0.5)', px: 1, fontSize: '0.72rem', letterSpacing: '0.08em' }}
                   >
-                    OR CONTINUE WITH
+                    OR
                   </Typography>
                 </Divider>
 
@@ -498,8 +516,8 @@ const Login = () => {
                     fontWeight: 600,
                     borderRadius: '10px',
                     textTransform: 'none',
-                    borderColor: 'divider',
-                    color: 'text.primary',
+                    borderColor: 'rgba(148,163,184,0.25)',
+                    color: '#e2e8f0',
                     transition: 'all 0.2s ease',
                     '&:hover': {
                       borderColor: '#326CE5',
@@ -519,7 +537,7 @@ const Login = () => {
         {(appVersion || edition) && (
           <Typography sx={{
             position: 'absolute', bottom: 20,
-            color: 'var(--text-secondary)', fontSize: '0.8rem',
+            color: 'rgba(148,163,184,0.5)', fontSize: '0.8rem',
           }}>
             {appVersion}{appVersion && edition ? ' · ' : ''}{edition}
           </Typography>

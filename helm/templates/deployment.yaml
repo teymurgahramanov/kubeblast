@@ -60,6 +60,14 @@ spec:
             - name: MONGODB_NAME
               value: {{ .Values.mongodb.database }}
             {{- end }}
+            {{- if .Values.influxdb.enabled }}
+            - name: INFLUXDB_ENABLED
+              value: "true"
+            - name: INFLUXDB_URL
+              value: "http://{{ .Release.Name }}-influxdb:8086"
+            - name: INFLUXDB_DATABASE
+              value: "jmeter"
+            {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
