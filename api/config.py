@@ -38,6 +38,10 @@ class Config:
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
 
+    # Delay before first capacity / job-worker sync so the API can bind and serve health checks first
+    STARTUP_CAPACITY_STAGGER_S: int = int(os.getenv("STARTUP_CAPACITY_STAGGER_S", "5"))
+    STARTUP_WORKER_STAGGER_S: int = int(os.getenv("STARTUP_WORKER_STAGGER_S", "5"))
+
     # Metrics server URL for capacity data
     K8S_METRICS_SERVER: str = os.getenv("K8S_METRICS_SERVER", "https://metrics-server.kube-system")
 
