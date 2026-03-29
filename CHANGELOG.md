@@ -2,12 +2,31 @@
 
 ## [1.3.0]
 
+### Added
+
+- Optional **InfluxDB** (enabled by default in the main Helm `values.yaml`) integration for JMeter: configurable Backend Listener injection on scheduled workloads, `kb-`–prefixed `application` tag for per-job series, metrics query API, and a bundled **Grafana** dashboard JSON.
+- **Live metrics** charts on the Job Details page (when InfluxDB is enabled); API marks timestamps as **UTC epoch milliseconds** (`timestamps_epoch_ms_utc`) for client display using the configured app timezone.
+- **Plan file editing**: `PUT /api/v1/jobs/{job_id}/plan` replaces the stored JMX when the job is **ready**, **completed**, or **failed**; Job Details **Plan** tab adds an editor with XML highlighting and save/cancel (approval rules re-applied via owner **auto_approve** / license, same as new jobs).
+- Staggered startup for background tasks: fixed **5s** delay before the first capacity sync and before the job-status worker starts, so the API can bind and serve health checks first.
+- FastAPI **lifespan** context for startup ordering (replacing ad-hoc initialization on import where applicable).
+
 ### Changed
-- Redesigned login page and improved the overall UI
+
+- Redesigned **login** page, refined **Job Details** and **Jobs** UI, and improved readability of **logs / events** text in the job view; Job Details caches **`/stats/app`** in **sessionStorage**, always shows **Metrics** and **Plan** tabs (metrics UI depends on InfluxDB), and reparses log SSE as JSON lines.
+- **Report download**: packaged HTML report as `kb-{job-name}-report.zip` instead of opening report HTML in the browser; JTL result file named `kb-{job-name}-result.jtl`.
+- **MongoDB** subchart: workload backed by a **StatefulSet** with `volumeClaimTemplates` for data persistence (replacing a separate PVC-only pattern where applicable).
+- **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/logs/{job_id}` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
+- **OIDC** (Advanced): authorization URL query parameters are properly URL-encoded; token and userinfo HTTP clients use explicit timeouts and form content type for the token exchange.
+- **OIDC callback** now passes **raw IdP claims** into login so user/role mapping runs once with full token claims (e.g. Keycloak realm roles); API response `username` / `role` are read from the persisted user after login.
+- **Startup**: admin user bootstrap is wrapped in **try/except** with error logging and **process exit** on failure; missing license env sets **`LICENSE_VALID`** to **false**; **`license_check`** failures are handled with a single warning path instead of only `ImportError`.
+- **JMeter workloads**: master and slave pods set **`TZ=UTC`** so InfluxDB line-protocol timestamps are consistent UTC instants.
+- **Frontend nginx**: removed the extra **`/static/`** location block;
+- In-app **API docs** hide **`metrics`** and **`jobs_extra`** OpenAPI tags (alongside existing exclusions).
 
 ### Fixed
-- Users are now logged out automatically when the browser is closed
 
+- Users are no longer logged out automatically when the browser is closed (session / token handling).
+- OIDC users no longer lose correct **role** mapping when the callback had pre-normalized user data (second mapping pass stripped IdP role claims).
 
 ## [1.2.0]
 
