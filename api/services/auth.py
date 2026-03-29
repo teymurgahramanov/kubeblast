@@ -16,7 +16,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = config.REFRESH_TOKEN_EXPIRE_DAYS
 ALGORITHM = "HS256"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/token")
 # Use bcrypt with 8 rounds for faster verification (still secure, ~100ms vs ~2500ms with default 12 rounds)
 pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=8, deprecated="auto")
 

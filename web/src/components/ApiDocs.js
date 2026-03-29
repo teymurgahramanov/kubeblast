@@ -46,7 +46,7 @@ const ApiDocs = () => {
     if (!spec?.paths) return {};
     
     const groups = {};
-    const excludedTags = ['token','oidc','pats'];
+    const excludedTags = ['token','oidc','pats','metrics','jobs_extra'];
     
     Object.entries(spec.paths).forEach(([path, methods]) => {
       Object.entries(methods).forEach(([method, details]) => {

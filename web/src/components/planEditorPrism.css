@@ -1,0 +1,49 @@
+/* Prism token colors for Plan XML editor (dark terminal) */
+/* PCDATA between tags is not wrapped in .token — force a light base on pre + editor root */
+.plan-code-editor > div {
+  color: #e6edf3 !important;
+}
+
+.plan-code-editor pre {
+  outline: none !important;
+  color: #e6edf3 !important;
+}
+
+/* Do not set color on textarea — Editor uses transparent fill + WebKitTextFillColor */
+.plan-code-editor textarea {
+  outline: none !important;
+}
+
+/* Default for any Prism token; specific types below override (higher specificity .token.xxx) */
+.plan-code-editor .token {
+  color: #e6edf3;
+}
+
+.plan-code-editor .token.punctuation {
+  color: #808080;
+}
+
+.plan-code-editor .token.tag {
+  color: #569cd6;
+}
+
+.plan-code-editor .token.attr-name {
+  color: #9cdcfe;
+}
+
+.plan-code-editor .token.attr-value,
+.plan-code-editor .token.string {
+  color: #ce9178;
+}
+
+.plan-code-editor .token.prolog,
+.plan-code-editor .token.doctype,
+.plan-code-editor .token.cdata,
+.plan-code-editor .token.entity {
+  color: #c586c0;
+}
+
+.plan-code-editor .token.comment {
+  color: #6a9955;
+  font-style: italic;
+}

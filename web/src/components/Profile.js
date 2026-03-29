@@ -34,13 +34,13 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const username = sessionStorage.getItem('username');
+      const username = localStorage.getItem('username');
       if (!username) {
         throw new Error('No username found in session');
       }
       
       const response = await axiosInstance.get(`/profile`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
       });
       
       setProfile({
@@ -59,7 +59,7 @@ const Profile = () => {
   const fetchPats = async () => {
     try {
       const response = await axiosInstance.get('/pats', {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
       });
       setPats(response.data);
     } catch (error) {
@@ -99,7 +99,7 @@ const Profile = () => {
 
       await axiosInstance.put('/profile', formData, {
         headers: { 
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       });
@@ -129,7 +129,7 @@ const Profile = () => {
 
       await axiosInstance.put('/profile', formData, {
         headers: { 
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       });
@@ -138,7 +138,7 @@ const Profile = () => {
       setPasswords({ new_password: '', confirm_password: '' });
       
       // Force logout after password change
-      sessionStorage.clear();
+      localStorage.clear();
       window.location.href = '/login';
     } catch (error) {
       setMessage({
@@ -163,7 +163,7 @@ const Profile = () => {
       };
       const response = await axiosInstance.post('/pats', payload, {
         headers: { 
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json'
         }
       });
@@ -185,7 +185,7 @@ const Profile = () => {
   const handleRevokePat = async (patId) => {
     try {
       await axiosInstance.post(`/pats/${patId}/revoke`, {}, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
       });
       setMessage({ type: 'success', text: 'PAT revoked successfully' });
       fetchPats();
@@ -200,7 +200,7 @@ const Profile = () => {
   const handleDeletePat = async (patId) => {
     try {
       await axiosInstance.delete(`/pats/${patId}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
       });
       setMessage({ type: 'success', text: 'PAT deleted successfully' });
       fetchPats();
@@ -310,9 +310,15 @@ const Profile = () => {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              mt: 2
+              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+              boxShadow: 'none',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 2.2,
+              mt: 2,
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
             }}
           >
             Update Profile
@@ -345,9 +351,15 @@ const Profile = () => {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              mt: 2
+              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+              boxShadow: 'none',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 2.2,
+              mt: 2,
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
             }}
           >
             Change Password
@@ -364,9 +376,14 @@ const Profile = () => {
               startIcon={<Add />}
               onClick={() => setPatDialogOpen(true)}
               sx={{
-                backgroundColor: 'var(--primary-color)',
-                '&:hover': { backgroundColor: 'var(--primary-dark)' },
-                textTransform: 'none'
+                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+                boxShadow: 'none',
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                px: 2.2,
+                '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
               }}
             >
               Create Token
@@ -511,9 +528,14 @@ const Profile = () => {
             onClick={handleCreatePat}
             disabled={loading || newPatName.length < 3}
             sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              textTransform: 'none'
+              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+              boxShadow: 'none',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 2.2,
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
             }}
           >
             Create
@@ -561,9 +583,14 @@ const Profile = () => {
             variant="contained"
             onClick={handleCloseTokenDialog}
             sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              textTransform: 'none'
+              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+              boxShadow: 'none',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 2.2,
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
             }}
           >
             Done

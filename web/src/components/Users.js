@@ -23,7 +23,7 @@ const Users = ({ setAddUser }) => {
   const fetchUsers = async () => {
     try {
       const response = await axiosInstance.get("/users", {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
       setUsers(response.data);
     } catch (error) {
@@ -53,7 +53,7 @@ const Users = ({ setAddUser }) => {
   const handleDeleteUser = async (username) => {
     try {
       await axiosInstance.delete(`/users/${username}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('access_token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       });
       setUsers(users.filter(user => user.username !== username));
       handleMenuClose();
@@ -218,11 +218,14 @@ const Users = ({ setAddUser }) => {
             onClick={() => setAddUser(true)}
             startIcon={<PersonAdd />}
             sx={{
-              backgroundColor: 'var(--primary-color)',
-              '&:hover': { backgroundColor: 'var(--primary-dark)' },
-              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+              boxShadow: 'none',
+              borderRadius: '10px',
               textTransform: 'none',
-              px: 3
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 2.2,
+              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
             }}
           >
             Add
@@ -373,26 +376,16 @@ const Users = ({ setAddUser }) => {
           </MenuItem>
         </Menu>
 
-        <Modal
-          open={Boolean(selectedUser)}
-          onClose={() => setSelectedUser(null)}
-          aria-labelledby="edit-user-modal"
-          sx={{
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
+        <Modal open={Boolean(selectedUser)} onClose={() => setSelectedUser(null)}>
           <Box sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
+            position: 'absolute', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 600,
+            width: '92%', maxWidth: 640,
             bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2
+            boxShadow: '0 25px 60px rgba(0,0,0,0.22)',
+            borderRadius: '16px', outline: 'none',
+            border: '1px solid var(--border-color)',
+            p: 4.5,
           }}>
             {selectedUser && (
               <EditUser
@@ -404,26 +397,16 @@ const Users = ({ setAddUser }) => {
           </Box>
         </Modal>
 
-        <Modal
-          open={Boolean(addUser)}
-          onClose={handleAddUserClose}
-          aria-labelledby="add-user-modal"
-          sx={{
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
+        <Modal open={Boolean(addUser)} onClose={handleAddUserClose}>
           <Box sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
+            position: 'absolute', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 600,
+            width: '92%', maxWidth: 640,
             bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2
+            boxShadow: '0 25px 60px rgba(0,0,0,0.22)',
+            borderRadius: '16px', outline: 'none',
+            border: '1px solid var(--border-color)',
+            p: 4.5,
           }}>
             <AddUser onClose={handleAddUserClose} />
           </Box>

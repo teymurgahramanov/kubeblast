@@ -1,14 +1,16 @@
 {{- if not .Values.pvc.existingClaim }}
+{{- $pvcName := include "kubeblast.fullname" . }}
+{{- if not (lookup "v1" "PersistentVolumeClaim" .Release.Namespace $pvcName) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "kubeblast.fullname" . }}
+  name: {{ $pvcName }}
   labels:
     {{- include "kubeblast.labels" . | nindent 4 }}
-  {{- with .Values.pvc.annotations }}
   annotations:
+    {{- with .Values.pvc.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   storageClassName: {{ .Values.pvc.storageClassName }}
   accessModes:
@@ -16,4 +18,5 @@ spec:
   resources:
     requests:
       storage: {{ .Values.pvc.size }}
+{{- end }}
 {{- end }}
