@@ -45,6 +45,9 @@ Below is the list of supported environment variables:
 | `WORKER_WATCH_INTERVAL` | int | Worker full resync interval (seconds) | `300` | `120` |
 | `WORKER_WATCH_TIMEOUT` | int | Kubernetes watch stream timeout (seconds) | `60` | `30` |
 | `K8S_METRICS_SERVER` | string | Metrics Server URL used for capacity data retrieval | `https://metrics-server.kube-system` | `https://metrics-server.kube-system` |
+| `INFLUXDB_ENABLED` | bool | Enable InfluxDB for JMeter real-time metrics in the UI | `false` | `true` |
+| `INFLUXDB_URL` | string | InfluxDB base URL | `http://localhost:8086` | `http://influxdb:8086` |
+| `INFLUXDB_DATABASE` | string | InfluxDB database name for JMeter metrics | `jmeter` |  |
 | `MONGODB_HOST` | string | MongoDB host address | `localhost` |  |
 | `MONGODB_PORT` | int | MongoDB port number | `27017` |  |
 | `MONGODB_USER` | string | MongoDB username | `kubeblast` |  |
