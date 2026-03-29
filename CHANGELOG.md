@@ -12,9 +12,8 @@
 
 ### Changed
 
-- Redesigned **login** page, refined **Job Details** and **Jobs** UI, and improved readability of **logs / events** text in the job view; Job Details caches **`/stats/app`** in **sessionStorage**, always shows **Metrics** and **Plan** tabs (metrics UI depends on InfluxDB), and reparses log SSE as JSON lines.
+- Redesigned **login** page, refined **Job Details** and **Jobs** UI (@Yesveer)
 - **Report download**: packaged HTML report as `kb-{job-name}-report.zip` instead of opening report HTML in the browser; JTL result file named `kb-{job-name}-result.jtl`.
-- **MongoDB** subchart: workload backed by a **StatefulSet** with `volumeClaimTemplates` for data persistence (replacing a separate PVC-only pattern where applicable).
 - **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/logs/{job_id}` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
 - **OIDC** (Advanced): authorization URL query parameters are properly URL-encoded; token and userinfo HTTP clients use explicit timeouts and form content type for the token exchange.
 - **OIDC callback** now passes **raw IdP claims** into login so user/role mapping runs once with full token claims (e.g. Keycloak realm roles); API response `username` / `role` are read from the persisted user after login.
@@ -27,6 +26,11 @@
 
 - Users are no longer logged out automatically when the browser is closed (session / token handling).
 - OIDC users no longer lose correct **role** mapping when the callback had pre-normalized user data (second mapping pass stripped IdP role claims).
+
+### Breaking changes
+- **MongoDB** subchart migrated to a **StatefulSet** with `volumeClaimTemplates`. PVC names have changed, which may affect existing data and upgrades.
+- **InfluxDB** is now deployed by default with the chart.
+
 
 ## [1.2.0]
 
