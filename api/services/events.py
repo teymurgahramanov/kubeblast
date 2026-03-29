@@ -5,9 +5,7 @@ from datetime import datetime
 import bson
 
 from core import db
-
-
-COLLECTION_NAME = "job_events"
+from core import models
 
 
 def create_event(job_id: str, msg: str, ts: datetime | None = None) -> None:
@@ -16,7 +14,8 @@ def create_event(job_id: str, msg: str, ts: datetime | None = None) -> None:
     """
     if not ts:
         ts = datetime.utcnow()
-    db.mongo.events.insert_one({"job_id": job_id, "ts": ts, "msg": msg})
+    entry = models.JobLog(job_id=job_id, ts=ts, msg=models.JobLog.coerce_msg(msg))
+    db.mongo.events.insert_one(entry.model_dump())
 
 
 def delete_events_for_job(job_id: str) -> None:
@@ -62,11 +61,8 @@ def stream_job_events(
             sent_any = False
             for doc in cursor:
                 last_id = doc.get("_id", last_id)
-                payload = {
-                    "job_id": doc.get("job_id", job_id),
-                    "ts": (doc.get("ts") or datetime.utcnow()).isoformat(),
-                    "msg": doc.get("msg", ""),
-                }
+                row = models.JobLog.from_mongo_doc(doc, fallback_job_id=job_id)
+                payload = row.model_dump(mode="json")
                 yield f"data: {json.dumps(payload)}\n\n"
                 sent_any = True
 

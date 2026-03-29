@@ -1,10 +1,16 @@
+import logging
+
 import httpx
 from config import config
 from core.log import logger
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 def _query(q: str) -> list:
-    """Execute an InfluxQL query and return the series results."""
+    """
+    Execute an InfluxQL query and return the series results.
+    epoch=ms returns Unix milliseconds (UTC instants); GROUP BY time() aligns to UTC.
+    """
     try:
         resp = httpx.get(
             f"{config.INFLUXDB_URL}/query",
@@ -78,6 +84,8 @@ def get_live_metrics(job_id: str) -> dict:
     """
     Query InfluxDB for real-time JMeter metrics for a specific job.
     Returns structured time-series data suitable for charting.
+    All timestamp values are UTC epoch milliseconds; clients should convert for display
+    using the configured application timezone (e.g. TIMEZONE /stats/app).
     """
     if not config.INFLUXDB_ENABLED:
         return {"enabled": False, "data": {}}
@@ -130,6 +138,7 @@ def get_live_metrics(job_id: str) -> dict:
 
     return {
         "enabled": True,
+        "timestamps_epoch_ms_utc": True,
         "data": {
             "timestamps": response_data["timestamps"],
             "avg_response_time": response_data["avg_response_time"],

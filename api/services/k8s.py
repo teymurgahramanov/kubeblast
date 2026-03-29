@@ -34,9 +34,13 @@ def gen_labels(job_id,job_component):
 def gen_label_selector(job_id,job_component):
     return f"kubeblast/job-id={job_id},kubeblast/job-component={job_component}"
 
-def stream_pod_logs(job_id, job_status):
+def iter_pod_log_lines(job_id, job_status):
+    """
+    Yield raw log lines from the job's master pod (blocking iterator).
+    Used by the log pump to persist lines to MongoDB; clients consume via logs.stream_job_logs.
+    """
     namespace = get_namespace()
-    label_selector = gen_label_selector(job_id,"master")
+    label_selector = gen_label_selector(job_id, "master")
     try:
         logger.info(f"Looking for Pods with label selector: {label_selector}")
         pod_list = client.CoreV1Api().list_namespaced_pod(
@@ -46,14 +50,12 @@ def stream_pod_logs(job_id, job_status):
 
         if not pod_list.items:
             logger.warning(f"Nothing found for Job: {job_id}")
-            yield "data: Nothing found for this job.\n\n"
             return
-        
-        pod_name = pod_list.items[0].metadata.name
-        logger.info(f"Streaming logs from pod: {pod_name}")
 
-        # Don't follow logs for completed or failed jobs
-        should_follow = job_status == 'running'
+        pod_name = pod_list.items[0].metadata.name
+        logger.info(f"Reading logs from pod: {pod_name}")
+
+        should_follow = job_status == "running"
 
         logs = client.CoreV1Api().read_namespaced_pod_log(
             name=pod_name,
@@ -61,18 +63,17 @@ def stream_pod_logs(job_id, job_status):
             container="jmeter",
             follow=should_follow,
             _preload_content=False,
-            tail_lines=1000 if not should_follow else None
+            tail_lines=1000 if not should_follow else None,
         )
 
         for line in logs:
             if isinstance(line, bytes):
-                line = line.decode('utf-8')
-            yield f"data: {line}\n\n"  # SSE format
+                line = line.decode("utf-8")
+            yield line.rstrip("\n")
 
     except Exception as e:
         logger.error(e)
-        yield f"data: Waiting for logs ...\n\n"
-        return
+        yield "Waiting for logs ..."
 
 def schedule_slave_daemonset_and_service(job_id: str):
     """

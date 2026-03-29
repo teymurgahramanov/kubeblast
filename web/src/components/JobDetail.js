@@ -1,26 +1,96 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Box, Typography, Button, Skeleton, Tooltip, IconButton, Modal,
+  Box, Typography, Button, Skeleton, Modal, CircularProgress,
 } from '@mui/material';
 import {
   ArrowBack, CheckCircle, Cancel, Visibility, Description,
   Autorenew, Download, PlayArrow, ListAlt, Stop,
-  Delete, AccessTime, Person, ContentCopy, ShowChart,
+  Delete, AccessTime, Person, ShowChart, Save, Edit,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
+import Editor from 'react-simple-code-editor';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-markup';
 import AppHeader from './AppHeader';
 import ErrorMessage from './ErrorMessage';
 import LiveMetrics from './LiveMetrics';
+import './planEditorPrism.css';
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
 const BASE_TABS = [
   { label: 'Logs',   Icon: Visibility,  dotColor: '#7ee787' },
   { label: 'Events', Icon: ListAlt,     dotColor: '#79c0ff' },
-  { label: 'Plan',   Icon: Description, dotColor: '#e3b341' },
 ];
 const METRICS_TAB = { label: 'Metrics', Icon: ShowChart, dotColor: '#a371f7' };
+const PLAN_TAB = { label: 'Plan', Icon: Description, dotColor: '#e3b341' };
+/** Logs, Events, Metrics, Plan — InfluxDB only affects Metrics charts. */
+const JOB_DETAIL_TABS = [...BASE_TABS, METRICS_TAB, PLAN_TAB];
+
+/** Match API: plan PUT only when job is in one of these statuses. */
+const PLAN_EDIT_STATUSES = new Set(['ready', 'completed', 'failed']);
+
+const APP_STATS_CACHE_KEY = 'kubeblast_app_stats';
+
+/** Default XML text color (PCDATA / non-token spans); tag colors use inline styles on child spans. */
+const XML_BASE_COLOR = '#e6edf3';
+
+/** HTML string for XML syntax colors (shared by read-only view and edit backdrop). */
+function highlightXmlToHtml(xml) {
+  if (!xml) return '';
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inner = esc(xml).replace(
+    /(&lt;!--[\s\S]*?--&gt;)|(&lt;\?[\s\S]*?\?&gt;)|(&lt;\/?)([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*&quot;[^&]*?&quot;|\s+[\w:.-]+\s*=\s*'[^']*?')*)(\/?\s*&gt;)/g,
+    (match, comment, pi, open, tag, attrs, close) => {
+      if (comment) return `<span style="color:#6a9955;font-style:italic">${comment}</span>`;
+      if (pi) return `<span style="color:#c586c0">${pi}</span>`;
+      const coloredAttrs = (attrs || '').replace(
+        /([\w:.-]+)(\s*=\s*)(&quot;[^&]*?&quot;|'[^']*?')/g,
+        '<span style="color:#9cdcfe">$1</span>$2<span style="color:#ce9178">$3</span>'
+      );
+      return `<span style="color:#808080">${open}</span><span style="color:#569cd6">${tag}</span>${coloredAttrs}<span style="color:#808080">${close}</span>`;
+    }
+  );
+  return `<span style="color:${XML_BASE_COLOR}">${inner}</span>`;
+}
+
+function highlightPlanXml(code) {
+  const src = code ?? '';
+  try {
+    return Prism.highlight(src, Prism.languages.markup, 'markup');
+  } catch {
+    return src
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+}
+
+function readCachedAppStats() {
+  try {
+    const raw = sessionStorage.getItem(APP_STATS_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedAppStats(data) {
+  try {
+    sessionStorage.setItem(
+      APP_STATS_CACHE_KEY,
+      JSON.stringify({
+        INFLUXDB_ENABLED: Boolean(data?.INFLUXDB_ENABLED),
+        LICENSE_VALID: Boolean(data?.LICENSE_VALID),
+        TIMEZONE: data?.TIMEZONE || 'UTC',
+      }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════ */
 const JobDetail = () => {
@@ -37,23 +107,35 @@ const JobDetail = () => {
   const [planText, setPlanText]             = useState('');
   const [logsStreaming, setLogsStreaming]   = useState(false);
   const [eventsStreaming, setEventsStreaming] = useState(false);
-  const [planLoading, setPlanLoading]       = useState(false);
-  const [isPro, setIsPro]                   = useState(false);
-  const [influxdbEnabled, setInfluxdbEnabled] = useState(false);
-  const [timezone, setTimezone]             = useState('UTC');
+  const [isPro, setIsPro]                   = useState(() => Boolean(readCachedAppStats()?.LICENSE_VALID));
+  const [influxdbEnabled, setInfluxdbEnabled] = useState(() => Boolean(readCachedAppStats()?.INFLUXDB_ENABLED));
+  const [timezone, setTimezone]             = useState(() => readCachedAppStats()?.TIMEZONE || 'UTC');
   const [confirmDelete, setConfirmDelete]   = useState(false);
+  const [planSaving, setPlanSaving]         = useState(false);
+  const [planEditingMode, setPlanEditingMode] = useState(false);
+  const [planBaseline, setPlanBaseline]     = useState('');
   const logsAbortRef   = useRef(null);
   const eventsAbortRef = useRef(null);
+  /** Set after a successful plan GET for `job_id`; cleared when route `jobId` changes. */
+  const planLoadedForJobIdRef = useRef(null);
 
   /* ── App stats ─────────────────────────────────────────────── */
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
         const res = await axiosInstance.get('/stats/app');
+        writeCachedAppStats(res.data);
         setIsPro(Boolean(res.data?.LICENSE_VALID));
         setInfluxdbEnabled(Boolean(res.data?.INFLUXDB_ENABLED));
         if (res.data?.TIMEZONE) setTimezone(res.data.TIMEZONE);
-      } catch { setIsPro(false); }
+      } catch {
+        const c = readCachedAppStats();
+        if (c) {
+          setIsPro(Boolean(c.LICENSE_VALID));
+          setInfluxdbEnabled(Boolean(c.INFLUXDB_ENABLED));
+          if (c.TIMEZONE) setTimezone(c.TIMEZONE);
+        }
+      }
     };
     fetchAppStats();
   }, []);
@@ -75,6 +157,18 @@ const JobDetail = () => {
     const id = setInterval(fetchJob, 5000);
     return () => clearInterval(id);
   }, [fetchJob]);
+
+  useEffect(() => {
+    planLoadedForJobIdRef.current = null;
+    setPlanText('');
+    setPlanEditingMode(false);
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!job || !PLAN_EDIT_STATUSES.has(job.status)) {
+      setPlanEditingMode(false);
+    }
+  }, [job?.status, job?.id]);
 
   /* ── Helpers ───────────────────────────────────────────────── */
   const getStatusColor = (status) => {
@@ -148,6 +242,25 @@ const JobDetail = () => {
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
+  const savePlan = async (id) => {
+    if (!id || !PLAN_EDIT_STATUSES.has(job?.status)) return;
+    setPlanSaving(true);
+    setError('');
+    try {
+      const res = await axiosInstance.put(`/jobs/${id}/plan`, planText, {
+        headers: { 'Content-Type': 'application/xml' },
+      });
+      setJob(res.data);
+      planLoadedForJobIdRef.current = id;
+      setPlanEditingMode(false);
+    } catch (err) {
+      const d = err.response?.data?.detail || err.message;
+      setError(d);
+    } finally {
+      setPlanSaving(false);
+    }
+  };
+
   /* ── Stream helpers ────────────────────────────────────────── */
   const stopLogsStream = () => {
     try { if (logsAbortRef.current) logsAbortRef.current.abort(); } catch {}
@@ -189,7 +302,16 @@ const JobDetail = () => {
             const { value, done } = await reader.read();
             if (done) break;
             for (const line of decoder.decode(value).split('\n')) {
-              if (line.startsWith('data: ')) content += line.slice(6) + '\n';
+              if (!line || line.startsWith(':')) continue;
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                try {
+                  const obj = JSON.parse(data);
+                  content += `${obj.msg != null ? String(obj.msg) : data}\n`;
+                } catch { content += data + '\n'; }
+              } else if (line.startsWith('event: ')) {
+                content += `\n[${line.slice(7)}]\n`;
+              }
             }
             setLogs(content);
           }
@@ -246,21 +368,44 @@ const JobDetail = () => {
     } catch (err) { setEventsStreaming(false); setError(err?.message || 'Error fetching events'); }
   };
 
-  /* ── Fetch plan ────────────────────────────────────────────── */
-  const fetchPlanText = async (job_id) => {
+  /* ── Fetch plan (one HTTP GET; full XML in one response — not streamed). Uses cache per job until refresh or route change. ─ */
+  const fetchPlanText = async (job_id, opts = {}) => {
+    const force = opts.force === true;
     try {
       if (!job_id) { setError('No job available.'); return; }
-      setPlanLoading(true);
+      if (!force && planLoadedForJobIdRef.current === job_id) return;
+
       const response = await axiosInstance.get(`/files/${job_id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'application/xml' },
         params: { type: 'plan' }, responseType: 'text',
       });
-      setPlanText(typeof response.data === 'string' ? response.data : String(response.data || ''));
+      const text = typeof response.data === 'string' ? response.data : String(response.data || '');
+      setPlanText(text);
+      planLoadedForJobIdRef.current = job_id;
     } catch (err) {
       const d = err.response?.data instanceof Blob ? await err.response.data.text() : err.response?.data?.detail || err.message;
       setError(d);
-    } finally { setPlanLoading(false); }
+    }
   };
+
+  /* ── When job loads: stream logs & events, fetch plan; metrics poll via mounted LiveMetrics (see below). ─ */
+  useEffect(() => {
+    if (!job?.id) return undefined;
+    const jid = job.id;
+    const st = job.status;
+
+    viewEvents(jid);
+    fetchPlanText(jid);
+    if (['running', 'completed', 'failed'].includes(st)) {
+      viewLogs(jid, st);
+    }
+
+    return () => {
+      stopLogsStream();
+      stopEventsStream();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: (re)start when job identity/status changes
+  }, [job?.id, job?.status]);
 
   /* ── Download result ───────────────────────────────────────── */
   const downloadResult = async (job_id) => {
@@ -303,50 +448,44 @@ const JobDetail = () => {
   /* ── XML syntax highlighting ──────────────────────────────── */
   const highlightXml = useCallback((xml) => {
     if (!xml) return null;
-    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const html = esc(xml).replace(
-      /(&lt;!--[\s\S]*?--&gt;)|(&lt;\?[\s\S]*?\?&gt;)|(&lt;\/?)([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*&quot;[^&]*?&quot;|\s+[\w:.-]+\s*=\s*'[^']*?')*)(\/?\s*&gt;)/g,
-      (match, comment, pi, open, tag, attrs, close) => {
-        if (comment) return `<span style="color:#6a9955;font-style:italic">${comment}</span>`;
-        if (pi) return `<span style="color:#c586c0">${pi}</span>`;
-        const coloredAttrs = (attrs || '').replace(
-          /([\w:.-]+)(\s*=\s*)(&quot;[^&]*?&quot;|'[^']*?')/g,
-          '<span style="color:#9cdcfe">$1</span>$2<span style="color:#ce9178">$3</span>'
-        );
-        return `<span style="color:#808080">${open}</span><span style="color:#569cd6">${tag}</span>${coloredAttrs}<span style="color:#808080">${close}</span>`;
-      }
-    );
-    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+    return <span dangerouslySetInnerHTML={{ __html: highlightXmlToHtml(xml) }} />;
   }, []);
 
   /* ── Derived ───────────────────────────────────────────────── */
-  const TABS = useMemo(
-    () => influxdbEnabled ? [...BASE_TABS, METRICS_TAB] : BASE_TABS,
-    [influxdbEnabled],
-  );
-  const metricsTabIndex = influxdbEnabled ? 3 : -1;
   const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
-  const isMetricsTab  = activeTab === metricsTabIndex;
-  const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : activeTab === 2 ? planText : '';
-  const isStreaming    = logsStreaming || eventsStreaming || planLoading;
+  const isMetricsTab  = activeTab === 2;
+  const canEditPlan   = job && PLAN_EDIT_STATUSES.has(job.status);
+  const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : activeTab === 3 ? planText : '';
+  const showTerminalPlaceholder = (() => {
+    if (activeTab === 3) return false;
+    if (!currentContent && activeTab === 0 && logsStreaming) return false;
+    if (!currentContent && activeTab === 1 && eventsStreaming) return false;
+    return !currentContent;
+  })();
 
   const handleTabChange = (_, newValue) => {
+    if (activeTab === 3 && newValue !== 3) setPlanEditingMode(false);
     setActiveTab(newValue);
-    if (!job) return;
-    if (newValue === 0) viewLogs(job.id, job.status);
-    else if (newValue === 1) viewEvents(job.id);
-    else if (newValue === 2 && !planText) fetchPlanText(job.id);
   };
 
-  const handleRefresh = () => {
-    if (!job) return;
-    if (isMetricsTab) return;
-    if (activeTab === 0) { setLogs(''); viewLogs(job.id, job.status); }
-    else if (activeTab === 1) { setEvents(''); viewEvents(job.id); }
-    else if (activeTab === 2) { fetchPlanText(job.id); }
+  const enterPlanEditMode = () => {
+    setPlanBaseline(planText);
+    setPlanEditingMode(true);
   };
+
+  const cancelPlanEdit = () => {
+    setPlanText(planBaseline);
+    setPlanEditingMode(false);
+  };
+
+  /* Recharts measures on mount; nudge layout when Metrics tab becomes visible again. */
+  useEffect(() => {
+    if (!isMetricsTab) return;
+    const id = requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    return () => cancelAnimationFrame(id);
+  }, [isMetricsTab]);
 
   /* ── Action button styles ──────────────────────────────────── */
   const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', px: 2.2, boxShadow: 'none' };
@@ -538,7 +677,7 @@ const JobDetail = () => {
               bgcolor: '#161b22',
             }}>
               {/* Tabs */}
-              {TABS.map(({ label, Icon, dotColor }, idx) => (
+              {JOB_DETAIL_TABS.map(({ label, Icon, dotColor }, idx) => (
                 <Box
                   key={idx}
                   onClick={() => handleTabChange(null, idx)}
@@ -562,82 +701,168 @@ const JobDetail = () => {
                 >
                   <Icon sx={{ fontSize: 14 }} />
                   {label}
-                  {activeTab === idx && (
-                    <Box sx={{
-                      width: 5, height: 5, borderRadius: '50%',
-                      bgcolor: dotColor, boxShadow: `0 0 6px ${dotColor}`, ml: 0.3,
-                    }} />
-                  )}
                 </Box>
               ))}
-
-              <Box sx={{ flex: 1 }} />
-
-              {/* Streaming indicator */}
-              {isStreaming && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mr: 1 }}>
-                  <Box sx={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    bgcolor: TABS[activeTab].dotColor,
-                    animation: 'termPulse 1s ease-in-out infinite',
-                    '@keyframes termPulse': {
-                      '0%,100%': { opacity: 1 },
-                      '50%': { opacity: 0.2 },
-                    },
-                  }} />
-                  <Typography sx={{ color: '#8b949e', fontSize: '0.72rem', fontFamily: 'monospace' }}>
-                    {activeTab === 2 ? 'loading…' : 'streaming…'}
-                  </Typography>
-                </Box>
+              {activeTab === 3 && canEditPlan && (
+                <Box sx={{ flex: 1 }} />
               )}
-
-              {/* Refresh */}
-              <Tooltip title="Refresh" placement="top">
-                <IconButton
-                  size="small" onClick={handleRefresh}
-                  sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}
-                >
-                  <Autorenew sx={{ fontSize: 15 }} />
-                </IconButton>
-              </Tooltip>
-
-              {/* Copy */}
-              <Tooltip title="Copy to clipboard" placement="top">
-                <IconButton
+              {activeTab === 3 && canEditPlan && !planEditingMode && (
+                <Button
+                  type="button"
                   size="small"
-                  onClick={() => navigator.clipboard.writeText(currentContent || '')}
-                  sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}
+                  variant="outlined"
+                  startIcon={<Edit sx={{ fontSize: 16 }} />}
+                  onClick={enterPlanEditMode}
+                  sx={{
+                    ml: 'auto',
+                    flexShrink: 0,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    borderRadius: '8px',
+                    color: '#e3b341',
+                    borderColor: 'rgba(227,179,65,0.55)',
+                    '&:hover': { borderColor: '#e3b341', bgcolor: 'rgba(227,179,65,0.08)' },
+                  }}
                 >
-                  <ContentCopy sx={{ fontSize: 15 }} />
-                </IconButton>
-              </Tooltip>
+                  Edit
+                </Button>
+              )}
+              {activeTab === 3 && canEditPlan && planEditingMode && (
+                <>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="outlined"
+                    disabled={planSaving}
+                    onClick={cancelPlanEdit}
+                    sx={{
+                      flexShrink: 0,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      borderRadius: '8px',
+                      color: '#8b949e',
+                      borderColor: '#30363d',
+                      '&:hover': { borderColor: '#484f58', bgcolor: 'rgba(255,255,255,0.04)' },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="contained"
+                    disabled={planSaving}
+                    startIcon={planSaving ? <CircularProgress size={14} color="inherit" /> : <Save sx={{ fontSize: 16 }} />}
+                    onClick={() => savePlan(job.id)}
+                    sx={{
+                      flexShrink: 0,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      borderRadius: '8px',
+                      bgcolor: '#e3b341',
+                      color: '#1c1917',
+                      boxShadow: 'none',
+                      '&:hover': { bgcolor: '#f5d565', boxShadow: 'none' },
+                      '&.Mui-disabled': { bgcolor: 'rgba(227,179,65,0.35)', color: '#1c1917' },
+                    }}
+                  >
+                    Save plan
+                  </Button>
+                </>
+              )}
             </Box>
 
-            {/* Terminal content */}
-            {isMetricsTab ? (
-              <LiveMetrics jobId={job.id} jobStatus={job.status} />
-            ) : (
+            {/* Metrics: mount when Influx is on so polling runs even on other tabs; show only on Metrics tab */}
+            {influxdbEnabled && (
+              <Box sx={{ display: isMetricsTab ? 'block' : 'none', minHeight: isMetricsTab ? 320 : 0 }}>
+                <LiveMetrics
+                  key={job.id}
+                  jobId={job.id}
+                  jobStatus={job.status}
+                  displayTimeZone={timezone || 'UTC'}
+                />
+              </Box>
+            )}
+            {isMetricsTab && !influxdbEnabled && (
+              <Box sx={{
+                px: 3, py: 4, minHeight: 320,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Typography sx={{
+                  color: '#8b949e',
+                  fontSize: '0.9rem',
+                  textAlign: 'center',
+                  maxWidth: 420,
+                  lineHeight: 1.7,
+                }}>
+                  Metrics are not enabled for this deployment. Live charts require InfluxDB to be configured on the server.
+                </Typography>
+              </Box>
+            )}
+            {!isMetricsTab && (
             <Box sx={{
               px: 3, py: 2.5,
               fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
               fontSize: '0.8rem',
               lineHeight: 1.9,
-              color: activeTab === 2 ? '#d4d4d4' : '#e6edf3',
+              color: '#e6edf3',
               minHeight: 320,
               maxHeight: '65vh',
               overflow: 'auto',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',
             }}>
-              {currentContent
-                ? (activeTab === 2 ? highlightXml(currentContent) : currentContent)
+              {!showTerminalPlaceholder
+                ? (activeTab === 3 && canEditPlan && planEditingMode
+                  ? (
+                    <Box
+                      className="plan-code-editor"
+                      sx={{
+                        width: '100%',
+                        minHeight: 280,
+                        '& pre, & textarea': {
+                          margin: 0,
+                          whiteSpace: 'pre-wrap !important',
+                          wordBreak: 'break-all',
+                        },
+                      }}
+                    >
+                      <Editor
+                        value={planText}
+                        onValueChange={setPlanText}
+                        highlight={highlightPlanXml}
+                        padding={0}
+                        disabled={planSaving}
+                        style={{
+                          fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
+                          fontSize: '0.8rem',
+                          lineHeight: 1.9,
+                          minHeight: 280,
+                          color: XML_BASE_COLOR,
+                          backgroundColor: 'transparent',
+                        }}
+                        textareaProps={{
+                          spellCheck: false,
+                          'aria-label': 'JMeter plan XML',
+                        }}
+                      />
+                    </Box>
+                  )
+                  : activeTab === 3
+                    ? highlightXml(currentContent)
+                    : (currentContent || ''))
                 : (
                 <Typography sx={{ color: '#484f58', fontFamily: 'inherit', fontSize: '0.8rem', fontStyle: 'italic' }}>
                   {activeTab === 0
-                    ? '# Click ↻ Refresh to stream logs for this job…'
-                    : activeTab === 1
-                    ? '# Click ↻ Refresh to load Kubernetes events…'
-                    : '# Click ↻ Refresh to load the JMX plan file…'}
+                    ? (['running', 'completed', 'failed'].includes(job?.status || '')
+                      ? '# Waiting for logs…'
+                      : '# Logs are available when the job is running, completed, or failed.')
+                    : activeTab === 3
+                      ? '# No plan content loaded.'
+                      : '# Waiting for events…'}
                 </Typography>
               )}
             </Box>

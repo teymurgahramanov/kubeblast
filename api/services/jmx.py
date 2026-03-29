@@ -21,6 +21,8 @@ def inject_backend_listener(jmx_content: str, job_id: str) -> str:
     Parse a JMX test plan and inject an InfluxDB BackendListener element
     so JMeter sends real-time metrics during execution.
 
+    JMeter pods run with TZ=UTC so Influx line-protocol timestamps are UTC instants.
+
     If the plan already contains a BackendListener, the original content
     is returned unchanged to respect user configuration.
     """

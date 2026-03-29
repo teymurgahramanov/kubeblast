@@ -14,16 +14,20 @@ def _sync_startup_initialize():
     from core import models, db
     from services import auth
 
-    admin = auth.get_user("admin")
-    if not admin:
-        admin = models.UserInDB(
-            username="admin",
-            hashed_password=auth.hash_password("admin"),
-            role="admin",
-        )
-        db.mongo.users.insert_one(admin.dict())
-        logger.info("Admin user created with password: admin")
-
+    try:
+        admin = auth.get_user("admin")
+        if not admin:
+            admin = models.UserInDB(
+                username="admin",
+                hashed_password=auth.hash_password("admin"),
+                role="admin",
+            )
+            db.mongo.users.insert_one(admin.dict())
+            logger.info("Admin user created with password: admin")
+    except Exception as e:
+        logger.error(f"Admin bootstrap failed: {e}")
+        exit(1)
+        
     if config.LICENSE_KEY and config.LICENSE_ID:
         try:
             from license_check import check_license
@@ -38,15 +42,14 @@ def _sync_startup_initialize():
                 app.include_router(users.router, tags=["users"])
                 app.include_router(oidc.router, tags=["oidc"])
                 app.include_router(pats.router, tags=["pats"])
-        except ImportError:
-            logger.warning("license_check not available. Continuing in community mode.")
+        except Exception as e:
+            logger.warning(f"license_check failed: {e}. Continuing in community mode.")
             config.LICENSE_VALID = False
     else:
         logger.info("License or account id not provided. Continuing in community mode.")
-
+        config.LICENSE_VALID = False
 
 _job_status_worker_started = False
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

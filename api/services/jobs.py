@@ -6,9 +6,25 @@ import hashlib
 from config import config
 from datetime import datetime
 from core.log import logger
-from services import k8s, events
+from services import k8s, events, logs, auth
 
 from services import files_fs as files
+
+_PLAN_EDIT_STATUSES = frozenset({"ready", "completed", "failed"})
+
+
+def _job_approve(current_user, job_owner_username: str) -> str:
+    if job_owner_username == current_user.username:
+        auto_approve = current_user.auto_approve
+    else:
+        owner = auth.get_user(job_owner_username)
+        auto_approve = bool(owner.auto_approve) if owner else False
+    if not config.LICENSE_VALID:
+        return "ready"
+    if auto_approve:
+        return "ready"
+    return "pending"
+
 
 def get_jobs(
     current_user,
@@ -98,12 +114,7 @@ def create_job(current_user, job_data):
             detail=f"The same job already exists: {job_name}"
         )
     
-    if not config.LICENSE_VALID:
-        job_status = "ready"
-    elif current_user.auto_approve:
-        job_status = "ready"
-    else:
-        job_status = "pending"
+    job_status = _job_approve(current_user, current_user.username)
 
     job = {
         "name": job_name,
@@ -132,6 +143,34 @@ def create_job(current_user, job_data):
             events.create_event(job_id, f"Job creation failed: {e}")
             delete_job(current_user, job_id)
         raise HTTPException(status_code=500, detail="Failed to create job")
+
+
+def update_job_plan(current_user, job_id: str, file_content: bytes):
+    if not file_content:
+        raise HTTPException(status_code=400, detail="Plan body is empty")
+
+    job = get_job(current_user, job_id).dict()
+    if job["status"] not in _PLAN_EDIT_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="Plan can only be updated when the job is ready, completed, or failed",
+        )
+
+    new_status = _job_approve(current_user, job["owner"])
+
+    try:
+        files.create_file(job_id, file_content, "plan.jmx")
+        db.mongo.jobs.update_one(
+            {"_id": bson.objectid.ObjectId(job_id)},
+            {"$set": {"status": new_status}},
+        )
+        events.create_event(job_id, "Plan updated")
+        return get_job(current_user, job_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Failed to update plan")
 
 
 def start_job(current_user, job_id):
@@ -172,6 +211,16 @@ def retry_job(current_user, job_id):
         )
         logger.info(f"Deleting workload for job {job_id}")
         events.create_event(job_id, "Workload deletion started")
+        try:
+            logs.delete_logs_for_job(job_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete job logs for {job_id}: {e}")
+        if config.INFLUXDB_ENABLED:
+            try:
+                from services.influxdb import delete_job_metrics
+                delete_job_metrics(job_id)
+            except Exception as e:
+                logger.warning(f"Failed to delete InfluxDB metrics for {job_id}: {e}")
         k8s.delete_workload(job_id)
         events.create_event(job_id, "Workload deleted")
         sleep(10)
@@ -224,11 +273,15 @@ def delete_job(current_user, job_id):
 
     files.delete_file(job_id)
 
-    # Clean up associated job events
+    # Clean up associated job events and stored log lines
     try:
         events.delete_events_for_job(job_id)
     except Exception as e:
         logger.warning(f"Failed to delete job events for {job_id}: {e}")
+    try:
+        logs.delete_logs_for_job(job_id)
+    except Exception as e:
+        logger.warning(f"Failed to delete job logs for {job_id}: {e}")
 
     # Clean up associated InfluxDB metrics
     if config.INFLUXDB_ENABLED:

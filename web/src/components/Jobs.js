@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip,
@@ -7,17 +7,16 @@ import {
   LinearProgress, Skeleton, Divider, InputAdornment,
 } from '@mui/material';
 import {
-  Delete, MoreVert, CheckCircle, Cancel, Visibility, Description,
-  Autorenew, Download, Add, PlayArrow, ListAlt, Stop, Dashboard,
+  Delete, MoreVert, CheckCircle, Cancel,
+  Autorenew, Add, PlayArrow, ListAlt, Stop,
   Search, ViewModule, ViewList, Memory, DeveloperBoard, Dns,
-  ContentCopy, Close, Speed, AccessTime, FiberManualRecord, Person,
+  Speed, AccessTime, FiberManualRecord, Person,
 } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { getUserRole } from "../utils/auth";
 import AppHeader from './AppHeader';
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
-import config from '../config.json';
 
 /* ─── Status chip definitions ────────────────────────────────── */
 const STATUS_CHIPS = [
@@ -80,47 +79,6 @@ const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor
   </Box>
 );
 
-/* ─── Terminal modal shell ────────────────────────────────────── */
-const TerminalModal = ({ open, onClose, title, dotColor, content }) => (
-  <Modal open={open} onClose={onClose}>
-    <Box sx={{
-      position: 'absolute', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: '88%', maxWidth: 920, maxHeight: '85vh',
-      bgcolor: '#0d1117', borderRadius: '16px',
-      boxShadow: '0 30px 70px rgba(0,0,0,0.55)',
-      outline: 'none', display: 'flex', flexDirection: 'column',
-    }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 1.8, borderBottom: '1px solid #30363d', flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: dotColor, boxShadow: `0 0 8px ${dotColor}` }} />
-          <Typography sx={{ color: '#e6edf3', fontWeight: 600, fontFamily: '"JetBrains Mono","Fira Code",monospace', fontSize: '0.88rem' }}>
-            {title}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <Tooltip title="Copy to clipboard">
-            <IconButton size="small" onClick={() => navigator.clipboard.writeText(content || '')} sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}>
-              <ContentCopy sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
-          <IconButton size="small" onClick={onClose} sx={{ color: '#8b949e', '&:hover': { color: '#e6edf3', bgcolor: 'rgba(255,255,255,0.06)' } }}>
-            <Close sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
-      </Box>
-      <Box sx={{
-        flex: 1, overflow: 'auto', p: 3,
-        fontFamily: '"JetBrains Mono","Fira Code",monospace',
-        fontSize: '0.81rem', lineHeight: 1.75,
-        color: dotColor, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-      }}>
-        {content || <Typography sx={{ color: '#8b949e', fontFamily: 'inherit', fontSize: '0.81rem' }}>Waiting for data…</Typography>}
-      </Box>
-    </Box>
-  </Modal>
-);
-
 /* ══════════════════════════════════════════════════════════════ */
 const Jobs = () => {
   const navigate = useNavigate();
@@ -133,8 +91,6 @@ const Jobs = () => {
   const [totalJobs, setTotalJobs] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
-  const [logs, setLogs] = useState(null);
-  const [events, setEvents] = useState(null);
   const [openAddJob, setOpenAddJob] = useState(false);
   const [resources, setResources] = useState(null);
   const [resourcesError, setResourcesError] = useState('');
@@ -144,12 +100,9 @@ const Jobs = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [goToPage, setGoToPage] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const logsAbortRef   = useRef(null);
-  const eventsAbortRef = useRef(null);
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(false);
   const [timezone, setTimezone] = useState('UTC');
-  const proRedirectUrl = config.proRedirectUrl;
 
   /* ── App stats ─────────────────────────────────────────────── */
   useEffect(() => {
@@ -164,149 +117,6 @@ const Jobs = () => {
     };
     fetchAppStats();
   }, []);
-
-  const handleProFeature = () => { window.location.href = proRedirectUrl; };
-
-  /* ── Report viewer ─────────────────────────────────────────── */
-  const openReport = async (job_id) => {
-    try {
-      if (!job_id) { setError("No job available."); return; }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'text/html' },
-        params: { type: "report" },
-        responseType: 'text',
-      });
-      const rawHtml = typeof response.data === 'string' ? response.data : String(response.data || '');
-
-      const inlineAssets = async (html, currentDir = '') => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const toArray = (list) => Array.prototype.slice.call(list || []);
-        const normalizePath = (baseDir, relPath) => {
-          const dummy = 'http://x/';
-          const base = new URL(baseDir ? (dummy + baseDir) : dummy);
-          const resolved = new URL(relPath, base);
-          return resolved.pathname.replace(/^\//, '');
-        };
-        const fetchText = async (relPath) => {
-          const path = normalizePath(currentDir, relPath);
-          const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-            params: { type: "report", path }, responseType: 'text',
-          });
-          return typeof res.data === 'string' ? res.data : String(res.data || '');
-        };
-        const fetchBinary = async (relPath) => {
-          const path = normalizePath(currentDir, relPath);
-          const res = await axiosInstance.get(`/files/${job_id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-            params: { type: "report", path }, responseType: 'arraybuffer',
-          });
-          return res.data;
-        };
-        const guessMime = (p) => {
-          const lower = String(p || '').toLowerCase();
-          if (lower.endsWith('.png')) return 'image/png';
-          if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-          if (lower.endsWith('.gif')) return 'image/gif';
-          if (lower.endsWith('.svg')) return 'image/svg+xml';
-          if (lower.endsWith('.webp')) return 'image/webp';
-          if (lower.endsWith('.ico')) return 'image/x-icon';
-          if (lower.endsWith('.css')) return 'text/css';
-          if (lower.endsWith('.js')) return 'text/javascript';
-          return 'application/octet-stream';
-        };
-        const toDataUrl = (arrayBuffer, mime) => {
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-          return `data:${mime};base64,${btoa(binary)}`;
-        };
-        const linkEls = toArray(doc.querySelectorAll('link[rel="stylesheet"][href]'));
-        await Promise.all(linkEls.map(async (link) => {
-          const href = link.getAttribute('href');
-          try {
-            const cssText = await fetchText(href);
-            const styleEl = doc.createElement('style');
-            styleEl.textContent = cssText;
-            link.parentNode.replaceChild(styleEl, link);
-          } catch { /* keep as-is */ }
-        }));
-        const scriptEls = toArray(doc.querySelectorAll('script[src]'));
-        await Promise.all(scriptEls.map(async (script) => {
-          const src = script.getAttribute('src');
-          try {
-            const jsText = await fetchText(src);
-            const inlineScript = doc.createElement('script');
-            inlineScript.textContent = jsText;
-            const typeAttr = script.getAttribute('type');
-            if (typeAttr) inlineScript.setAttribute('type', typeAttr);
-            script.parentNode.replaceChild(inlineScript, script);
-          } catch { /* keep as-is */ }
-        }));
-        const imgEls = toArray(doc.querySelectorAll('img[src]'));
-        await Promise.all(imgEls.map(async (img) => {
-          const src = img.getAttribute('src');
-          try {
-            const data = await fetchBinary(src);
-            img.setAttribute('src', toDataUrl(data, guessMime(src)));
-          } catch { /* keep as-is */ }
-        }));
-        const iconLinks = toArray(doc.querySelectorAll('link[rel="icon"][href],link[rel="shortcut icon"][href]'));
-        await Promise.all(iconLinks.map(async (link) => {
-          const href = link.getAttribute('href');
-          try {
-            const data = await fetchBinary(href);
-            link.setAttribute('href', toDataUrl(data, guessMime(href)));
-          } catch { /* keep as-is */ }
-        }));
-        return '<!doctype html>\n' + doc.documentElement.outerHTML;
-      };
-
-      const getDir = (p) => { if (!p) return ''; const idx = p.lastIndexOf('/'); return idx === -1 ? '' : p.slice(0, idx + 1); };
-
-      const navigateTo = async (win, path) => {
-        const res = await axiosInstance.get(`/files/${job_id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'text/html' },
-          params: { type: "report", path }, responseType: 'text',
-        });
-        const html = typeof res.data === 'string' ? res.data : String(res.data || '');
-        const inlined = await inlineAssets(html, getDir(path));
-        win.document.open(); win.document.write(inlined); win.document.close();
-        bindLinkHandlers(win, getDir(path));
-      };
-
-      const bindLinkHandlers = (win, currentDir) => {
-        win.document.addEventListener('click', async (e) => {
-          const anchor = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-          if (!anchor) return;
-          const href = anchor.getAttribute('href') || '';
-          const lower = href.toLowerCase();
-          if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:') || lower.startsWith('javascript:') || lower.startsWith('#')) return;
-          e.preventDefault();
-          const dummy = 'http://x/';
-          const base = new URL(currentDir ? (dummy + currentDir) : dummy);
-          const resolved = new URL(href, base);
-          const relPath = resolved.pathname.replace(/^\//, '');
-          try { await navigateTo(win, relPath); }
-          catch (err) { setError((err && (err.response?.data?.detail || err.message)) || 'Failed to load report page'); }
-        }, { capture: true });
-      };
-
-      const inlinedHtml = await inlineAssets(rawHtml, '');
-      const reportWindow = window.open('', '_blank');
-      if (reportWindow) {
-        reportWindow.document.open(); reportWindow.document.write(inlinedHtml); reportWindow.document.close();
-        bindLinkHandlers(reportWindow, '');
-      } else {
-        setError('Popup blocked. Please allow popups for this site.');
-      }
-      handleMenuClose();
-    } catch (error) {
-      const errorDetail = error.response?.data instanceof Blob ? await error.response.data.text() : error.response?.data?.detail || error.message;
-      setError(errorDetail);
-    }
-  };
 
   /* ── Fetch jobs ────────────────────────────────────────────── */
   const fetchJobs = useCallback(async () => {
@@ -376,129 +186,6 @@ const Jobs = () => {
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'declined' } : j));
       handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
-  };
-
-  const stopLogsStream = () => {
-    try { if (logsAbortRef.current) logsAbortRef.current.abort(); } catch {}
-    logsAbortRef.current = null;
-  };
-
-  const stopEventsStream = () => {
-    try { if (eventsAbortRef.current) eventsAbortRef.current.abort(); } catch {}
-    eventsAbortRef.current = null;
-  };
-
-  // Stop streams on unmount
-  useEffect(() => () => { stopLogsStream(); stopEventsStream(); }, []); // eslint-disable-line
-
-  const viewLogs = async (job_id, job_status) => {
-    if (job_status !== 'running' && job_status !== 'completed' && job_status !== 'failed') {
-      setError('Logs are only available for running, completed, or failed jobs.'); return;
-    }
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) { setError('Unauthorized: Please log in'); return; }
-      stopLogsStream();
-      const controller = new AbortController();
-      logsAbortRef.current = controller;
-      const response = await fetch(`${axiosInstance.defaults.baseURL}/logs/${job_id}`, {
-        headers: { Authorization: `Bearer ${token}`, 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
-        signal: controller.signal,
-      });
-      if (!response.ok) { const d = await response.json(); throw new Error(d.detail || `HTTP ${response.status}`); }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let logContent = '';
-      const readStream = async () => {
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            for (const line of decoder.decode(value).split('\n')) {
-              if (line.startsWith('data: ')) logContent += line.slice(6) + '\n';
-            }
-            setLogs(logContent);
-          }
-        } catch (err) { if (err?.name !== 'AbortError' && !logContent) setError(err.message || 'Error reading logs.'); }
-        finally { reader.releaseLock(); }
-      };
-      readStream(); handleMenuClose();
-    } catch (error) { setError(error.message || 'Error fetching logs'); }
-  };
-
-  const viewEvents = async (job_id) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) { setError('Unauthorized: Please log in'); return; }
-      stopEventsStream();
-      const controller = new AbortController();
-      eventsAbortRef.current = controller;
-      const response = await fetch(`${axiosInstance.defaults.baseURL}/events/${job_id}`, {
-        headers: { Authorization: `Bearer ${token}`, 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
-        signal: controller.signal,
-      });
-      if (!response.ok) { const d = await response.json(); throw new Error(d.detail || `HTTP ${response.status}`); }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let eventsContent = '';
-      const readStream = async () => {
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            for (const line of decoder.decode(value).split('\n')) {
-              if (!line || line.startsWith(':')) continue;
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                try {
-                  const obj = JSON.parse(data);
-                  const ts = obj.ts ? formatDate(String(obj.ts)) : '';
-                  eventsContent += `${ts ? `[${ts}] ` : ''}${obj.msg ? String(obj.msg) : String(data)}\n`;
-                } catch { eventsContent += data + '\n'; }
-              } else if (line.startsWith('event: ')) {
-                eventsContent += `\n[${line.slice(7)}]\n`;
-              }
-            }
-            setEvents(eventsContent);
-          }
-        } catch (err) { if (err?.name !== 'AbortError' && !eventsContent) setError(err.message || 'Error reading events.'); }
-        finally { reader.releaseLock(); }
-      };
-      readStream(); handleMenuClose();
-    } catch (error) { setError(error.message || 'Error fetching events'); }
-  };
-
-  const openPlanFile = async (job_id) => {
-    try {
-      if (!job_id) { setError("No job available."); return; }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'Accept': 'application/xml' },
-        params: { type: "plan" }, responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'application/xml' });
-      window.open(window.URL.createObjectURL(blob), "_blank");
-    } catch (error) {
-      const d = error.response?.data instanceof Blob ? await error.response.data.text() : error.response?.data?.detail || error.message;
-      setError(d);
-    }
-  };
-
-  const downloadResult = async (job_id) => {
-    try {
-      if (!job_id) { setError("No job available."); return; }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-        params: { type: "result" }, responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'text/plain' });
-      const link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `kubeblast_${jobs.find(j => j.id === job_id)?.name}.jtl`;
-      link.click(); handleMenuClose();
-    } catch (error) {
-      const d = error.response?.data instanceof Blob ? await error.response.data.text() : error.response?.data?.detail || error.message;
-      setError(d);
-    }
   };
 
   const deleteJob = async (job_id) => {
@@ -1202,23 +889,6 @@ const Jobs = () => {
             </MenuItem>
           </Menu>
         )}
-
-        {/* ── Modals ─────────────────────────────────────────── */}
-        <TerminalModal
-          open={Boolean(logs)}
-          onClose={() => { stopLogsStream(); setLogs(null); }}
-          title="Job Logs"
-          dotColor="#7ee787"
-          content={logs}
-        />
-
-        <TerminalModal
-          open={Boolean(events)}
-          onClose={() => { stopEventsStream(); setEvents(null); }}
-          title="K8s Events"
-          dotColor="#79c0ff"
-          content={events}
-        />
 
         {/* ── Delete confirmation modal ──────────────────────── */}
         <Modal open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>

@@ -34,6 +34,8 @@ spec:
         image: {{ image_job }}
         imagePullPolicy: {{ image_pull_policy }}
         env:
+        - name: TZ
+          value: UTC
         - name: POD_IP
           valueFrom:
             fieldRef:

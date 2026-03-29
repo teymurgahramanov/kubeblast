@@ -35,10 +35,25 @@ const titleSx = {
   mb: 1.5,
 };
 
-const formatTimestamp = (ts) => {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+/** `ts` is UTC epoch ms from API; `timeZone` is IANA name from server TIMEZONE (e.g. Europe/Berlin). */
+const formatTimestamp = (ts, timeZone = 'UTC') => {
+  if (ts == null || ts === '') return '';
+  const n = typeof ts === 'number' ? ts : Number(ts);
+  const d = new Date(n);
+  if (Number.isNaN(d.getTime())) return String(ts);
+  const tz = (timeZone && String(timeZone).trim()) || 'UTC';
+  const opts = {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: tz,
+  };
+  try {
+    return d.toLocaleTimeString('en-US', opts);
+  } catch {
+    return d.toLocaleTimeString('en-US', { ...opts, timeZone: 'UTC' });
+  }
 };
 
 const formatNumber = (v) => {
@@ -47,11 +62,11 @@ const formatNumber = (v) => {
   return typeof v === 'number' ? v.toFixed(v < 10 ? 1 : 0) : String(v);
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, timeZone }) => {
   if (!active || !payload?.length) return null;
   return (
     <Box sx={{ bgcolor: '#161b22', border: '1px solid #30363d', borderRadius: '8px', p: 1.5, fontSize: '0.75rem' }}>
-      <Typography sx={{ color: '#8b949e', fontSize: '0.7rem', mb: 0.5 }}>{formatTimestamp(label)}</Typography>
+      <Typography sx={{ color: '#8b949e', fontSize: '0.7rem', mb: 0.5 }}>{formatTimestamp(label, timeZone)}</Typography>
       {payload.map((entry, i) => (
         <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: entry.color }}>
           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: entry.color, flexShrink: 0 }} />
@@ -62,7 +77,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const LiveMetrics = ({ jobId, jobStatus }) => {
+const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
   const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState('');
   const intervalRef = useRef(null);
@@ -77,12 +92,18 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
     }
   }, [jobId]);
 
+  /* Poll whenever this job is mounted and still running/starting — even if Metrics tab is hidden. */
   useEffect(() => {
     fetchMetrics();
     if (['running', 'starting'].includes(jobStatus)) {
       intervalRef.current = setInterval(fetchMetrics, POLL_INTERVAL);
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [fetchMetrics, jobStatus]);
 
   if (error) {
@@ -97,7 +118,7 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography sx={{ color: '#8b949e', fontSize: '0.85rem', fontStyle: 'italic' }}>
-          Real-time metrics are not enabled. Enable InfluxDB integration to see live data.
+          Real-time metrics are not available yet. Check if InfluxDB is enabled and running.
         </Typography>
       </Box>
     );
@@ -147,6 +168,9 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
     tickLine: false,
   };
 
+  const tickTime = (v) => formatTimestamp(v, displayTimeZone);
+  const tooltipContent = <CustomTooltip timeZone={displayTimeZone} />;
+
   return (
     <Box sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
       {/* Response Times */}
@@ -155,9 +179,9 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={responseData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
-            <XAxis dataKey="time" tickFormatter={formatTimestamp} {...axisProps} />
+            <XAxis dataKey="time" tickFormatter={tickTime} {...axisProps} />
             <YAxis {...axisProps} tickFormatter={formatNumber} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={tooltipContent} />
             <Legend wrapperStyle={{ fontSize: '0.7rem', color: '#8b949e' }} />
             <Line type="monotone" dataKey="avg" name="Avg" stroke={CHART_COLORS.avg} dot={false} strokeWidth={2} />
             <Line type="monotone" dataKey="p90" name="p90" stroke={CHART_COLORS.p90} dot={false} strokeWidth={1.5} />
@@ -173,9 +197,9 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={throughputData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
-            <XAxis dataKey="time" tickFormatter={formatTimestamp} {...axisProps} />
+            <XAxis dataKey="time" tickFormatter={tickTime} {...axisProps} />
             <YAxis {...axisProps} tickFormatter={formatNumber} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={tooltipContent} />
             <Line type="monotone" dataKey="throughput" name="Req/s" stroke={CHART_COLORS.throughput} dot={false} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
@@ -187,9 +211,9 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={threadsData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
-            <XAxis dataKey="time" tickFormatter={formatTimestamp} {...axisProps} />
+            <XAxis dataKey="time" tickFormatter={tickTime} {...axisProps} />
             <YAxis {...axisProps} tickFormatter={formatNumber} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={tooltipContent} />
             <Area type="monotone" dataKey="threads" name="Threads" stroke={CHART_COLORS.threads} fill={CHART_COLORS.threads} fillOpacity={0.15} strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
@@ -201,9 +225,9 @@ const LiveMetrics = ({ jobId, jobStatus }) => {
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={errorData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
-            <XAxis dataKey="time" tickFormatter={formatTimestamp} {...axisProps} />
+            <XAxis dataKey="time" tickFormatter={tickTime} {...axisProps} />
             <YAxis {...axisProps} tickFormatter={formatNumber} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={tooltipContent} />
             <Line type="monotone" dataKey="errors" name="Errors" stroke={CHART_COLORS.errors} dot={false} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>

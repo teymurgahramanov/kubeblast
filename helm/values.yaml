@@ -65,7 +65,7 @@ mongodb:
 # Uses the official influxdata/influxdb Helm chart.
 # If disabled, real-time metrics features are not available.
 influxdb:
-  enabled: false
+  enabled: true
   initScripts:
     enabled: true
     scripts:
