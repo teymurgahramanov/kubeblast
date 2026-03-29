@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
 
     # General
-    APP_VERSION: str = "1.2.0"
+    APP_VERSION: str = "1.3.0"
     LICENSE_VALID: bool = False
     LICENSE_KEY: str = os.getenv("LICENSE_KEY")
     LICENSE_ID: str = os.getenv("LICENSE_ID")
@@ -38,8 +38,17 @@ class Config:
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
 
+    # Delay before first capacity / job-worker sync so the API can bind and serve health checks first
+    STARTUP_CAPACITY_STAGGER_S: int = 5
+    STARTUP_WORKER_STAGGER_S: int = 5
+
     # Metrics server URL for capacity data
     K8S_METRICS_SERVER: str = os.getenv("K8S_METRICS_SERVER", "https://metrics-server.kube-system")
+
+    # InfluxDB (JMeter real-time metrics)
+    INFLUXDB_ENABLED: bool = os.getenv("INFLUXDB_ENABLED", "false").lower() == "true"
+    INFLUXDB_URL: str = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+    INFLUXDB_DATABASE: str = os.getenv("INFLUXDB_DATABASE", "jmeter")
 
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")

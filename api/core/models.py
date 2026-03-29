@@ -148,7 +148,22 @@ class PatCreate(BaseModel):
 class PatCreatedResponse(BaseModel):
     token: str
 
-class JobEvent(BaseModel):
+class JobLog(BaseModel):
     job_id: str = Field(..., description="Job identifier")
     ts: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp (UTC)")
     msg: str = Field(..., min_length=1, description="Event message")
+
+    @staticmethod
+    def coerce_msg(msg: str) -> str:
+        s = msg if isinstance(msg, str) else str(msg)
+        return s if s.strip() else " "
+
+    @classmethod
+    def from_mongo_doc(cls, doc: dict, *, fallback_job_id: str) -> "JobLog":
+        raw_ts = doc.get("ts")
+        ts = raw_ts if isinstance(raw_ts, datetime) else datetime.utcnow()
+        return cls(
+            job_id=str(doc.get("job_id", fallback_job_id)),
+            ts=ts,
+            msg=cls.coerce_msg(doc.get("msg", "")),
+        )

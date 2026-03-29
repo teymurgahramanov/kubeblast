@@ -36,7 +36,7 @@ const AddJob = ({ onClose }) => {
       await axiosInstance.post('/jobs', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
         }
       });
       onClose();
@@ -127,12 +127,11 @@ const AddJob = ({ onClose }) => {
               onClick={onClose}
               variant="outlined"
               sx={{
-                color: 'var(--text-secondary)',
-                borderColor: 'var(--border-color)',
-                '&:hover': {
-                  borderColor: 'var(--text-primary)',
-                  backgroundColor: 'transparent'
-                }
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                px: 2.2,
               }}
             >
               Cancel
@@ -141,9 +140,14 @@ const AddJob = ({ onClose }) => {
               type="submit"
               variant="contained"
               sx={{
-                backgroundColor: 'var(--primary-color)',
-                '&:hover': { backgroundColor: 'var(--primary-dark)' },
-                textTransform: 'none'
+                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
+                boxShadow: 'none',
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                px: 2.2,
+                '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
               }}
             >
               Add

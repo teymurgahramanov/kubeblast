@@ -1,4 +1,6 @@
+import io
 import shutil
+import zipfile
 from pathlib import Path
 from fastapi import HTTPException, Response
 from core.log import logger
@@ -65,7 +67,7 @@ def download_file(current_user, job_id, type, path=None):
                     content=content,
                     media_type="text/plain",
                     headers={
-                        "Content-Disposition": f'attachment; filename="{job["name"]}.jtl"'
+                        "Content-Disposition": f'attachment; filename="kb-{job["name"]}-result.jtl"'
                     }
                 )
             except Exception as e:
@@ -74,36 +76,27 @@ def download_file(current_user, job_id, type, path=None):
         case "report":
             report_dir = (STORAGE_DIR / job_id / "report")
             try:
-                if path is None or path == "" or path == "/":
-                    index_path = report_dir / "index.html"
-                    with open(index_path, 'r') as f:
-                        content = f.read()
-                    return Response(
-                        content=content,
-                        media_type="text/html",
-                        headers={
-                            "Content-Disposition": "inline;"
-                        }
-                    )
-                # Serve requested asset as a blob from within the report directory
-                # Normalize and protect against path traversal
-                normalized_subpath = str(path).lstrip("/\\")
-                base_dir = report_dir.resolve()
-                requested_path = (report_dir / normalized_subpath).resolve()
-                if requested_path != base_dir and base_dir not in requested_path.parents:
-                    logger.warning(f"Blocked path traversal attempt: {requested_path}")
-                    raise HTTPException(status_code=400, detail="Invalid path.")
-                with open(requested_path, 'rb') as f:
-                    content = f.read()
+                if not report_dir.is_dir():
+                    raise HTTPException(status_code=404, detail="Report directory not found.")
+
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for file_path in report_dir.rglob("*"):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(report_dir)
+                            zf.write(file_path, arcname)
+                buf.seek(0)
+
+                zip_name = f"kb-{job['name']}-report.zip"
                 return Response(
-                    content=content,
-                    media_type="application/octet-stream",
+                    content=buf.getvalue(),
+                    media_type="application/zip",
                     headers={
-                        "Content-Disposition": "inline;"
+                        "Content-Disposition": f'attachment; filename="{zip_name}"'
                     }
                 )
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Failed to read report content from filesystem: {str(e)}")
-                raise HTTPException(status_code=404, detail="Report content not found.")
+                logger.error(f"Failed to create report zip: {str(e)}")
+                raise HTTPException(status_code=404, detail="Report not found.")

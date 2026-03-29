@@ -35,7 +35,7 @@ async def oidc_authorize():
         
         state = secrets.token_urlsafe(32)
         _oidc_states[state] = True
-        
+
         auth_url = oidc.get_authorization_url(state)
         
         return {
@@ -88,17 +88,25 @@ async def oidc_callback(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="OIDC authentication failed"
             )
-        
-        user_data = oidc.map_oidc_user_to_db_user(oidc_user)
-        
-        token = auth.login(method="oidc", oidc_user_data=user_data.dict())
-        
+
+        # Pass raw IdP claims into login; authenticate_user maps once (roles, username).
+        # Passing a pre-mapped UserInDB dict would run mapping again without realm_access / resource_access and break role mapping.
+        token = auth.login(method="oidc", oidc_user_data=oidc_user)
+
+        preview = oidc.map_oidc_user_to_db_user(oidc_user)
+        db_user = auth.get_user(preview.username)
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="OIDC authentication failed",
+            )
+
         return {
             "access_token": token.access_token,
             "token_type": token.token_type,
             "refresh_token": token.refresh_token,
-            "username": user_data.username,
-            "role": user_data.role
+            "username": db_user.username,
+            "role": db_user.role,
         }
         
     except HTTPException:

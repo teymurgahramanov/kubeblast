@@ -31,4 +31,5 @@ async def get_app_stats():
         "LICENSE_VALID": config.LICENSE_VALID,
         "EDITION": "Advanced" if config.LICENSE_VALID else "Community",
         "TIMEZONE": config.TIMEZONE,
+        "INFLUXDB_ENABLED": config.INFLUXDB_ENABLED,
     }

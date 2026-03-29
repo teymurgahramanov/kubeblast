@@ -38,7 +38,7 @@ const Menuselect = () => {
   };
 
   const handleLogout = () => {
-    sessionStorage.clear();
+    localStorage.clear();
     navigate('/login');
   };
 

@@ -61,6 +61,31 @@ mongodb:
   extraVolumes: []
   extraVolumeMounts: []
 
+# InfluxDB configuration (JMeter real-time metrics)
+# Uses the official influxdata/influxdb Helm chart.
+# If disabled, real-time metrics features are not available.
+influxdb:
+  enabled: true
+  initScripts:
+    enabled: true
+    scripts:
+      init.iql: |+
+        CREATE DATABASE "jmeter" WITH DURATION 30d REPLICATION 1
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  config:
+    http:
+      enabled: true
+      flux-enabled: true
+
 # Storage PVC configuration
 pvc:
   # If you want to use an existing PVC, set existingClaim to the PVC name

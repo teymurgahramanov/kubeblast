@@ -6,11 +6,8 @@ from datetime import timedelta
 from core import models
 from core.log import logger
 from config import config
-import secrets
 
 router = APIRouter(prefix="/api/v1")
-
-_oidc_states = {}
 
 @router.post("/token", response_model=models.Token)
 async def login(

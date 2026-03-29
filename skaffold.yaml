@@ -5,6 +5,10 @@ metadata:
   name: kubeblast
 
 build:
+  tagPolicy:
+    inputDigest: {}
+  local:
+    push: true
   artifacts:
     - image: kubeblast
       context: ./

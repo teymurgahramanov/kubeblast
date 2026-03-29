@@ -1,6 +1,6 @@
 // Centralized helpers for auth-related data derived from the access token
 export function getAccessToken() {
-  return sessionStorage.getItem('access_token') || '';
+  return localStorage.getItem('access_token') || '';
 }
 
 function base64UrlDecode(input) {
@@ -47,8 +47,8 @@ export function getUserRole() {
   if (typeof claimRole === 'string' && claimRole.trim()) {
     return claimRole.trim();
   }
-  // Fallback to sessionStorage set during login flow
-  const stored = sessionStorage.getItem('user_role');
+  // Fallback to localStorage set during login flow
+  const stored = localStorage.getItem('user_role');
   return stored && stored.trim() ? stored.trim() : '';
 }
 
@@ -60,7 +60,7 @@ export function getUsername() {
   if (typeof sub === 'string' && sub.trim()) {
     return sub.trim();
   }
-  const stored = sessionStorage.getItem('username');
+  const stored = localStorage.getItem('username');
   return stored && stored.trim() ? stored.trim() : '';
 }
 

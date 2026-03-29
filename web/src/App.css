@@ -242,3 +242,43 @@ html[data-theme="dark"] #root {
   animation: fadeIn 0.3s ease-in;
 }
 
+/* KubeBlast Login - Modern Split Layout Animations */
+@keyframes kbFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-14px) rotate(1deg); }
+  66%       { transform: translateY(-7px) rotate(-0.5deg); }
+}
+
+@keyframes kbSlideInRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes kbFadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kbPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+}
+
+@keyframes kbOrbit {
+  from { transform: rotate(0deg) translateX(110px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
+}
+
+@keyframes kbOrbitReverse {
+  from { transform: rotate(0deg) translateX(75px) rotate(0deg); }
+  to   { transform: rotate(-360deg) translateX(75px) rotate(360deg); }
+}
+
+.login-form-animate {
+  animation: kbSlideInRight 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-brand-animate {
+  animation: kbFadeInUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+

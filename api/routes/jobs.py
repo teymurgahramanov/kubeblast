@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query, BackgroundTasks, Body
 from fastapi.responses import FileResponse
 from typing import Annotated, Literal, Optional, List
 from core import models, db
@@ -42,6 +42,14 @@ async def create_job(
     job_data: Annotated[models.JobCreate, Depends(models.JobCreate.create_form)],
     ):
     return jobs.create_job(current_user, job_data)
+
+@router.put("/jobs/{job_id}/plan", response_model=models.Job)
+async def update_job_plan(
+    job_id: str,
+    current_user: Annotated[models.User, Depends(auth.check_role([]))],
+    body: bytes = Body(...),
+):
+    return jobs.update_job_plan(current_user, job_id, body)
 
 @router.put("/jobs/start/{job_id}")
 async def start_job(job_id: str, background_tasks: BackgroundTasks, current_user: Annotated[models.User, Depends(auth.check_role([]))]):

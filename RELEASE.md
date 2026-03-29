@@ -1,21 +1,27 @@
-# Kubeblast 1.2.0 🚀
+# Kubeblast 1.3.0 🌅
 
 ## What's new?
 
-### ⚡ Distributed Load Testing
-Run JMeter in **true distributed mode** with an automatically provisioned **master/slave architecture**. Load tests now can run across multiple nodes, allowing Kubeblast to efficiently utilize Kubernetes clusters of any size.
+### Real-time performance metrics  
+View live performance charts directly in the **Job Details** page while tests are running; Kubeblast now streams JMeter metrics to **InfluxDB** (built-in or external) for instant visualization in the UI.
 
-### 🔐 API Automation with Personal Access Tokens
-Integrate Kubeblast into your **CI/CD pipelines** or custom automation workflows.  
-Personal Access Tokens (PATs) are managed directly from the **User Profile**, where you’ll also find a built-in link to the **in-app API documentation**.  
-> Available only in **Advanced Edition**.
+### Built-in JMeter plan editor  
+Edit JMX test plans directly from the UI with validation and approval rules applied automatically.
 
-### 📊 Job Transparency
-A brand-new **Job page** and detailed **job event timeline** give you complete visibility into what’s happening with your load tests—so you always know the exact state of job, directly from the UI.
+### Better report handling  
+In-browser reports have been removed; reports and results are now downloaded with consistent artifact naming.
 
-### 🧹 Smarter Resource Management
-Kubeblast now automatically cleans up workloads as soon as a job **completes or fails**, instantly freeing cluster resources. Combined with improved job status synchronization, Kubeblast becomes even more reliable.
+### Improved experience
+Refined UI delivers a cleaner and smoother visual experience; startup is optimized and faster.
 
-## Upgrade notes
+## Fixes
 
-- **API prefix change**: routes are now served under **`/api/v1`**.
+- Sessions no longer end when the browser is closed  
+- Improved startup behavior and stability  
+- OIDC users retain correct roles after login
+- Job logs are now persisted instead of being streamed from pods, so they remain available after job completion
+
+## Breaking changes
+
+- Built-in **InfluxDB** Helm chart is enabled by default for a better out-of-the-box experience (can be disabled)  
+- Built-in **MongoDB** now runs as a **StatefulSet**, and PVC naming has changed; ensure proper data migration if you rely on the built-in database  
