@@ -2,16 +2,16 @@
 
 ## What's new?
 
-### Real-time performance metrics  
+📊 ### Real-time performance metrics  
 View live performance charts directly in the **Job Details** page while tests are running; Kubeblast now streams JMeter metrics to **InfluxDB** (built-in or external) for instant visualization in the UI.
 
-### Built-in JMeter plan editor  
+📝 ### Built-in JMeter plan editor  
 Edit JMX test plans directly from the UI with validation and approval rules applied automatically.
 
-### Better report handling  
+⬇️ ### Better report handling  
 In-browser reports have been removed; reports and results are now downloaded with consistent artifact naming.
 
-### Improved experience
+👍 ### Improved experience
 Refined UI delivers a cleaner and smoother visual experience; startup is optimized and faster.
 
 ## Fixes
