@@ -132,6 +132,8 @@ def create_job(current_user, job_data):
         job_id = str(result.inserted_id)
         logger.info(f"Job {job_id} inserted into Mongo")
         events.create_event(job_id, "Job created")
+        if job_status == "pending":
+            events.create_event(job_id, "Job is pending approval")
         file_name = "plan.jmx"
         files.create_file(job_id, job_data.file_content, file_name)
         job = get_job(current_user, job_id)
@@ -164,6 +166,8 @@ def update_job_plan(current_user, job_id: str, file_content: bytes):
             {"$set": {"status": new_status}},
         )
         events.create_event(job_id, "Plan updated")
+        if new_status == "pending":
+            events.create_event(job_id, "Job is pending approval")
         return get_job(current_user, job_id)
     except HTTPException:
         raise
