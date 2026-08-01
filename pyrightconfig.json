@@ -1,0 +1,13 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["api"],
+  "exclude": ["advanced"],
+  "typeCheckingMode": "basic",
+  "executionEnvironments": [
+    {
+      "root": "api",
+      "extraPaths": ["api"]
+    }
+  ]
+}

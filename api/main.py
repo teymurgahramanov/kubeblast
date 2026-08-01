@@ -1,17 +1,19 @@
-from contextlib import asynccontextmanager
+import importlib
+import sys
 import threading
 import time
+from contextlib import asynccontextmanager
 
+import uvicorn
+from config import config
+from core.log import logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import token, user_profile, jobs, logs, events, files, stats, metrics
-from core.log import logger
-from config import config
-import uvicorn
+from routes import events, files, jobs, logs, metrics, stats, token, user_profile
 
 
 def _sync_startup_initialize():
-    from core import models, db
+    from core import db, models
     from services import auth
 
     try:
@@ -24,25 +26,25 @@ def _sync_startup_initialize():
             )
             db.mongo.users.insert_one(admin.dict())
             logger.info("Admin user created with password: admin")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Admin bootstrap failed: {e}")
-        exit(1)
+        sys.exit(1)
         
     if config.LICENSE_KEY and config.LICENSE_ID:
         try:
-            from license_check import check_license
+            check_license = importlib.import_module("license_check").check_license
             if not check_license(config.LICENSE_ID, config.LICENSE_KEY):
                 logger.error("Invalid license key. Continuing in community mode.")
                 config.LICENSE_VALID = False
             else:
                 logger.info("License key is valid. Advanced features enabled.")
                 config.LICENSE_VALID = True
-                from routes import jobs_extra, users, oidc, pats
+                from routes import jobs_extra, oidc, pats, users
                 app.include_router(jobs_extra.router, tags=["jobs_extra"])
                 app.include_router(users.router, tags=["users"])
                 app.include_router(oidc.router, tags=["oidc"])
                 app.include_router(pats.router, tags=["pats"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"license_check failed: {e}. Continuing in community mode.")
             config.LICENSE_VALID = False
     else:
@@ -65,7 +67,7 @@ async def lifespan(app: FastAPI):
         while True:
             try:
                 capacity.compute_and_store_capacity()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Capacity update failed: {e}")
             time.sleep(interval)
 
@@ -76,7 +78,7 @@ async def lifespan(app: FastAPI):
         try:
             from worker import process_job_update
             process_job_update()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Job status worker crashed: {e}")
 
     if not _job_status_worker_started:

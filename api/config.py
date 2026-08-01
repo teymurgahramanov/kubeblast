@@ -1,7 +1,9 @@
-import os
 import json
+import os
 import random
 import string
+from typing import ClassVar
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,8 +13,8 @@ class Config:
     # General
     APP_VERSION: str = "1.3.0"
     LICENSE_VALID: bool = False
-    LICENSE_KEY: str = os.getenv("LICENSE_KEY")
-    LICENSE_ID: str = os.getenv("LICENSE_ID")
+    LICENSE_KEY: str | None = os.getenv("LICENSE_KEY")
+    LICENSE_ID: str | None = os.getenv("LICENSE_ID")
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
@@ -28,12 +30,12 @@ class Config:
     if JMETER_MODE not in ("standalone", "distributed"):
         JMETER_MODE = "standalone"
     
-    PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", 3))
+    PER_USER_CURRENT_JOBS_LIMIT: int = int(os.getenv("PER_USER_CURRENT_JOBS_LIMIT", "3"))
     # Worker job status sync:
     # - Uses Kubernetes watch (event-driven) as primary mechanism
     # - Periodically does a full resync as a safety net (missed events / restarts)
-    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", 300))  # seconds (full resync interval)
-    WORKER_WATCH_TIMEOUT: int = int(os.getenv("WORKER_WATCH_TIMEOUT", 60))    # seconds (watch stream timeout)
+    WORKER_WATCH_INTERVAL: int = int(os.getenv("WORKER_WATCH_INTERVAL", "300"))  # seconds (full resync interval)
+    WORKER_WATCH_TIMEOUT: int = int(os.getenv("WORKER_WATCH_TIMEOUT", "60"))    # seconds (watch stream timeout)
 
     # Capacity updater interval (seconds)
     CAPACITY_WARM_INTERVAL: int = 10
@@ -52,7 +54,7 @@ class Config:
 
     # Database
     MONGODB_HOST: str = os.getenv("MONGODB_HOST", "localhost")
-    MONGODB_PORT: int = int(os.getenv("MONGODB_PORT", 27017))
+    MONGODB_PORT: int = int(os.getenv("MONGODB_PORT", "27017"))
     MONGODB_USER: str = os.getenv("MONGODB_USER", "kubeblast")
     MONGODB_PASS: str = os.getenv("MONGODB_PASS", "kubeblast")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "kubeblast")
@@ -61,64 +63,64 @@ class Config:
 
     # Storage
     STORAGE_DIR: str = "/data"
-    STORAGE_PVC_NAME: str = os.getenv("STORAGE_PVC_NAME")
+    STORAGE_PVC_NAME: str | None = os.getenv("STORAGE_PVC_NAME")
     
     # Job
-    K8S_JOB_PRIORITY_CLASS: str = os.getenv("K8S_JOB_PRIORITY_CLASS", None)
+    K8S_JOB_PRIORITY_CLASS: str | None = os.getenv("K8S_JOB_PRIORITY_CLASS")
     K8S_JOB_IMAGE: str = os.getenv("K8S_JOB_IMAGE", "alpine/jmeter:5.6")
     K8S_JOB_IMAGE_PULL_POLICY: str = os.getenv("K8S_JOB_IMAGE_PULL_POLICY", "IfNotPresent")
 
     # Load Kubernetes Image Pull Secrets from JSON format
-    K8S_JOB_IMAGE_PULL_SECRETS: list = []
+    K8S_JOB_IMAGE_PULL_SECRETS: ClassVar[list] = []
     image_pull_secrets_env = os.getenv("K8S_JOB_IMAGE_PULL_SECRETS")
     if image_pull_secrets_env:
         try:
             K8S_JOB_IMAGE_PULL_SECRETS = json.loads(image_pull_secrets_env)
         except json.JSONDecodeError:
-            K8S_JOB_IMAGE_PULL_SECRETS = None
+            K8S_JOB_IMAGE_PULL_SECRETS = []
     
     # Load Kubernetes NodeSelector from JSON format
-    K8S_JOB_NODE_SELECTOR: dict = {}
+    K8S_JOB_NODE_SELECTOR: ClassVar[dict] = {}
     job_node_selector_env = os.getenv("K8S_JOB_NODE_SELECTOR")
     if job_node_selector_env:
         try:
             K8S_JOB_NODE_SELECTOR = json.loads(job_node_selector_env)
         except json.JSONDecodeError:
-            K8S_JOB_NODE_SELECTOR = None
+            K8S_JOB_NODE_SELECTOR = {}
 
     # Load Kubernetes Tolerations from JSON format
-    K8S_JOB_TOLERATIONS: list = []
+    K8S_JOB_TOLERATIONS: ClassVar[list] = []
     job_tolerations_env = os.getenv("K8S_JOB_TOLERATIONS")
     if job_tolerations_env:
         try:
             K8S_JOB_TOLERATIONS = json.loads(job_tolerations_env)
         except json.JSONDecodeError:
-            K8S_JOB_TOLERATIONS = None
+            K8S_JOB_TOLERATIONS = []
 
     # Load Kubernetes Resources from JSON format
-    K8S_JOB_RESOURCES: dict = {}
-    job_resources_env = os.getenv("K8S_JOB_RESOURCES", None)
+    K8S_JOB_RESOURCES: ClassVar[dict] = {}
+    job_resources_env = os.getenv("K8S_JOB_RESOURCES")
     if job_resources_env:
         try:
             K8S_JOB_RESOURCES = json.loads(job_resources_env)
         except json.JSONDecodeError:
-            K8S_JOB_RESOURCES = None
+            K8S_JOB_RESOURCES = {}
 
     # load Kubernetes Job Resources for Jmeter Master in distributed mode
-    K8S_JOB_RESOURCES_MASTER: dict = {}
-    job_resources_master_env = os.getenv("K8S_JOB_RESOURCES_MASTER", None)
+    K8S_JOB_RESOURCES_MASTER: ClassVar[dict] = {}
+    job_resources_master_env = os.getenv("K8S_JOB_RESOURCES_MASTER")
     if job_resources_master_env:
         try:
             K8S_JOB_RESOURCES_MASTER = json.loads(job_resources_master_env)
         except json.JSONDecodeError:
-            K8S_JOB_RESOURCES_MASTER = None
+            K8S_JOB_RESOURCES_MASTER = {}
 
     # LDAP Configuration
     LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "false").lower() == "true"
-    LDAP_SERVER: str = os.getenv("LDAP_SERVER")
-    LDAP_BASE_DN: str = os.getenv("LDAP_BASE_DN")
-    LDAP_BIND_DN: str = os.getenv("LDAP_BIND_DN")
-    LDAP_BIND_PASSWORD: str = os.getenv("LDAP_BIND_PASSWORD")
+    LDAP_SERVER: str | None = os.getenv("LDAP_SERVER")
+    LDAP_BASE_DN: str | None = os.getenv("LDAP_BASE_DN")
+    LDAP_BIND_DN: str | None = os.getenv("LDAP_BIND_DN")
+    LDAP_BIND_PASSWORD: str | None = os.getenv("LDAP_BIND_PASSWORD")
     LDAP_USER_SEARCH_FILTER: str = os.getenv("LDAP_USER_SEARCH_FILTER", "(&(objectClass=person)(sAMAccountName={username}))")
     LDAP_GROUP_SEARCH_FILTER: str = os.getenv("LDAP_GROUP_SEARCH_FILTER", "(&(objectClass=group)(member={dn}))")
     LDAP_USER_ATTRIBUTES: list = os.getenv("LDAP_USER_ATTRIBUTES", "uid,sAMAccountName,cn,mail,memberOf").split(",")
@@ -128,15 +130,15 @@ class Config:
 
     # OIDC Configuration
     OIDC_ENABLED: bool = os.getenv("OIDC_ENABLED", "false").lower() == "true"
-    OIDC_CLIENT_ID: str = os.getenv("OIDC_CLIENT_ID")
-    OIDC_CLIENT_SECRET: str = os.getenv("OIDC_CLIENT_SECRET")
+    OIDC_CLIENT_ID: str | None = os.getenv("OIDC_CLIENT_ID")
+    OIDC_CLIENT_SECRET: str | None = os.getenv("OIDC_CLIENT_SECRET")
     OIDC_REDIRECT_URI: str = os.getenv("OIDC_REDIRECT_URI", "http://localhost:3000/login")
-    OIDC_AUTH_URL: str = os.getenv("OIDC_AUTH_URL")
-    OIDC_TOKEN_URL: str = os.getenv("OIDC_TOKEN_URL")
-    OIDC_USERINFO_URL: str = os.getenv("OIDC_USERINFO_URL")
+    OIDC_AUTH_URL: str | None = os.getenv("OIDC_AUTH_URL")
+    OIDC_TOKEN_URL: str | None = os.getenv("OIDC_TOKEN_URL")
+    OIDC_USERINFO_URL: str | None = os.getenv("OIDC_USERINFO_URL")
     OIDC_SCOPES: list = os.getenv("OIDC_SCOPES", "openid profile email").split()
     
-    OIDC_ROLE_MAPPING: dict = {}
+    OIDC_ROLE_MAPPING: ClassVar[dict] = {}
     oidc_role_mapping_env = os.getenv("OIDC_ROLE_MAPPING")
     if oidc_role_mapping_env:
         try:

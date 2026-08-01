@@ -1,16 +1,17 @@
-from core import k8s
-from kubernetes import client, stream
-from kubernetes.client.rest import ApiException
-from config import config
-from jinja2 import Template
-from fastapi import HTTPException
-import yaml
 import os
 import time
-from core.log import logger
+from typing import cast
 
-from services import files_fs as files
+import yaml
+from config import config
+from core.log import logger
+from fastapi import HTTPException
+from jinja2 import Template
+from kubernetes import client, stream
+from kubernetes.client.rest import ApiException
 from services import events
+from services import files_fs as files
+
 
 def get_namespace():
     try:
@@ -71,7 +72,7 @@ def iter_pod_log_lines(job_id, job_status):
                 line = line.decode("utf-8")
             yield line.rstrip("\n")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(e)
         yield "Waiting for logs ..."
 
@@ -110,7 +111,7 @@ def schedule_slave_daemonset_and_service(job_id: str):
             msg = f"Failed to create slave Service {svc_name}. Handling: abort distributed scheduling."
             logger.error(f"{msg} Error: {e}")
             raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         msg = f"Failed to create slave Service {svc_name}. Handling: abort distributed scheduling."
         logger.error(f"{msg} Error: {e}")
         raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
@@ -143,7 +144,7 @@ def schedule_slave_daemonset_and_service(job_id: str):
             msg = f"Failed to create slave DaemonSet {ds_name}. Handling: abort distributed scheduling."
             logger.error(f"{msg} Error: {e}")
             raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         msg = f"Failed to create slave DaemonSet {ds_name}. Handling: abort distributed scheduling."
         logger.error(f"{msg} Error: {e}")
         raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
@@ -164,7 +165,10 @@ def watch_daemonset_and_get_slave_endpoints(job_id: str, timeout_s: int = 180, p
     last_desired = 0
     last_ready = 0
     while time.time() - start < timeout_s:
-        ds = apps.read_namespaced_daemon_set(name=ds_name, namespace=namespace)
+        ds = cast(
+            client.V1DaemonSet,
+            apps.read_namespaced_daemon_set(name=ds_name, namespace=namespace),
+        )
         st = ds.status
         last_desired = int(getattr(st, "desired_number_scheduled", 0) or 0)
         last_ready = int(getattr(st, "number_ready", 0) or 0)
@@ -172,7 +176,10 @@ def watch_daemonset_and_get_slave_endpoints(job_id: str, timeout_s: int = 180, p
         if last_desired > 0 and last_ready >= last_desired:
             # DS is ready; fetch endpoints
             try:
-                eps = v1.read_namespaced_endpoints(name=svc_name, namespace=namespace)
+                eps = cast(
+                    client.V1Endpoints,
+                    v1.read_namespaced_endpoints(name=svc_name, namespace=namespace),
+                )
             except ApiException as e:
                 if e.status == 404:
                     time.sleep(poll_s)
@@ -256,10 +263,10 @@ def schedule_workload(job_id,distributed):
         client.BatchV1Api().create_namespaced_job(namespace=namespace, body=job_manifest)
         logger.info(f"Created Kubernetes Job: {job_id}")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to create workload {job_id}: {e}")
         delete_workload(job_id)
-        raise HTTPException(status_code=500, detail=f"Error creating workload: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating workload: {e!s}")
     
 def stop_workload(job_id):
     """Gracefully stop a running workload by executing shutdown.sh in the pod"""
@@ -313,16 +320,16 @@ def stop_workload(job_id):
             
             logger.info(f"Shutdown command executed successfully in pod {pod_name}")
             logger.info(f"Output: {output}")
-            logger.info(f"JMeter will shutdown gracefully and Kubernetes will clean up the Job automatically")
+            logger.info("JMeter will shutdown gracefully and Kubernetes will clean up the Job automatically")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Failed to execute shutdown command in pod: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to execute shutdown command: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to execute shutdown command: {e!s}")
         
         logger.info(f"Workload {job_id} shutdown initiated")
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to stop workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error stopping workload")
 
@@ -389,8 +396,8 @@ def delete_workload(job_id):
             try:
                 client.CoreV1Api().delete_namespaced_service(namespace=namespace, name=svc_name)
                 logger.info(f"Service {svc_name} deleted")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to delete Service {svc_name}: {e}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to delete workload {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting workload")

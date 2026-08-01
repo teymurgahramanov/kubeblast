@@ -1,13 +1,12 @@
-from core import db, models
-from fastapi import HTTPException
-import bson
-from time import sleep
 import hashlib
-from config import config
-from datetime import datetime
-from core.log import logger
-from services import k8s, events, logs, auth
+from time import sleep
 
+from bson import ObjectId
+from config import config
+from core import db, models
+from core.log import logger
+from fastapi import HTTPException
+from services import auth, events, k8s, logs
 from services import files_fs as files
 
 _PLAN_EDIT_STATUSES = frozenset({"ready", "completed", "failed"})
@@ -28,9 +27,9 @@ def _job_approve(current_user, job_owner_username: str) -> str:
 
 def get_jobs(
     current_user,
-    status: str = None,
-    owner: str = None,
-    name: str = None,
+    status: str | None = None,
+    owner: str | None = None,
+    name: str | None = None,
     page: int = 1,
     page_size: int = 20,
     sort_by: str = "created_desc",
@@ -84,9 +83,9 @@ def get_jobs(
     return jobs, total
 
 def get_job(current_user, job_id):
-    job = db.mongo.jobs.find_one({"_id": bson.objectid.ObjectId(job_id)})
+    job = db.mongo.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
-        raise HTTPException(status_code=404, detail=f"Job not found")
+        raise HTTPException(status_code=404, detail="Job not found")
     if current_user.role not in ["admin", "moderator"] and job["owner"] != current_user.username:
         raise HTTPException(status_code=403, detail="Insufficent permissions")
     job["id"] = str(job["_id"])
@@ -127,8 +126,8 @@ def create_job(current_user, job_data):
 
     job_to_db = models.Job(**job)
 
+    job_id: str | None = None
     try:
-        job_id = None
         result = db.mongo.jobs.insert_one(job_to_db.dict())
         job_id = str(result.inserted_id)
         logger.info(f"Job {job_id} inserted into Mongo")
@@ -137,9 +136,9 @@ def create_job(current_user, job_data):
         files.create_file(job_id, job_data.file_content, file_name)
         job = get_job(current_user, job_id)
         return job
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(e)
-        if "job_id" in locals() and job_id:
+        if job_id:
             events.create_event(job_id, f"Job creation failed: {e}")
             delete_job(current_user, job_id)
         raise HTTPException(status_code=500, detail="Failed to create job")
@@ -161,14 +160,14 @@ def update_job_plan(current_user, job_id: str, file_content: bytes):
     try:
         files.create_file(job_id, file_content, "plan.jmx")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": new_status}},
         )
         events.create_event(job_id, "Plan updated")
         return get_job(current_user, job_id)
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(e)
         raise HTTPException(status_code=500, detail="Failed to update plan")
 
@@ -179,7 +178,7 @@ def start_job(current_user, job_id):
         raise HTTPException(status_code=400, detail="Cannot start job that is not ready")
     try:
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "starting"}}
         )
         logger.info(f"Scheduling workload for job {job_id}")
@@ -187,11 +186,11 @@ def start_job(current_user, job_id):
         k8s.schedule_workload(job_id, job["distributed"])   
         events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} started"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to schedule workload for job {job_id}: {e}")
         events.create_event(job_id, f"Workload scheduling failed: {e}")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=500, detail="Failed to schedule workload")
@@ -206,20 +205,21 @@ def retry_job(current_user, job_id):
         logger.info(f"Rescheduling job {job_id}")
         events.create_event(job_id, "Workload rescheduling started")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "retrying"}}
         )
         logger.info(f"Deleting workload for job {job_id}")
         events.create_event(job_id, "Workload deletion started")
         try:
             logs.delete_logs_for_job(job_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to delete job logs for {job_id}: {e}")
         if config.INFLUXDB_ENABLED:
             try:
                 from services.influxdb import delete_job_metrics
+
                 delete_job_metrics(job_id)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to delete InfluxDB metrics for {job_id}: {e}")
         k8s.delete_workload(job_id)
         events.create_event(job_id, "Workload deleted")
@@ -229,10 +229,10 @@ def retry_job(current_user, job_id):
         k8s.schedule_workload(job_id,job["distributed"])
         events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} retried"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to reschedule job {job_id}: {e}")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "failed"}}
         )
         events.create_event(job_id, f"Workload scheduling failed: {e}")
@@ -246,22 +246,22 @@ def stop_job(current_user, job_id):
 
     try:
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "stopping"}}
         )
         k8s.stop_workload(job_id)
         events.create_event(job_id, "Workload stopped")
         logger.info(f"Job {job_id} stopped gracefully")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "completed"}}
         )
         return {"message": f"Job {job_id} stopped"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed to stop job {job_id}: {e}")
         events.create_event(job_id, f"Workload stopping failed: {e}")
         db.mongo.jobs.update_one(
-            {"_id": bson.objectid.ObjectId(job_id)},
+            {"_id": ObjectId(job_id)},
             {"$set": {"status": "failed"}}
         )
         raise HTTPException(status_code=500, detail="Failed to stop job")
@@ -276,21 +276,22 @@ def delete_job(current_user, job_id):
     # Clean up associated job events and stored log lines
     try:
         events.delete_events_for_job(job_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"Failed to delete job events for {job_id}: {e}")
     try:
         logs.delete_logs_for_job(job_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"Failed to delete job logs for {job_id}: {e}")
 
     # Clean up associated InfluxDB metrics
     if config.INFLUXDB_ENABLED:
         try:
             from services.influxdb import delete_job_metrics
+
             delete_job_metrics(job_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to delete InfluxDB metrics for {job_id}: {e}")
         
-    db.mongo.jobs.delete_one({"_id": bson.objectid.ObjectId(job_id)})
+    db.mongo.jobs.delete_one({"_id": ObjectId(job_id)})
     
     return {"message": f"Job {job_id} deleted"}

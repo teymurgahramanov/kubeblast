@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "kubeblast.fullname" . }}
+  name: '{{ include "kubeblast.fullname" . }}'
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -39,20 +39,20 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "kubeblast.fullname" . }}
+  name: '{{ include "kubeblast.fullname" . }}'
 subjects:
   - kind: ServiceAccount
-    name: {{ include "kubeblast.fullname" . }}
+    name: '{{ include "kubeblast.fullname" . }}'
 roleRef:
   kind: Role
-  name: {{ include "kubeblast.fullname" . }}
+  name: '{{ include "kubeblast.fullname" . }}'
   apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-nodes
+  name: '{{ include "kubeblast.fullname" . }}-nodes'
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -62,21 +62,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-nodes
+  name: '{{ include "kubeblast.fullname" . }}-nodes'
 subjects:
   - kind: ServiceAccount
-    name: {{ include "kubeblast.fullname" . }}
-    namespace: {{ .Release.Namespace }}
+    name: '{{ include "kubeblast.fullname" . }}'
+    namespace: '{{ .Release.Namespace }}'
 roleRef:
   kind: ClusterRole
-  name: {{ include "kubeblast.fullname" . }}-nodes
+  name: '{{ include "kubeblast.fullname" . }}-nodes'
   apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-pods
+  name: '{{ include "kubeblast.fullname" . }}-pods'
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -86,21 +86,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-pods
+  name: '{{ include "kubeblast.fullname" . }}-pods'
 subjects:
   - kind: ServiceAccount
-    name: {{ include "kubeblast.fullname" . }}
-    namespace: {{ .Release.Namespace }}
+    name: '{{ include "kubeblast.fullname" . }}'
+    namespace: '{{ .Release.Namespace }}'
 roleRef:
   kind: ClusterRole
-  name: {{ include "kubeblast.fullname" . }}-pods
+  name: '{{ include "kubeblast.fullname" . }}-pods'
   apiGroup: rbac.authorization.k8s.io
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-metrics
+  name: '{{ include "kubeblast.fullname" . }}-metrics'
 rules:
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods", "nodes"]
@@ -110,12 +110,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubeblast.fullname" . }}-metrics
+  name: '{{ include "kubeblast.fullname" . }}-metrics'
 subjects:
   - kind: ServiceAccount
-    name: {{ include "kubeblast.fullname" . }}
-    namespace: {{ .Release.Namespace }}
+    name: '{{ include "kubeblast.fullname" . }}'
+    namespace: '{{ .Release.Namespace }}'
 roleRef:
   kind: ClusterRole
-  name: {{ include "kubeblast.fullname" . }}-metrics
+  name: '{{ include "kubeblast.fullname" . }}-metrics'
   apiGroup: rbac.authorization.k8s.io

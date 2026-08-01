@@ -1,41 +1,41 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kubeblast.fullname" . }}
+  name: '{{ include "kubeblast.fullname" . }}'
   labels:
-    {{- include "kubeblast.labels" . | nindent 4 }}
+    # {{- include "kubeblast.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "kubeblast.selectorLabels" . | nindent 6 }}
+      # {{- include "kubeblast.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "kubeblast.selectorLabels" . | nindent 8 }}
-      {{- with .Values.podAnnotations }}
+        # {{- include "kubeblast.selectorLabels" . | nindent 8 }}
+      # {{- with .Values.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        # {{- toYaml . | nindent 8 }}
+      # {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      # {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "kubeblast.fullname" . }}
+        # {{- toYaml . | nindent 8 }}
+      # {{- end }}
+      serviceAccountName: '{{ include "kubeblast.fullname" . }}'
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        # {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # {{- $containerPorts := list (dict "name" "web" "containerPort" (int .Values.service.port.web) "protocol" "TCP") (dict "name" "api" "containerPort" (int .Values.service.port.api) "protocol" "TCP") }}
+      # {{- $customEnv := list }}
+      # {{- range .Values.env }}
+      # {{- $customEnv = append $customEnv (dict "name" .name "value" (toString .value)) }}
+      # {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: '{{ .Chart.Name }}'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
-            - name: web
-              containerPort: {{ .Values.service.port.web }}
-              protocol: TCP
-            - name: api
-              containerPort: {{ .Values.service.port.api }}
-              protocol: TCP
+            # {{- toYaml $containerPorts | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /api/v1/stats/app
@@ -47,60 +47,59 @@ spec:
             failureThreshold: 12
           env:
             - name: STORAGE_PVC_NAME
-              value: {{ include "kubeblast.pvcName" . }}
-            {{- if .Values.mongodb.enabled }}
+              value: '{{ include "kubeblast.pvcName" . }}'
+            # {{- if .Values.mongodb.enabled }}
             - name: MONGODB_HOST
               value: "{{ .Values.mongodb.instanceName }}"
             - name: MONGODB_PORT
               value: "27017"
             - name: MONGODB_USER
-              value: {{ .Values.mongodb.username }}
+              value: '{{ .Values.mongodb.username }}'
             - name: MONGODB_PASS
-              value: {{ .Values.mongodb.password }}
+              value: '{{ .Values.mongodb.password }}'
             - name: MONGODB_NAME
-              value: {{ .Values.mongodb.database }}
-            {{- end }}
-            {{- if .Values.influxdb.enabled }}
+              value: '{{ .Values.mongodb.database }}'
+            # {{- end }}
+            # {{- if .Values.influxdb.enabled }}
             - name: INFLUXDB_ENABLED
               value: "true"
             - name: INFLUXDB_URL
               value: "http://{{ .Release.Name }}-influxdb:8086"
             - name: INFLUXDB_DATABASE
               value: "jmeter"
-            {{- end }}
-            {{- range .Values.env }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
-            {{- end }}
-          {{- if .Values.envFromSecret }}
+            # {{- end }}
+            # {{- with $customEnv }}
+            # {{- toYaml . | nindent 12 }}
+            # {{- end }}
+          # {{- if .Values.envFromSecret }}
           envFrom:
             - secretRef:
-                name: {{ .Values.envFromSecret }}
-          {{- end }}
+                name: '{{ .Values.envFromSecret }}'
+          # {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            # {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /data
-            {{- with .Values.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            # {{- with .Values.extraVolumeMounts }}
+            # {{- toYaml . | nindent 12 }}
+            # {{- end }}
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: {{ include "kubeblast.pvcName" . }}
-        {{- with .Values.extraVolumes }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-      {{- with .Values.nodeSelector }}
+            claimName: '{{ include "kubeblast.pvcName" . }}'
+        # {{- with .Values.extraVolumes }}
+        # {{- toYaml . | nindent 8 }}
+        # {{- end }}
+      # {{- with .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
+        # {{- toYaml . | nindent 8 }}
+      # {{- end }}
+      # {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
+        # {{- toYaml . | nindent 8 }}
+      # {{- end }}
+      # {{- with .Values.tolerations }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        # {{- toYaml . | nindent 8 }}
+      # {{- end }}

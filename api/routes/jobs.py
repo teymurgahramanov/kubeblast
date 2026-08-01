@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Response, Query, BackgroundTasks, Body
-from fastapi.responses import FileResponse
-from typing import Annotated, Literal, Optional, List
-from core import models, db
+from typing import Annotated, Literal
+
+from core import models
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query, Response
 from services import auth, jobs
-from datetime import datetime
 
 router = APIRouter(prefix="/api/v1")
 
-@router.get("/jobs", response_model=List[models.Job])
-async def get_job(
+@router.get("/jobs", response_model=list[models.Job])
+async def list_jobs(
     current_user: Annotated[models.User, Depends(auth.check_role([]))],
     response: Response,
-    status: Optional[str] = Query(None),
-    owner: Optional[str] = Query(None),
-    name: Optional[str] = Query(None),
+    status: str | None = Query(None),
+    owner: str | None = Query(None),
+    name: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     sort_by: Literal["created_desc", "created_asc"] = Query("created_desc"),

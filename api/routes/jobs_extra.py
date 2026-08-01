@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from typing import Annotated
+
 from core import models
-from services import auth, jobs_extra
+from fastapi import APIRouter, Depends, Query
+from services import (
+    auth,
+    jobs_extra,  # type: ignore[attr-defined]  # Provided by the licensed overlay.
+)
 
 router = APIRouter(prefix="/api/v1")
 
