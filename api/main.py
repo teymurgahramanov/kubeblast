@@ -21,6 +21,7 @@ def _sync_startup_initialize():
         if not admin:
             admin = models.UserInDB(
                 username="admin",
+                full_name="Administrator",
                 hashed_password=auth.hash_password("admin"),
                 role="admin",
             )
@@ -29,7 +30,7 @@ def _sync_startup_initialize():
     except Exception as e:  # noqa: BLE001
         logger.error(f"Admin bootstrap failed: {e}")
         sys.exit(1)
-        
+
     if config.LICENSE_KEY and config.LICENSE_ID:
         try:
             check_license = importlib.import_module("license_check").check_license

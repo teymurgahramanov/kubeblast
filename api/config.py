@@ -59,7 +59,10 @@ class Config:
     MONGODB_PASS: str = os.getenv("MONGODB_PASS", "kubeblast")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "kubeblast")
     MONGODB_PARAMS: str = os.getenv("MONGODB_PARAMS", "")
-    MONGODB_URI: str = f"mongodb://{MONGODB_USER}:{MONGODB_PASS}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}{MONGODB_PARAMS}"
+    MONGODB_URI: str = os.getenv(
+        "MONGODB_URI",
+        f"mongodb://{MONGODB_USER}:{MONGODB_PASS}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}{MONGODB_PARAMS}",
+    )
 
     # Storage
     STORAGE_DIR: str = "/data"

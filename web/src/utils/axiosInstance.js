@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || `${window.location.origin}/api/v1`;
+
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api/v1`,
+  baseURL: apiBaseUrl,
 });
 
 // Flag to prevent multiple simultaneous refresh requests
@@ -35,8 +37,8 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Authentication requests handle their own 401 errors (for example, invalid login credentials).
+    if (error.response?.status === 401 && !originalRequest.skipAuthRefresh && !originalRequest._retry) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -64,7 +66,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Request new access token
         const response = await axios.post(
-          `${process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api/v1`}/token/refresh`,
+          `${apiBaseUrl}/token/refresh`,
           { refresh_token: refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         );

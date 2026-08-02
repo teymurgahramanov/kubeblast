@@ -1,11 +1,11 @@
-import React, { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Box, Avatar, Divider } from '@mui/material';
-import { AccountCircle, Logout, People, Settings, Star, Person, DarkMode, LightMode } from '@mui/icons-material';
+import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Avatar, Divider } from '@mui/material';
+import { Logout, People, Person, DarkMode, LightMode } from '@mui/icons-material';
 import { ColorModeContext } from '../lib/theme';
 import { getUserRole, getUsername } from '../utils/auth';
 import axiosInstance from "../utils/axiosInstance";
-import config from '../config.json';
+
 
 const Menuselect = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -13,7 +13,6 @@ const Menuselect = () => {
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(false);
-  const proRedirectUrl = config.proRedirectUrl;
   const username = getUsername();
   const firstLetter = username ? username.charAt(0).toUpperCase() : '';
 
@@ -47,16 +46,7 @@ const Menuselect = () => {
     handleClose();
   };
 
-  const handleProFeature = () => {
-    window.location.href = proRedirectUrl;
-  };
 
-  const renderProFeature = (text) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{text}</Typography>
-      <Star fontSize="small" sx={{ color: 'var(--warning-color)', fontSize: '0.8rem' }} />
-    </Box>
-  );
 
   return (
     <div>
@@ -86,12 +76,14 @@ const Menuselect = () => {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            '& .MuiMenuItem-root': {
-              py: 1,
-              px: 2
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              '& .MuiMenuItem-root': {
+                py: 1,
+                px: 2
+              }
             }
           }
         }}

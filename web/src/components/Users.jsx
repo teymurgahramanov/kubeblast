@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Typography, Button, IconButton, Menu, MenuItem, Modal, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { Delete, Edit, MoreVert, PersonAdd, PersonOff, Person } from '@mui/icons-material';
+import { Delete, Edit, MoreVert, PersonAdd, Person } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
-import { getUserRole } from "../utils/auth";
+
 import Menuselect from "./Menuselect";
 import EditUser from "./EditUser";
 import ErrorMessage from './ErrorMessage';
@@ -18,7 +18,7 @@ const Users = ({ setAddUser }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [addUser, setAddUserState] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const userRole = getUserRole();
+  const [timezone, setTimezone] = useState('UTC');
 
   const fetchUsers = async () => {
     try {
@@ -33,6 +33,16 @@ const Users = ({ setAddUser }) => {
 
   useEffect(() => {
     fetchUsers();
+
+    const fetchAppStats = async () => {
+      try {
+        const response = await axiosInstance.get('/stats/app');
+        if (response.data?.TIMEZONE) setTimezone(response.data.TIMEZONE);
+      } catch {
+        // Keep UTC as the display fallback when app settings are unavailable.
+      }
+    };
+    fetchAppStats();
   }, []);
 
   const handleAddUserClose = () => {
@@ -62,13 +72,29 @@ const Users = ({ setAddUser }) => {
     }
   };
 
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-  };
+
 
   const handleUserUpdate = () => {
     fetchUsers();
     setSelectedUser(null);
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Never';
+    const hasTimezone = /Z$/i.test(dateString) || /[+-]\d\d:?\d\d$/.test(dateString);
+    const normalized = hasTimezone ? dateString : `${dateString}Z`;
+
+    try {
+      const date = new Date(normalized);
+      if (Number.isNaN(date.getTime())) return dateString;
+      return date.toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, timeZone: timezone || 'UTC',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const rows = users.map((user) => ({
@@ -79,9 +105,10 @@ const Users = ({ setAddUser }) => {
     role: user.role,
     method: user.method ?? user.mehod ?? '',
     enabled: user.enabled,
+    last_login: user.last_login || null,
   }));
 
-  const visibleRows = React.useMemo(() => {
+  const visibleRows = useMemo(() => {
     const text = (searchText || '').toLowerCase().trim();
     return rows.filter((row) => {
       const username = String(row.username || '').toLowerCase();
@@ -118,7 +145,14 @@ const Users = ({ setAddUser }) => {
     { field: 'username', headerName: 'Username', width: 180, flex: 1 },
     { field: 'full_name', headerName: 'Full Name', width: 200, flex: 1 },
     { field: 'role', headerName: 'Role', width: 150, flex: 1 },
-    { field: 'method', headerName: 'Method', width: 160, flex: 1 },
+    { field: 'method', headerName: 'Method', width: 130, flex: 0.8 },
+    {
+      field: 'last_login',
+      headerName: 'Last Login',
+      width: 220,
+      flex: 1.2,
+      valueFormatter: (value) => formatDateTime(value),
+    },
     {
       field: 'enabled',
       headerName: 'Status',
@@ -313,10 +347,7 @@ const Users = ({ setAddUser }) => {
               columns={columns}
               getRowId={(row) => row.username}
               hideFooter
-              disableSelectionOnClick
-              disableRowSelectionOnClick
-              rowSelectionModel={[]}
-              onRowSelectionModelChange={() => {}}
+              rowSelection={false}
               disableColumnMenu
               autoHeight
               getRowHeight={() => 'auto'}
@@ -346,12 +377,14 @@ const Users = ({ setAddUser }) => {
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
-          PaperProps={{
-            sx: {
-              mt: 1,
-              '& .MuiMenuItem-root': {
-                py: 1,
-                gap: 1
+          slotProps={{
+            paper: {
+              sx: {
+                mt: 1,
+                '& .MuiMenuItem-root': {
+                  py: 1,
+                  gap: 1
+                }
               }
             }
           }}

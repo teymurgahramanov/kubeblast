@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Jobs from './components/Jobs';
@@ -8,7 +8,7 @@ import PrivateRoute from './components/PrivateRoute';
 import { getUserRole } from './utils/auth';
 import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
-import AddJobForm from './components/AddJob';
+
 import Profile from './components/Profile';
 import Settings from './components/Settings';
 import ApiDocs from './components/ApiDocs';
@@ -21,7 +21,6 @@ const AdminRoute = ({ children }) => {
 
 const App = () => {
   const [addUser, setAddUser] = useState(false);
-  const [addJob, setAddJob] = useState(false);
 
   const isAuthenticated = () => {
     return !!localStorage.getItem('access_token');

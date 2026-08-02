@@ -50,15 +50,18 @@ spec:
               value: '{{ include "kubeblast.pvcName" . }}'
             # {{- if .Values.mongodb.enabled }}
             - name: MONGODB_HOST
-              value: "{{ .Values.mongodb.instanceName }}"
+              value: '{{ include "kubeblast.mongodbServiceName" . }}'
             - name: MONGODB_PORT
-              value: "27017"
+              value: '{{ .Values.mongodb.service.ports.mongodb }}'
             - name: MONGODB_USER
-              value: '{{ .Values.mongodb.username }}'
+              value: '{{ first .Values.mongodb.auth.usernames }}'
             - name: MONGODB_PASS
-              value: '{{ .Values.mongodb.password }}'
+              valueFrom:
+                secretKeyRef:
+                  name: '{{ include "kubeblast.mongodbSecretName" . }}'
+                  key: mongodb-passwords
             - name: MONGODB_NAME
-              value: '{{ .Values.mongodb.database }}'
+              value: '{{ first .Values.mongodb.auth.databases }}'
             # {{- end }}
             # {{- if .Values.influxdb.enabled }}
             - name: INFLUXDB_ENABLED

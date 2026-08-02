@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Typography, Button, Skeleton, Modal, CircularProgress,
@@ -164,11 +164,13 @@ const JobDetail = () => {
     setPlanEditingMode(false);
   }, [jobId]);
 
+  const isPlanEditable = Boolean(job && PLAN_EDIT_STATUSES.has(job.status));
+
   useEffect(() => {
-    if (!job || !PLAN_EDIT_STATUSES.has(job.status)) {
+    if (!isPlanEditable) {
       setPlanEditingMode(false);
     }
-  }, [job?.status, job?.id]);
+  }, [isPlanEditable]);
 
   /* ── Helpers ───────────────────────────────────────────────── */
   const getStatusColor = (status) => {
@@ -274,7 +276,7 @@ const JobDetail = () => {
     setEventsStreaming(false);
   };
 
-  useEffect(() => () => { stopLogsStream(); stopEventsStream(); }, []); // eslint-disable-line
+  useEffect(() => () => { stopLogsStream(); stopEventsStream(); }, []);
 
   /* ── View logs ─────────────────────────────────────────────── */
   const viewLogs = async (job_id, job_status) => {
@@ -456,7 +458,7 @@ const JobDetail = () => {
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const isMetricsTab  = activeTab === 2;
-  const canEditPlan   = job && PLAN_EDIT_STATUSES.has(job.status);
+  const canEditPlan   = isPlanEditable;
   const currentContent = activeTab === 0 ? logs : activeTab === 1 ? events : activeTab === 3 ? planText : '';
   const showTerminalPlaceholder = (() => {
     if (activeTab === 3) return false;

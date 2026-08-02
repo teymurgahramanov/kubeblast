@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
 import {
   ResponsiveContainer, LineChart, AreaChart,

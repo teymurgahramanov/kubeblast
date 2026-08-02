@@ -1,8 +1,9 @@
-FROM node:20-alpine AS web-build
+FROM node:24.15-alpine AS web-build
 
 WORKDIR /app
 COPY web/package*.json ./
-RUN npm install
+RUN npm ci
+COPY web/index.html web/vite.config.mjs ./
 COPY web/public/ public/
 COPY web/src/ src/
 RUN npm run build
@@ -40,7 +41,7 @@ RUN pyarmor gen -r -O /app/obf /app/advanced/ \
     && rm -rf /app/advanced
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=web-build /app/build /usr/share/nginx/html
+COPY --from=web-build /app/dist /usr/share/nginx/html
 COPY web/nginx.conf /etc/nginx/http.d/default.conf
 
 EXPOSE 80

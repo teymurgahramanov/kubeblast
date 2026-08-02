@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Typography, TextField, Button, FormControl,
@@ -215,9 +215,8 @@ const BrandPanel = () => {
 const Login = () => {
   const [credentials, setCredentials]   = useState({ username: '', password: '' });
   const [authMethod, setAuthMethod]     = useState('local');
+  const [authenticationMethods, setAuthenticationMethods] = useState(['local']);
   const [error, setError]               = useState('');
-  const [oidcEnabled, setOidcEnabled]   = useState(false);
-  const [isPro, setIsPro]               = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
   const [appVersion, setAppVersion]     = useState('');
@@ -226,23 +225,19 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ── Check OIDC config & license on mount ── */
+  /* ── Load app and authentication configuration on mount ── */
   useEffect(() => {
-    const checkOIDCConfig = async () => {
-      try {
-        const res = await axiosInstance.get('/oidc/enabled');
-        setOidcEnabled(res.data.enabled);
-      } catch { /* silent */ }
-    };
     const fetchAppStats = async () => {
       try {
         const res = await axiosInstance.get('/stats/app');
-        setIsPro(Boolean(res.data?.LICENSE_VALID));
+        const enabledMethods = Array.isArray(res.data?.AUTHENTICATION_METHODS)
+          ? res.data.AUTHENTICATION_METHODS
+          : ['local'];
+        setAuthenticationMethods(enabledMethods);
         if (res.data?.APP_VERSION) setAppVersion(res.data.APP_VERSION);
         if (res.data?.EDITION) setEdition(res.data.EDITION);
-      } catch { setIsPro(false); }
+      } catch { setAuthenticationMethods(['local']); }
     };
-    checkOIDCConfig();
     fetchAppStats();
   }, []);
 
@@ -291,7 +286,11 @@ const Login = () => {
       form.append('grant_type', 'password');
       form.append('scope',      '');
 
-      const res   = await axiosInstance.post(`/token?method=${authMethod.toLowerCase()}`, form);
+      const res   = await axiosInstance.post(
+        `/token?method=${authMethod.toLowerCase()}`,
+        form,
+        { skipAuthRefresh: true }
+      );
       const token = res.data.access_token;
 
       localStorage.setItem('access_token',  token);
@@ -323,6 +322,11 @@ const Login = () => {
       setError(e.response?.data?.detail || 'Failed to initiate OIDC login');
     }
   };
+
+  const passwordAuthenticationMethods = authenticationMethods.filter(
+    method => method === 'local' || method === 'ldap'
+  );
+  const oidcEnabled = authenticationMethods.includes('oidc');
 
   /* ════════════════════════════ RENDER ════════════════════════════ */
   return (
@@ -385,8 +389,8 @@ const Login = () => {
 
           <Box component="form" onSubmit={handleSubmit}>
 
-            {/* Auth method selector — Pro only */}
-            {isPro && (
+            {/* Show a selector only when multiple password methods are configured. */}
+            {passwordAuthenticationMethods.length > 1 && (
               <FormControl fullWidth sx={{ mb: 2.5 }}>
                 <InputLabel id="auth-method-label">Authentication Method</InputLabel>
                 <Select
@@ -395,8 +399,11 @@ const Login = () => {
                   label="Authentication Method"
                   onChange={(e) => setAuthMethod(e.target.value)}
                 >
-                  <MenuItem value="local">Local</MenuItem>
-                  <MenuItem value="ldap">LDAP</MenuItem>
+                  {passwordAuthenticationMethods.map(method => (
+                    <MenuItem key={method} value={method}>
+                      {method === 'ldap' ? 'LDAP' : 'Local'}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             )}
@@ -495,7 +502,7 @@ const Login = () => {
             </Button>
 
             {/* OIDC / SSO */}
-            {oidcEnabled && isPro && (
+            {oidcEnabled && (
               <>
                 <Divider sx={{ my: 3, borderColor: 'rgba(148,163,184,0.15)' }}>
                   <Typography

@@ -4,6 +4,7 @@
 .venv
 README.md
 node_modules
+web/dist
 .env
 .gitignore
 .dockerignore

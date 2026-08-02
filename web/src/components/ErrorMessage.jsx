@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Box, Typography } from '@mui/material';
 import { Cancel } from '@mui/icons-material';
 
@@ -7,9 +7,9 @@ const ErrorMessage = ({ message }) => {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography 
-        color="error" 
-        sx={{ 
+      <Typography
+        sx={{
+          color: 'error.main',
           p: 2, 
           bgcolor: '#FEE2E2', 
           borderRadius: 1,

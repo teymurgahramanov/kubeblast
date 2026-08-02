@@ -5,14 +5,14 @@ description: Implement or debug Kubeblast's React web UI under web/src, includin
 
 # Kubeblast Web Development
 
-Use this skill for the Create React App frontend in `web/`.
+Use this skill for the Vite React frontend in `web/`.
 
 ## Follow existing architecture
 
 - Write JavaScript and JSX, not TypeScript, unless the user explicitly requests a migration.
-- Put page and feature UI in `web/src/components/`; keep application routing in `web/src/App.js`.
+- Put page and feature UI in `web/src/components/`; keep application routing in `web/src/App.jsx`.
 - Use Material UI components and `sx` styling consistently with neighboring code.
-- Reuse the light/dark palette and component defaults in `web/src/lib/theme.js`. Prefer theme palette values or the CSS variables in `web/src/App.css` over introducing isolated colors.
+- Reuse the light/dark palette and component defaults in `web/src/lib/theme.jsx`. Prefer theme palette values or the CSS variables in `web/src/App.css` over introducing isolated colors.
 - Preserve responsive layouts and verify both light and dark modes for visible styling changes.
 
 ## API and authentication contracts
@@ -35,24 +35,26 @@ Use this skill for the Create React App frontend in `web/`.
 
 ## Dependency discipline
 
-- The production Docker stage uses Node 20 and `npm install`. Prefer Node 20 for parity when diagnosing build-only differences.
+- The production Docker stage uses Node 24.15 and `npm ci`. Prefer Node 24.15 or another version allowed by `web/package.json` for parity when diagnosing build-only differences.
 - Use the committed `web/package-lock.json`. Run `npm ci --prefix web` for a clean install and avoid lockfile churn unless dependencies intentionally change.
-- Prefer packages already present in `web/package.json`, especially MUI, Recharts, Formik, Axios, Redux Toolkit, and Testing Library.
+- Prefer packages already present in `web/package.json`, especially MUI, Recharts, Axios, React Router, and Testing Library.
+- Vite client environment variables must use the `VITE_` prefix and are embedded at build time. Keep production API calls on the same-origin `/api/v1` default unless a build-time override is explicitly required.
 
 ## Validation
 
-Run the production build for frontend changes:
+Run lint and the production build for frontend changes:
 
 ```bash
+npm --prefix web run lint
 npm --prefix web run build
 ```
 
-Run non-watch tests when relevant:
+Run Vitest in non-watch mode when relevant:
 
 ```bash
-CI=true npm --prefix web test -- --watchAll=false
+npm --prefix web test
 ```
 
-The repository currently has only `web/src/App.test.js`, and its default "learn react" assertion is stale relative to the current app. If a task touches `App.js` or establishes frontend test coverage, replace that assertion with behavior that exists; do not claim the existing test passes without running it.
+The routing smoke test is in `web/src/App.test.jsx`. Keep tests isolated from unrelated API, animation, and canvas behavior with focused mocks.
 
 For API-integrated UI changes, supplement automated checks with a focused review of loading, empty, error, unauthorized, community, and Pro states.

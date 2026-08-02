@@ -8,7 +8,8 @@ build:
   tagPolicy:
     inputDigest: {}
   local:
-    push: true
+    push: false
+    useDockerCLI: true
   artifacts:
     - image: kubeblast
       context: ./
@@ -23,10 +24,10 @@ deploy:
         createNamespace: true
         chartPath: ./helm
         valuesFiles:
-          - ./dev-values.yaml
+          - ./dev.values.yaml
         setValueTemplates:
           image.repository: "{{ .IMAGE_REPO_kubeblast }}"
-          image.tag: "{{ .IMAGE_TAG_kubeblast }}"         
+          image.tag: "{{ .IMAGE_TAG_kubeblast }}"
 portForward:
   - resourceType: service
     resourceName: kubeblast
@@ -40,6 +41,6 @@ portForward:
     localPort: 9002
 
 profiles:
-  - name: docker-desktop
+  - name: local
     activation:
-      - kubeContext: docker-desktop
+      - command: dev

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, Typography, TextField, Button, Alert, IconButton, 
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -14,7 +14,8 @@ const Profile = () => {
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
-    role: ''
+    role: '',
+    last_login: null
   });
   const [passwords, setPasswords] = useState({
     new_password: '',
@@ -23,6 +24,7 @@ const Profile = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const [timezone, setTimezone] = useState('UTC');
   
   // PAT state
   const [pats, setPats] = useState([]);
@@ -46,7 +48,8 @@ const Profile = () => {
       setProfile({
         full_name: response.data.full_name || '',
         email: response.data.email || '',
-        role: response.data.role || ''
+        role: response.data.role || '',
+        last_login: response.data.last_login || null
       });
     } catch (error) {
       setMessage({
@@ -71,6 +74,7 @@ const Profile = () => {
     try {
       const response = await axiosInstance.get('/stats/app');
       setIsAdvanced(Boolean(response.data?.LICENSE_VALID));
+      if (response.data?.TIMEZONE) setTimezone(response.data.TIMEZONE);
     } catch (error) {
       console.error('Error fetching app stats:', error);
     }
@@ -232,6 +236,24 @@ const Profile = () => {
     });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Never';
+    const hasTimezone = /Z$/i.test(dateString) || /[+-]\d\d:?\d\d$/.test(dateString);
+    const normalized = hasTimezone ? dateString : `${dateString}Z`;
+
+    try {
+      const date = new Date(normalized);
+      if (Number.isNaN(date.getTime())) return dateString;
+      return date.toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false, timeZone: timezone || 'UTC',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -283,9 +305,15 @@ const Profile = () => {
             value={profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ''}
             margin="normal"
             variant="outlined"
-            InputProps={{
-              readOnly: true,
-            }}
+            slotProps={{ input: { readOnly: true } }}
+          />
+          <TextField
+            fullWidth
+            label="Last Login"
+            value={formatDateTime(profile.last_login)}
+            margin="normal"
+            variant="outlined"
+            slotProps={{ input: { readOnly: true } }}
           />
           <TextField
             fullWidth
@@ -488,8 +516,8 @@ const Profile = () => {
       <Dialog 
         open={patDialogOpen && !createdToken} 
         onClose={() => setPatDialogOpen(false)}
-        PaperProps={{
-          sx: { borderRadius: '12px', minWidth: 400 }
+        slotProps={{
+          paper: { sx: { borderRadius: '12px', minWidth: 400 } }
         }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Create Personal Access Token</DialogTitle>
@@ -503,7 +531,7 @@ const Profile = () => {
             onChange={(e) => setNewPatName(e.target.value)}
             margin="normal"
             variant="outlined"
-            inputProps={{ minLength: 3, maxLength: 20 }}
+            slotProps={{ htmlInput: { minLength: 3, maxLength: 20 } }}
             helperText="3-20 characters"
           />
           <TextField
@@ -515,7 +543,7 @@ const Profile = () => {
             onChange={(e) => setNewPatExpiry(e.target.value)}
             margin="normal"
             variant="outlined"
-            inputProps={{ min: 1, max: 3650 }}
+            slotProps={{ htmlInput: { min: 1, max: 3650 } }}
             helperText="Optional: 1-3650 days"
           />
         </DialogContent>
@@ -547,8 +575,8 @@ const Profile = () => {
       <Dialog 
         open={!!createdToken} 
         onClose={handleCloseTokenDialog}
-        PaperProps={{
-          sx: { borderRadius: '12px', minWidth: 500 }
+        slotProps={{
+          paper: { sx: { borderRadius: '12px', minWidth: 500 } }
         }}
       >
         <DialogTitle sx={{ fontWeight: 600, color: 'var(--success-color)' }}>

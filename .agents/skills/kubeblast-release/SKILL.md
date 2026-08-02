@@ -44,13 +44,15 @@ Run the checks relevant to the release contents:
 
 ```bash
 python3 -m compileall -q api
+npm --prefix web run lint
+npm --prefix web test
 npm --prefix web run build
 helm dependency update helm
 helm lint helm
 helm template kubeblast helm --namespace kubeblast
 ```
 
-Run frontend tests with `CI=true npm --prefix web test -- --watchAll=false` if the stale baseline test has been replaced or the release includes test updates. Do not represent the current default `App.test.js` as passing without evidence.
+The frontend uses Vitest in non-watch mode via `npm --prefix web test`; do not claim it passes without running it.
 
 If the Pro submodule and container runtime are available, build the production image because it is the true integration boundary for Nginx, Supervisor, React, Python dependencies, PyArmor, and the Pro overlay.
 

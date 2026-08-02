@@ -20,6 +20,7 @@ class User(BaseModel):
     method: Literal["local", "ldap", "oidc"] = "local"
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    last_login: datetime | None = None
 
 class UserCreate(User):
     password: str

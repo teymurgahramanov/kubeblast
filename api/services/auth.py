@@ -307,5 +307,10 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
     )
     
     refresh_token = create_refresh_token(user.username)
+
+    db.mongo.users.update_one(
+        {"username": user.username},
+        {"$set": {"last_login": datetime.now(timezone.utc)}},
+    )
     
     return models.Token(access_token=access_token, token_type="bearer", refresh_token=refresh_token)
