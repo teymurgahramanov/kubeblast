@@ -5,6 +5,7 @@
 README.md
 node_modules
 web/dist
+*.lic
 .env
 .gitignore
 .dockerignore

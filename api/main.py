@@ -7,12 +7,16 @@ from contextlib import asynccontextmanager
 import uvicorn
 from config import config
 from core.log import logger
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import events, files, jobs, logs, metrics, stats, token, user_profile
 
+_advanced_routes_registered = False
+
 
 def _sync_startup_initialize():
+    global _advanced_routes_registered
+
     from core import db, models
     from services import auth
 
@@ -31,28 +35,71 @@ def _sync_startup_initialize():
         logger.error(f"Admin bootstrap failed: {e}")
         sys.exit(1)
 
-    if config.LICENSE_KEY and config.LICENSE_ID:
+    if config.LICENSE_FILE:
         try:
-            check_license = importlib.import_module("license_check").check_license
-            if not check_license(config.LICENSE_ID, config.LICENSE_KEY):
-                logger.error("Invalid license key. Continuing in community mode.")
-                config.LICENSE_VALID = False
-            else:
-                logger.info("License key is valid. Advanced features enabled.")
-                config.LICENSE_VALID = True
-                from routes import jobs_extra, oidc, pats, users
-                app.include_router(jobs_extra.router, tags=["jobs_extra"])
-                app.include_router(users.router, tags=["users"])
-                app.include_router(oidc.router, tags=["oidc"])
-                app.include_router(pats.router, tags=["pats"])
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"license_check failed: {e}. Continuing in community mode.")
+            license_module = importlib.import_module("license_check")
+            check_license = license_module.check_license
+            require_valid_license = license_module.require_valid_license
+        except (AttributeError, ImportError) as e:
+            logger.warning(
+                f"Unable to verify license: ({type(e).__name__}). "
+                "Continuing in community mode."
+            )
             config.LICENSE_VALID = False
+            return
+
+        try:
+            result = check_license(config.LICENSE_FILE)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"License check crashed: ({type(e).__name__}). "
+                "Continuing in community mode."
+            )
+            config.LICENSE_VALID = False
+            return
+
+        if result.valid:
+            logger.info("License is valid. Advanced features enabled.")
+            config.LICENSE_VALID = True
+            if not _advanced_routes_registered:
+                from routes import jobs_extra, oidc, pats, users
+
+                license_dependency = [Depends(require_valid_license)]
+                app.include_router(
+                    jobs_extra.router,
+                    tags=["jobs_extra"],
+                    dependencies=license_dependency,
+                )
+                app.include_router(
+                    users.router,
+                    tags=["users"],
+                    dependencies=license_dependency,
+                )
+                app.include_router(
+                    oidc.router,
+                    tags=["oidc"],
+                    dependencies=license_dependency,
+                )
+                app.include_router(
+                    pats.router,
+                    tags=["pats"],
+                    dependencies=license_dependency,
+                )
+                _advanced_routes_registered = True
+            return
+
+        logger.error(
+            f"License is invalid: {result.reason}. "
+            "Continuing in community mode."
+        )
+        config.LICENSE_VALID = False
     else:
-        logger.info("License or account id not provided. Continuing in community mode.")
+        logger.info("License not provided. Continuing in community mode.")
         config.LICENSE_VALID = False
 
+
 _job_status_worker_started = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,8 +125,9 @@ async def lifespan(app: FastAPI):
         time.sleep(max(0, int(config.STARTUP_WORKER_STAGGER_S)))
         try:
             from worker import process_job_update
+
             process_job_update()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.error(f"Job status worker crashed: {e}")
 
     if not _job_status_worker_started:

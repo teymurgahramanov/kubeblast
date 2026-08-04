@@ -31,10 +31,8 @@ resources:
 # Use envFromSecret to load environment variables from a secret.
 env: []
   # --- General ---
-  # - name: LICENSE_KEY
-  #   value: ""  # License key for enabling Pro features
-  # - name: LICENSE_ID
-  #   value: ""  # License ID for enabling Pro features
+  # - name: LICENSE_FILE
+  #   value: ""  # Full signed license file content; prefer loading it through envFromSecret
   # - name: LOG_LEVEL
   #   value: "INFO"  # Logging level (DEBUG, INFO, WARNING, ERROR)
   # - name: SECRET_KEY
@@ -143,7 +141,7 @@ env: []
   #   value: "true"  # Auto-create users on first OIDC login
 
 # Reference to a secret containing application environment variables.
-# For external databases, keep MONGODB_URI/MONGODB_PASS and credential-bearing
+# Store LICENSE_FILE, MONGODB_URI/MONGODB_PASS, and credential-bearing
 # INFLUXDB_URL values in this secret instead of adding them directly to env.
 envFromSecret: ""
 

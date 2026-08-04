@@ -12,3 +12,4 @@ dev.values.yaml
 test-*.jmx
 TODO.md
 scripts/
+*.lic

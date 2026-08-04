@@ -13,8 +13,7 @@ class Config:
     # General
     APP_VERSION: str = "1.3.0"
     LICENSE_VALID: bool = False
-    LICENSE_KEY: str | None = os.getenv("LICENSE_KEY")
-    LICENSE_ID: str | None = os.getenv("LICENSE_ID")
+    LICENSE_FILE: str | None = os.getenv("LICENSE_FILE")
 
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     SECRET_KEY: str = os.getenv("SECRET_KEY", ''.join(random.choices(string.ascii_letters + string.digits)))
