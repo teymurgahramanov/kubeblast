@@ -126,6 +126,7 @@ def schedule_slave_daemonset_and_service(job_id: str):
             name=ds_name,
             namespace=namespace,
             labels=labels,
+            job_id=job_id,
             priority_class=config.K8S_JOB_PRIORITY_CLASS,
             image_job=config.K8S_JOB_IMAGE,
             image_pull_policy=config.K8S_JOB_IMAGE_PULL_POLICY,
@@ -133,6 +134,7 @@ def schedule_slave_daemonset_and_service(job_id: str):
             nodeSelector=config.K8S_JOB_NODE_SELECTOR,
             tolerations=config.K8S_JOB_TOLERATIONS,
             resources=config.K8S_JOB_RESOURCES,
+            storage_pvc_name=config.STORAGE_PVC_NAME,
         )
         ds_manifest = yaml.safe_load(rendered_ds)
         apps.create_namespaced_daemon_set(namespace=namespace, body=ds_manifest)
@@ -205,12 +207,15 @@ def watch_daemonset_and_get_slave_endpoints(job_id: str, timeout_s: int = 180, p
         detail=f"Timed out waiting for slaves (ds_ready={last_ready}/{last_desired}, endpoints=empty)"
     )
 
-def schedule_workload(job_id,distributed):
+def schedule_workload(job_id, distributed, parameter_files):
     name = gen_resource_name(job_id)
     namespace = get_namespace()
     labels = gen_labels(job_id,"master")
     file_name = "plan.jmx"
     file_content = files.read_file(job_id, file_name)
+
+    from services.jmx import resolve_csv_parameter_files
+    file_content = resolve_csv_parameter_files(file_content, job_id, parameter_files)
 
     if config.INFLUXDB_ENABLED:
         from services.jmx import inject_backend_listener

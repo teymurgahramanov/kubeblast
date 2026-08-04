@@ -288,6 +288,9 @@ serviceAccount:
 # Kubeblast Ingress configuration
 ingress:
   enabled: false
+  # Large CSV uploads may require an ingress-specific body-size annotation, for example:
+  # annotations:
+  #   nginx.ingress.kubernetes.io/proxy-body-size: "110m"
   annotations: {}
   className: ""
   host: ""

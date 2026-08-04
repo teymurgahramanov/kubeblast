@@ -2,20 +2,30 @@ import io
 import shutil
 import zipfile
 from pathlib import Path
-from fastapi import HTTPException, Response
-from core.log import logger
+
 from config import config
+from core.log import logger
+from fastapi import HTTPException, Response
 from services import jobs
 
 # Convert STORAGE_DIR to Path object
 STORAGE_DIR = Path(config.STORAGE_DIR)
 
+
+def _artifact_path(job_id, file_name):
+    if not file_name or Path(file_name).name != file_name or "\\" in file_name:
+        raise HTTPException(status_code=400, detail="Invalid artifact filename")
+    return STORAGE_DIR / job_id / file_name
+
+
 def create_file(job_id, file_content, file_name):
     try:
-        file_path = STORAGE_DIR / job_id / file_name
+        file_path = _artifact_path(job_id, file_name)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, 'wb') as f:
             f.write(file_content)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to write file to filesystem: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to write file to filesystem: {str(e)}")
@@ -31,7 +41,7 @@ def delete_file(job_id):
 
 def read_file(job_id, file_name):
     try:
-        file_path = STORAGE_DIR / job_id / file_name
+        file_path = _artifact_path(job_id, file_name)
         with open(file_path, 'r') as f:
             file_content = f.read()
         logger.info(f"Read file from filesystem: {file_name}")

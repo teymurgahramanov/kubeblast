@@ -9,7 +9,7 @@ __pycache__
 openapi.json
 helm/Chart.lock
 dev.values.yaml
-test-*.jmx
+.test-data
 TODO.md
 scripts/
 *.lic

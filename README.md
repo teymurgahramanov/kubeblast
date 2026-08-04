@@ -29,6 +29,12 @@ All parameters are configurable via environment variables.
 You can define them directly using Helm values or store in a Kubernetes Secret.
 See [`helm/values.yaml`](./helm/values.yaml) for the full list of supported environment variables with defaults and examples.
 
+### CSV parameter files
+
+A job can include one JMX plan and up to 20 CSV parameter files (100 MB combined). Kubeblast matches each JMeter `CSV Data Set Config` filename by basename and makes the uploaded file available to the JMeter engines. JMX plans are limited to 900 KB because the runtime plan is stored in a Kubernetes ConfigMap.
+
+Deployments behind an ingress must configure its request body limit to at least 110 MB; an NGINX Ingress example is included in `helm/values.yaml`. Distributed execution requires storage that supports read/write mounts from all selected nodes, such as a `ReadWriteMany` PVC.
+
 ## 👍 Get more
 Kubeblast scales from quick, single-click load tests to a collaborative platform with enterprise-grade capabilities. See the full feature list at [kubeblast.io](https://kubeblast.io).
 

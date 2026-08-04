@@ -4,6 +4,24 @@ from typing import Annotated, Literal
 from fastapi import File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field, StringConstraints
 
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
+_MAX_JMX_SIZE = 900 * 1024
+_MAX_PARAMETER_FILE_SIZE = 100 * 1024 * 1024
+_MAX_PARAMETER_FILES_SIZE = 100 * 1024 * 1024
+_MAX_PARAMETER_FILES = 20
+_MAX_FILENAME_BYTES = 255
+
+
+async def _read_upload_limited(upload: UploadFile, maximum_size: int, label: str) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    while chunk := await upload.read(_UPLOAD_CHUNK_SIZE):
+        size += len(chunk)
+        if size > maximum_size:
+            raise HTTPException(status_code=413, detail=f"{label} exceeds the upload size limit.")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 
 class Token(BaseModel):
     access_token: str
@@ -95,12 +113,14 @@ class Job(BaseModel):
     owner: str
     distributed: bool | None = False
     description: Annotated[str, StringConstraints(max_length=20)] | None = None
+    parameter_files: list[str] = Field(default_factory=list)
     status: Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]
     created_at: datetime
 
 class JobCreate(BaseModel):
     description: Annotated[str, StringConstraints(max_length=20)] | None = None
     file_content: bytes
+    parameter_files: dict[str, bytes] = Field(default_factory=dict)
     created_at: datetime
 
     @classmethod
@@ -108,16 +128,52 @@ class JobCreate(BaseModel):
         cls,
         file: Annotated[UploadFile, File()],
         description: Annotated[str | None, Form(max_length=20)] = None,
-    ) -> "JobCreate":   
-        if file.content_type not in ["text/xml", "application/xml", "application/octet-stream"]:
+        parameter_files: Annotated[list[UploadFile] | None, File()] = None,
+    ) -> "JobCreate":
+        if not file.filename or not file.filename.lower().endswith(".jmx"):
+            raise HTTPException(status_code=400, detail="The plan must be a JMX file.")
+        if file.content_type not in ["text/xml", "application/xml", "application/octet-stream", "text/plain"]:
             raise HTTPException(status_code=400, detail=f"Invalid file type. Received: {file.content_type}")
-        else:
-            file_content = await file.read()
-            return cls(
-                description=description,
-                file_content=file_content,
-                created_at=datetime.now(timezone.utc),
+
+        uploads = parameter_files or []
+        if len(uploads) > _MAX_PARAMETER_FILES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"A maximum of {_MAX_PARAMETER_FILES} CSV parameter files can be uploaded.",
             )
+
+        uploaded_parameters: dict[str, bytes] = {}
+        total_parameter_size = 0
+        for parameter_file in uploads:
+            filename = parameter_file.filename or ""
+            basename = filename.replace("\\", "/").rsplit("/", 1)[-1]
+            has_control_character = any(ord(character) < 32 or ord(character) == 127 for character in filename)
+            if (
+                filename != basename
+                or not filename.lower().endswith(".csv")
+                or not filename
+                or has_control_character
+                or len(filename.encode("utf-8")) > _MAX_FILENAME_BYTES
+            ):
+                raise HTTPException(status_code=400, detail=f"Invalid CSV parameter filename: {filename}")
+            if filename in uploaded_parameters:
+                raise HTTPException(status_code=400, detail=f"Duplicate parameter filename: {filename}")
+
+            remaining_total = _MAX_PARAMETER_FILES_SIZE - total_parameter_size
+            content = await _read_upload_limited(
+                parameter_file,
+                min(_MAX_PARAMETER_FILE_SIZE, remaining_total),
+                filename if remaining_total >= _MAX_PARAMETER_FILE_SIZE else "Combined CSV parameter files",
+            )
+            total_parameter_size += len(content)
+            uploaded_parameters[filename] = content
+
+        return cls(
+            description=description,
+            file_content=await _read_upload_limited(file, _MAX_JMX_SIZE, "JMX plan"),
+            parameter_files=uploaded_parameters,
+            created_at=datetime.now(timezone.utc),
+        )
 
 class CapacityResources(BaseModel):
     cpu_m: int = 0

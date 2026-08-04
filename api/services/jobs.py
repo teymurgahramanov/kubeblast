@@ -6,7 +6,7 @@ from config import config
 from core import db, models
 from core.log import logger
 from fastapi import HTTPException
-from services import auth, events, k8s, logs
+from services import auth, events, jmx, k8s, logs
 from services import files_fs as files
 
 _PLAN_EDIT_STATUSES = frozenset({"ready", "completed", "failed"})
@@ -93,6 +93,10 @@ def get_job(current_user, job_id):
     return job
 
 def create_job(current_user, job_data):
+    try:
+        jmx.validate_jmx(job_data.file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     current_jobs_count = db.mongo.jobs.count_documents({
         "owner": current_user.username
@@ -104,7 +108,14 @@ def create_job(current_user, job_data):
             detail=f"Jobs limit exceeded ({current_jobs_count}, limit is {config.PER_USER_CURRENT_JOBS_LIMIT})"
         )
 
-    job_name = f"{hashlib.sha256(job_data.file_content+current_user.username.encode()).hexdigest()[:6]}"
+    job_hash = hashlib.sha256(job_data.file_content + current_user.username.encode())
+    for filename, content in sorted(job_data.parameter_files.items()):
+        encoded_filename = filename.encode()
+        job_hash.update(len(encoded_filename).to_bytes(4, "big"))
+        job_hash.update(encoded_filename)
+        job_hash.update(len(content).to_bytes(8, "big"))
+        job_hash.update(content)
+    job_name = job_hash.hexdigest()[:6]
 
     job = db.mongo.jobs.find_one({"name": job_name, "owner": current_user.username})
     if job:
@@ -120,6 +131,7 @@ def create_job(current_user, job_data):
         "owner": current_user.username,
         "distributed": config.JMETER_MODE == "distributed",
         "description": job_data.description,
+        "parameter_files": sorted(job_data.parameter_files),
         "status": job_status,
         "created_at": job_data.created_at
     }
@@ -134,8 +146,9 @@ def create_job(current_user, job_data):
         events.create_event(job_id, "Job created")
         if job_status == "pending":
             events.create_event(job_id, "Job is pending approval")
-        file_name = "plan.jmx"
-        files.create_file(job_id, job_data.file_content, file_name)
+        files.create_file(job_id, job_data.file_content, "plan.jmx")
+        for filename, content in job_data.parameter_files.items():
+            files.create_file(job_id, content, filename)
         job = get_job(current_user, job_id)
         return job
     except Exception as e:  # noqa: BLE001
@@ -147,8 +160,10 @@ def create_job(current_user, job_data):
 
 
 def update_job_plan(current_user, job_id: str, file_content: bytes):
-    if not file_content:
-        raise HTTPException(status_code=400, detail="Plan body is empty")
+    try:
+        jmx.validate_jmx(file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     job = get_job(current_user, job_id).dict()
     if job["status"] not in _PLAN_EDIT_STATUSES:
@@ -187,7 +202,7 @@ def start_job(current_user, job_id):
         )
         logger.info(f"Scheduling workload for job {job_id}")
         events.create_event(job_id, "Workload scheduling started")
-        k8s.schedule_workload(job_id, job["distributed"])   
+        k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
         events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} started"}
     except Exception as e:  # noqa: BLE001
@@ -230,7 +245,7 @@ def retry_job(current_user, job_id):
         sleep(10)
         logger.info(f"Scheduling workload for job {job_id}")
         events.create_event(job_id, "Workload scheduling started")
-        k8s.schedule_workload(job_id,job["distributed"])
+        k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
         events.create_event(job_id, "Workload scheduled successfully")
         return {"message": f"Job {job_id} retried"}
     except Exception as e:  # noqa: BLE001

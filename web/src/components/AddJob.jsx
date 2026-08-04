@@ -1,13 +1,18 @@
 import { useRef, useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Chip } from '@mui/material';
 import { Close, CloudUpload } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import ErrorMessage from './ErrorMessage';
 
+const MAX_JMX_SIZE = 900 * 1024;
+const MAX_PARAMETER_FILES = 20;
+const MAX_PARAMETER_FILES_SIZE = 100 * 1024 * 1024;
+
 const AddJob = ({ onClose }) => {
   const [jobData, setJobData] = useState({
     description: '',
-    file: null
+    file: null,
+    parameterFiles: []
   });
   const [error, setError] = useState('');
   const [fileError, setFileError] = useState('');
@@ -23,21 +28,52 @@ const AddJob = ({ onClose }) => {
     }));
   };
 
-  const selectFile = (file) => {
-    if (!file) return;
+  const selectFiles = (selectedFiles) => {
+    const files = Array.from(selectedFiles || []);
+    if (!files.length) return;
 
-    if (!file.name.toLowerCase().endsWith('.jmx')) {
-      setJobData(prev => ({ ...prev, file: null }));
-      setFileError('Please select a JMX file.');
+    const unsupported = files.find(file => !/\.(jmx|csv)$/i.test(file.name));
+    if (unsupported) {
+      setFileError(`Unsupported file: ${unsupported.name}. Select JMX and CSV files only.`);
       return;
     }
 
-    setJobData(prev => ({ ...prev, file }));
+    const plans = files.filter(file => file.name.toLowerCase().endsWith('.jmx'));
+    if (plans.length > 1) {
+      setFileError('Please select only one JMX file.');
+      return;
+    }
+    if (plans[0]?.size > MAX_JMX_SIZE) {
+      setFileError('The JMX plan cannot exceed 900 KB.');
+      return;
+    }
+
+    const csvByName = new Map(jobData.parameterFiles.map(file => [file.name, file]));
+    files
+      .filter(file => file.name.toLowerCase().endsWith('.csv'))
+      .forEach(file => csvByName.set(file.name, file));
+    const nextParameterFiles = Array.from(csvByName.values());
+    if (nextParameterFiles.length > MAX_PARAMETER_FILES) {
+      setFileError(`A maximum of ${MAX_PARAMETER_FILES} CSV parameter files can be uploaded.`);
+      return;
+    }
+    if (nextParameterFiles.reduce((total, file) => total + file.size, 0) > MAX_PARAMETER_FILES_SIZE) {
+      setFileError('CSV parameter files cannot exceed 100 MB in total.');
+      return;
+    }
+
+    setJobData(prev => {
+      return {
+        ...prev,
+        file: plans[0] || prev.file,
+        parameterFiles: nextParameterFiles
+      };
+    });
     setFileError('');
   };
 
   const handleFileChange = (e) => {
-    selectFile(e.target.files[0]);
+    selectFiles(e.target.files);
     e.target.value = '';
   };
 
@@ -70,7 +106,7 @@ const AddJob = ({ onClose }) => {
     e.stopPropagation();
     dragDepth.current = 0;
     setIsDragging(false);
-    selectFile(e.dataTransfer.files[0]);
+    selectFiles(e.dataTransfer.files);
   };
 
   const handleUploadKeyDown = (e) => {
@@ -78,6 +114,14 @@ const AddJob = ({ onClose }) => {
       e.preventDefault();
       fileInputRef.current?.click();
     }
+  };
+
+  const removeParameterFile = (event, filename) => {
+    event.stopPropagation();
+    setJobData(prev => ({
+      ...prev,
+      parameterFiles: prev.parameterFiles.filter(file => file.name !== filename)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -91,6 +135,7 @@ const AddJob = ({ onClose }) => {
     const formData = new FormData();
     formData.append('description', jobData.description);
     formData.append('file', jobData.file);
+    jobData.parameterFiles.forEach(file => formData.append('parameter_files', file));
 
     try {
       await axiosInstance.post('/jobs', formData, {
@@ -161,7 +206,7 @@ const AddJob = ({ onClose }) => {
             <Box
               role="button"
               tabIndex={0}
-              aria-label="Upload JMX file"
+              aria-label="Upload JMX and CSV files"
               onClick={() => fileInputRef.current?.click()}
               onKeyDown={handleUploadKeyDown}
               onDragEnter={handleDragEnter}
@@ -192,7 +237,8 @@ const AddJob = ({ onClose }) => {
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
                 id="job-file-input"
-                accept=".jmx"
+                accept=".jmx,.csv"
+                multiple
               />
               <CloudUpload
                 sx={{
@@ -202,11 +248,27 @@ const AddJob = ({ onClose }) => {
                 }}
               />
               <Typography sx={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                {jobData.file ? jobData.file.name : isDragging ? 'Drop JMX file here' : 'Drag and drop a JMX file here'}
+                {jobData.file ? jobData.file.name : isDragging ? 'Drop JMX and CSV files here' : 'Drag and drop a JMX plan and optional CSV files here'}
               </Typography>
               <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mt: 0.5 }}>
-                {jobData.file ? 'Drop or click to replace' : 'or click to browse'}
+                {jobData.file ? 'Drop or click to replace the plan or add CSV files' : 'or click to browse'}
               </Typography>
+              {jobData.parameterFiles.length > 0 && (
+                <Box
+                  sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.75, mt: 1.5 }}
+                  onClick={event => event.stopPropagation()}
+                  onKeyDown={event => event.stopPropagation()}
+                >
+                  {jobData.parameterFiles.map(file => (
+                    <Chip
+                      key={file.name}
+                      size="small"
+                      label={`${file.name} (${Math.max(1, Math.ceil(file.size / 1024))} KB)`}
+                      onDelete={event => removeParameterFile(event, file.name)}
+                    />
+                  ))}
+                </Box>
+              )}
             </Box>
             {fileError && (
               <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 1 }}>
