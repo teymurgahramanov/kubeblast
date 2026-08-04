@@ -22,7 +22,7 @@ Use this skill for the Vite React frontend in `web/`.
 - Avoid direct `axios` calls except for intentionally unauthenticated/token-bootstrap flows such as the refresh implementation.
 - Read server error details defensively with `error.response?.data?.detail || error.message` and render failures through the existing UI patterns.
 - Route visibility is not sufficient authorization. Backend role dependencies remain the security boundary.
-- Advanced endpoints may not exist in community mode. Use `/stats/app` and `LICENSE_VALID` where the UI needs to gate Pro behavior.
+- Advanced endpoints may not exist in community mode. Use `/stats/app` and `LICENSE_VALID` where the UI needs to gate Advanced behavior.
 - Keep access and refresh token storage compatible with `web/src/utils/auth.js` and the Axios interceptors.
 
 ## Cross-layer behavior
@@ -57,4 +57,4 @@ npm --prefix web test
 
 The routing smoke test is in `web/src/App.test.jsx`. Keep tests isolated from unrelated API, animation, and canvas behavior with focused mocks.
 
-For API-integrated UI changes, supplement automated checks with a focused review of loading, empty, error, unauthorized, community, and Pro states.
+For API-integrated UI changes, supplement automated checks with a focused review of loading, empty, error, unauthorized, community, and Advanced states.

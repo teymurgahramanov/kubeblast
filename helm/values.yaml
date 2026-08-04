@@ -6,8 +6,22 @@ nameOverride: ""
 # Full name override for the release
 fullnameOverride: ""
 
-# Pod security context configuration for Kubeblast pod.
-podSecurityContext: {}
+# Pod security context configuration for the non-root Kubeblast runtime.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context configuration for Kubeblast.
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
 # Node selector for Kubeblast pod scheduling.
 nodeSelector: {}
@@ -256,11 +270,16 @@ image:
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
 
-# Kubeblast service configuration
+# Internal ports used by the non-root Kubeblast container.
+containerPort:
+  web: 8080
+  api: 8000
+
+# Kubeblast service configuration.
 service:
   port:
-    web: 80    # Web interface port
-    api: 8000  # API port
+    web: 80    # Web interface service port
+    api: 8000  # API service port
 
 # Kubeblast service account annotations
 serviceAccount:

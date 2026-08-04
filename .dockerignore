@@ -1,3 +1,6 @@
+.git
+.github
+.agents
 .gitignore
 .dockerignore
 .env
@@ -5,10 +8,8 @@
 README.md
 node_modules
 web/dist
+advanced/.git
+advanced/tests
+**/__pycache__
+**/*.py[cod]
 *.lic
-.env
-.gitignore
-.dockerignore
-.env
-.venv
-README.md

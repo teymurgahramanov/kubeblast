@@ -25,7 +25,7 @@ spec:
       serviceAccountName: '{{ include "kubeblast.fullname" . }}'
       securityContext:
         # {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      # {{- $containerPorts := list (dict "name" "web" "containerPort" (int .Values.service.port.web) "protocol" "TCP") (dict "name" "api" "containerPort" (int .Values.service.port.api) "protocol" "TCP") }}
+      # {{- $containerPorts := list (dict "name" "web" "containerPort" (int .Values.containerPort.web) "protocol" "TCP") (dict "name" "api" "containerPort" (int .Values.containerPort.api) "protocol" "TCP") }}
       # {{- $customEnv := list }}
       # {{- range .Values.env }}
       # {{- $customEnv = append $customEnv (dict "name" .name "value" (toString .value)) }}
@@ -34,6 +34,8 @@ spec:
         - name: '{{ .Chart.Name }}'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            # {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
             # {{- toYaml $containerPorts | nindent 12 }}
           readinessProbe:

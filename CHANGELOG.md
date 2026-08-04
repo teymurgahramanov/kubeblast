@@ -107,7 +107,7 @@
 ### Changed
 - Renamed some variables. Check [README.md](README.md).
 - Replaced Bitnami MongoDB Helm Chart with simple deployment.
-- Removed separate "pro" image.
+- Removed separate "advanced" image.
 - Optimized Job manifest.
 - Redesigned Jobs page.
 - Improved Job status sync.

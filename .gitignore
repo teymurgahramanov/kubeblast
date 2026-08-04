@@ -13,3 +13,5 @@ test-*.jmx
 TODO.md
 scripts/
 *.lic
+.zed/*
+.ruff_cache

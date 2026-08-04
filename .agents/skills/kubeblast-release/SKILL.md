@@ -54,7 +54,7 @@ helm template kubeblast helm --namespace kubeblast
 
 The frontend uses Vitest in non-watch mode via `npm --prefix web test`; do not claim it passes without running it.
 
-If the Pro submodule and container runtime are available, build the production image because it is the true integration boundary for Nginx, Supervisor, React, Python dependencies, PyArmor, and the Pro overlay.
+If the Advanced submodule and container runtime are available, build the production image because it is the true integration boundary for Nginx, Supervisor, React, Python dependencies, Nuitka-compiled native extensions, and the Advanced overlay.
 
 ## Pre-dispatch checklist
 
@@ -64,7 +64,7 @@ Report, and obtain confirmation for, all of the following:
 - clean worktree status
 - `CHANGELOG.md` and `RELEASE.md` readiness
 - required validation results and any skipped checks
-- Pro submodule revision and availability
+- Advanced submodule revision and availability
 - required GitHub secrets: `PAT`, Docker Hub credentials, and Helm repository owner/token
 - expected remote mutations: source version-bump commit, Docker tags, Helm package/index commit, Git tag, and GitHub release
 

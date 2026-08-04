@@ -37,9 +37,9 @@ When adding an environment variable:
 
 When adding Kubernetes API calls, inspect `helm/templates/rbac.yaml` and add only the minimum required resource and verbs.
 
-## Pro boundary
+## Advanced boundary
 
-`advanced/` is a private Git submodule. The Docker build copies the community API and then overlays obfuscated files from `advanced/api/`. Do not invent or replace missing Pro code when the submodule is unavailable, and do not move community features behind the license check unless explicitly requested.
+`advanced/` is a private Git submodule. The Docker build copies the community API and then overlays compiled files from `advanced/api/`. Do not invent or replace missing Advanced code when the submodule is unavailable, and do not move community features behind the license check unless explicitly requested.
 
 ## Validation
 
