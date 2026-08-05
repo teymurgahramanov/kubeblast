@@ -10,7 +10,7 @@ import {
   Delete, MoreVert, CheckCircle, Cancel,
   Autorenew, Add, PlayArrow, ListAlt, Stop,
   Search, ViewModule, ViewList, Memory, DeveloperBoard, Dns,
-  Speed, AccessTime, FiberManualRecord, Person,
+  AccessTime, FiberManualRecord,
 } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { getUserRole } from "../utils/auth";
@@ -32,36 +32,36 @@ const STATUS_CHIPS = [
 /* ─── Capacity card ───────────────────────────────────────────── */
 const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor }) => (
   <Box sx={{
-    p: 2,
+    p: 1.5,
     border: '1px solid var(--border-color)',
-    borderRadius: '14px',
+    borderRadius: '18px',
     backgroundColor: 'background.paper',
     transition: 'transform 0.22s ease, box-shadow 0.22s ease',
     '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 14px 32px rgba(0,0,0,0.10)' },
     cursor: 'default',
     overflow: 'hidden',
     position: 'relative',
-    height: '100%',
+    width: '100%',
+    aspectRatio: '1 / 1',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-    minHeight: 110,
   }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: (sub || progress !== undefined) ? 1.5 : 0 }}>
-      <Box sx={{ width: 44, height: 44, borderRadius: '12px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, mb: (sub || progress !== undefined) ? 1 : 0, minWidth: 0 }}>
+      <Box sx={{ width: 38, height: 38, borderRadius: '12px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {icon}
       </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.62rem', display: 'block', mb: 0.3 }}>
+      <Box sx={{ minWidth: 0, width: '100%' }}>
+        <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.58rem', display: 'block', mb: 0.3, whiteSpace: 'nowrap' }}>
           {label}
         </Typography>
-        <Typography sx={{ fontWeight: 700, lineHeight: 1.2, color: 'text.primary', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', wordBreak: 'break-all' }}>
+        <Typography sx={{ fontWeight: 700, lineHeight: 1.15, color: 'text.primary', fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {value}
         </Typography>
       </Box>
     </Box>
     {sub && (
-      <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block', mb: progress !== undefined ? 0.8 : 0 }}>
+      <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block', mb: progress !== undefined ? 0.8 : 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {sub}
       </Typography>
     )}
@@ -256,6 +256,18 @@ const Jobs = () => {
     return gib >= 10 ? gib.toFixed(0) : gib.toFixed(1);
   };
 
+  const formatCpuQuota = (quota = {}) => {
+    if (quota.cpu !== undefined) return String(quota.cpu);
+    if (quota.cpu_m !== undefined) return `${formatCores(quota.cpu_m)}c`;
+    return '-';
+  };
+
+  const formatMemoryQuota = (quota = {}) => {
+    if (quota.memory !== undefined) return String(quota.memory);
+    if (quota.memory_bytes !== undefined) return `${formatGiB(quota.memory_bytes)}Gi`;
+    return '-';
+  };
+
   /* ── Derived data ──────────────────────────────────────────── */
   const rows = useMemo(() => jobs.map((job) => ({
     id: job.id, job_name: job.name, owner: job.owner,
@@ -313,63 +325,56 @@ const Jobs = () => {
             )}
           </Box>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: 2, alignItems: 'stretch' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(120px, 1fr))', gap: 2, alignItems: 'stretch', overflowX: 'auto', pb: 0.5 }}>
             {!resources ? (
-              [0, 1, 2, 3, 4, 5].map(i => (
+              [0, 1, 2, 3, 4].map(i => (
                 <Skeleton key={i} variant="rounded" height={96} sx={{ borderRadius: '14px', transform: 'none' }} />
               ))
             ) : (
               <>
-                {/* 1. Platform Jobs */}
-                {typeof resources.jobsTotal === 'number' && (
-                  <Tooltip title="Total jobs running across the platform" arrow>
-                    <span style={{ display: 'block', height: '100%' }}>
-                      <CapacityCard
-                        icon={<Speed sx={{ fontSize: 20, color: '#fff' }} />}
-                        iconBg="linear-gradient(135deg, #6366f1, #818cf8)"
-                        label="Platform Jobs"
-                        value={resources.jobsTotal}
-                        sub="Currently running"
-                      />
-                    </span>
-                  </Tooltip>
-                )}
-
-                {/* 2. Your Jobs */}
-                {(typeof resources.userJobsTotal === 'number' && typeof resources.perUserCurrentJobsLimit === 'number') && (
-                  <Tooltip title="Your active jobs vs. allowed concurrent limit" arrow>
-                    <span style={{ display: 'block', height: '100%' }}>
-                      <CapacityCard
-                        icon={<Person sx={{ fontSize: 20, color: '#fff' }} />}
-                        iconBg="linear-gradient(135deg, #f59e0b, #fbbf24)"
-                        label="Your Jobs"
-                        value={`${resources.userJobsTotal} / ${resources.perUserCurrentJobsLimit === 0 ? '∞' : resources.perUserCurrentJobsLimit}`}
-                        sub="Active / Limit"
-                        progress={resources.perUserCurrentJobsLimit > 0 ? (resources.userJobsTotal / resources.perUserCurrentJobsLimit) * 100 : null}
-                        progressColor="#f59e0b"
-                      />
-                    </span>
-                  </Tooltip>
-                )}
-
-                {/* 3. Nodes */}
-                <Tooltip title="Usable nodes (matching selector) vs total cluster nodes" arrow>
+                {/* Nodes */}
+                <Tooltip title="Available nodes matching selector/tolerations" arrow>
                   <span style={{ display: 'block', height: '100%' }}>
                     <CapacityCard
                       icon={<Dns sx={{ fontSize: 20, color: '#fff' }} />}
                       iconBg="linear-gradient(135deg, #10b981, #34d399)"
                       label="Nodes"
-                      value={`${resources.nodesMatching ?? resources.nodesTotal ?? 0} / ${resources.nodesTotal ?? 0}`}
-                      sub="Available / Total"
+                      value={resources.nodesMatching ?? resources.nodesTotal ?? 0}
+                      sub="Matching available"
                     />
                   </span>
                 </Tooltip>
 
-                {/* 4a. CPU Quota */}
+                {/* CPU */}
+                {(() => {
+                  const avail = formatCores(resources.remaining?.cpu_m || 0);
+                  const total = formatCores(resources.capacity?.cpu_m || 0);
+                  const pct = resources.capacity?.cpu_m
+                    ? ((resources.capacity.cpu_m - (resources.remaining?.cpu_m || 0)) / resources.capacity.cpu_m) * 100
+                    : 0;
+                  const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#326CE5';
+                  return (
+                    <Tooltip title="Available vs total CPU across matching available nodes" arrow>
+                      <span style={{ display: 'block', height: '100%' }}>
+                        <CapacityCard
+                          icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
+                          iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#326CE5,#7aa2f7'})`}
+                          label="CPU"
+                          value={`${avail} / ${total} cores`}
+                          sub="Available / Total"
+                          progress={pct}
+                          progressColor={color}
+                        />
+                      </span>
+                    </Tooltip>
+                  );
+                })()}
+
+                {/* CPU Quota */}
                 {resources.jobResources && (() => {
                   const jr = resources.jobResources || {};
-                  const cpuReq = jr.requests?.cpu !== undefined ? String(jr.requests.cpu) : (jr.requests?.cpu_m !== undefined ? `${formatCores(jr.requests.cpu_m)}c` : '-/');
-                  const cpuLim = jr.limits?.cpu   !== undefined ? String(jr.limits.cpu)   : (jr.limits?.cpu_m   !== undefined ? `${formatCores(jr.limits.cpu_m)}c`   : '-/');
+                  const cpuReq = formatCpuQuota(jr.requests);
+                  const cpuLim = formatCpuQuota(jr.limits);
                   return (
                     <Tooltip title="Default CPU requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
@@ -385,11 +390,11 @@ const Jobs = () => {
                   );
                 })()}
 
-                {/* 4b. RAM Quota */}
+                {/* RAM Quota */}
                 {resources.jobResources && (() => {
                   const jr = resources.jobResources || {};
-                  const memReq = jr.requests?.memory !== undefined ? String(jr.requests.memory) : (jr.requests?.memory_bytes !== undefined ? `${formatGiB(jr.requests.memory_bytes)}G` : '-/');
-                  const memLim = jr.limits?.memory   !== undefined ? String(jr.limits.memory)   : (jr.limits?.memory_bytes   !== undefined ? `${formatGiB(jr.limits.memory_bytes)}G`   : '-/');
+                  const memReq = formatMemoryQuota(jr.requests);
+                  const memLim = formatMemoryQuota(jr.limits);
                   return (
                     <Tooltip title="Default RAM requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
@@ -405,32 +410,7 @@ const Jobs = () => {
                   );
                 })()}
 
-                {/* 5. CPU */}
-                {(() => {
-                  const avail = formatCores(resources.remaining?.cpu_m || 0);
-                  const total = formatCores(resources.capacity?.cpu_m || 0);
-                  const pct = resources.capacity?.cpu_m
-                    ? ((resources.capacity.cpu_m - (resources.remaining?.cpu_m || 0)) / resources.capacity.cpu_m) * 100
-                    : 0;
-                  const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#326CE5';
-                  return (
-                    <Tooltip title="Available vs total CPU across selected nodes" arrow>
-                      <span style={{ display: 'block', height: '100%' }}>
-                        <CapacityCard
-                          icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
-                          iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#326CE5,#7aa2f7'})`}
-                          label="Cluster CPU"
-                          value={`${avail} / ${total} cores`}
-                          sub="Available / Total"
-                          progress={pct}
-                          progressColor={color}
-                        />
-                      </span>
-                    </Tooltip>
-                  );
-                })()}
-
-                {/* 6. Memory */}
+                {/* RAM */}
                 {(() => {
                   const avail = formatGiB(resources.remaining?.memory_bytes || 0);
                   const total = formatGiB(resources.capacity?.memory_bytes || 0);
@@ -439,12 +419,12 @@ const Jobs = () => {
                     : 0;
                   const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#10b981';
                   return (
-                    <Tooltip title="Available vs total memory across selected nodes" arrow>
+                    <Tooltip title="Available vs total RAM across matching available nodes" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
                         <CapacityCard
                           icon={<Memory sx={{ fontSize: 20, color: '#fff' }} />}
                           iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#10b981,#34d399'})`}
-                          label="Cluster Memory"
+                          label="RAM"
                           value={`${avail} / ${total} GiB`}
                           sub="Available / Total"
                           progress={pct}

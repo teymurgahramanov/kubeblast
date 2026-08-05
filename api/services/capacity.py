@@ -63,8 +63,18 @@ def parse_mem(mem: str) -> int:
 
 
 # ============================================================================
-# NODE FILTERING (selector + tolerations)
+# NODE FILTERING (availability + selector + tolerations)
 # ============================================================================
+
+def node_is_available(node: client.V1Node) -> bool:
+    """Return True when a node can currently accept scheduled workloads."""
+    if getattr(node.spec, "unschedulable", False):
+        return False
+
+    conditions = getattr(node.status, "conditions", []) or []
+    ready = next((c for c in conditions if c.type == "Ready"), None)
+    return bool(ready and ready.status == "True")
+
 
 def node_matches(node: client.V1Node, selector: dict, tolerations: list) -> bool:
     labels = node.metadata.labels or {}
@@ -272,10 +282,10 @@ def compute_and_store_capacity() -> Dict:
     # Fetch nodes
     nodes = client.CoreV1Api().list_node().items
 
-    # Apply selector + tolerations
+    # Apply availability, selector + tolerations
     sel = config.K8S_JOB_NODE_SELECTOR
     tol = config.K8S_JOB_TOLERATIONS
-    matched = [n for n in nodes if node_matches(n, sel, tol)]
+    matched = [n for n in nodes if node_is_available(n) and node_matches(n, sel, tol)]
     matched_names = [n.metadata.name for n in matched]
 
     # ----- Allocatable totals -----
@@ -295,7 +305,7 @@ def compute_and_store_capacity() -> Dict:
 
     # Build your Pydantic model (no 'allocated' in response; 'remaining' instead)
     cap = models.Capacity(
-        nodesTotal=len(nodes),
+        nodesTotal=len(matched),
         nodesMatching=len(matched),
         capacity=models.CapacityResources(cpu_m=total_alloc_cpu, memory_bytes=total_alloc_mem),
         remaining=models.CapacityResources(cpu_m=remaining_cpu, memory_bytes=remaining_mem),
