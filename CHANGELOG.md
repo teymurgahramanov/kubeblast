@@ -14,7 +14,7 @@
 
 - Redesigned **login** page, refined **Job Details** and **Jobs** UI (@Yesveer)
 - **Report download**: packaged HTML report as `kb-{job-name}-report.zip` instead of opening report HTML in the browser; JTL result file named `kb-{job-name}-result.jtl`.
-- **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/logs/{job_id}` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
+- **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/jobs/{job_id}/logs` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
 - **OIDC** (Advanced): authorization URL query parameters are properly URL-encoded; token and userinfo HTTP clients use explicit timeouts and form content type for the token exchange.
 - **OIDC callback** now passes **raw IdP claims** into login so user/role mapping runs once with full token claims (e.g. Keycloak realm roles); API response `username` / `role` are read from the persisted user after login.
 - **Startup**: admin user bootstrap is wrapped in **try/except** with error logging and **process exit** on failure; missing license env sets **`LICENSE_VALID`** to **false**; **`license_check`** failures are handled with a single warning path instead of only `ImportError`.

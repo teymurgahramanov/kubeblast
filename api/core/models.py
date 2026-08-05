@@ -107,6 +107,19 @@ class UserUpdate(BaseModel):
 class UserInDB(User):
     hashed_password: str
 
+JobStatus = Literal[
+    "pending",
+    "ready",
+    "declined",
+    "starting",
+    "stopping",
+    "retrying",
+    "running",
+    "completed",
+    "failed",
+]
+
+
 class Job(BaseModel):
     id: str | None = None
     name: str
@@ -114,8 +127,38 @@ class Job(BaseModel):
     distributed: bool | None = False
     description: Annotated[str, StringConstraints(max_length=20)] | None = None
     parameter_files: list[str] = Field(default_factory=list)
-    status: Literal["pending", "ready", "declined", "starting", "stopping", "retrying", "running", "completed", "failed"]
+    status: JobStatus
     created_at: datetime
+
+
+class JobCommandResponse(BaseModel):
+    message: str = Field(description="Human-readable command acknowledgement")
+    job_id: str = Field(description="Job identifier")
+    status: JobStatus = Field(description="Job status after the command was accepted")
+
+
+class JobVerdict(BaseModel):
+    job_id: str = Field(description="Job identifier")
+    execution_status: JobStatus = Field(description="Job execution lifecycle status")
+    verdict: Literal["passed", "failed", "not_evaluated"] = Field(
+        description="Result verdict, kept separate from execution status",
+    )
+    samples_total: int = Field(ge=0, description="Number of JMeter samples evaluated")
+    samples_failed: int = Field(ge=0, description="Number of samples whose success field is false")
+    error_rate: float = Field(
+        ge=0,
+        le=1,
+        description="Failed sample ratio from 0.0 to 1.0",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Why a verdict could not be evaluated",
+    )
+
+
+class MessageResponse(BaseModel):
+    message: str
+
 
 class JobCreate(BaseModel):
     description: Annotated[str, StringConstraints(max_length=20)] | None = None
@@ -126,9 +169,18 @@ class JobCreate(BaseModel):
     @classmethod
     async def create_form(
         cls,
-        file: Annotated[UploadFile, File()],
-        description: Annotated[str | None, Form(max_length=20)] = None,
-        parameter_files: Annotated[list[UploadFile] | None, File()] = None,
+        file: Annotated[
+            UploadFile,
+            File(description="JMeter .jmx test plan (maximum 900 KiB)"),
+        ],
+        description: Annotated[
+            str | None,
+            Form(max_length=20, description="Optional job description"),
+        ] = None,
+        parameter_files: Annotated[
+            list[UploadFile] | None,
+            File(description="Optional CSV parameter files (maximum 20 files and 100 MiB total)"),
+        ] = None,
     ) -> "JobCreate":
         if not file.filename or not file.filename.lower().endswith(".jmx"):
             raise HTTPException(status_code=400, detail="The plan must be a JMX file.")

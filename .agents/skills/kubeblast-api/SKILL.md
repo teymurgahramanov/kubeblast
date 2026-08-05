@@ -7,6 +7,17 @@ description: Implement or debug Kubeblast's FastAPI backend, MongoDB persistence
 
 Use this skill for changes under `api/` and for cross-layer work whose source of truth is the backend contract.
 
+## Simplicity first
+
+- Implement the smallest correct change that satisfies the explicit request. Do not add adjacent features, speculative extensibility, or future-proofing unless required.
+- Prefer existing routes, models, services, dependencies, and standard-library tools over new abstractions or infrastructure.
+- Do not introduce a new service, model, endpoint, configuration option, queue, framework, or helper when a direct change in the existing path is clear and maintainable.
+- Keep control flow explicit and easy to trace. Avoid generic engines, deep indirection, clever metaprogramming, and premature deduplication.
+- Preserve current contracts unless changing them is necessary. If a breaking change is unavoidable, make only that change and call it out.
+- Add only focused tests for the requested behavior. Do not build elaborate test harnesses when a small isolated test is sufficient.
+- Correctness, authorization, and data safety take priority over simplicity, but choose the simplest solution that preserves them.
+- Stop when the requested behavior works and validation passes. Remove dead code made obsolete by the simplification.
+
 ## Map the change before editing
 
 1. Trace HTTP behavior from `api/routes/` into `api/services/`, then into `api/core/` or `api/templates/`.
@@ -49,7 +60,7 @@ Start with the narrowest available checks:
 python3 -m compileall -q api
 ```
 
-There is currently no backend test suite. For non-trivial pure logic, add focused tests only with a deliberate test setup; mock MongoDB, Kubernetes, and InfluxDB boundaries instead of requiring a live cluster.
+Run focused tests under `api/tests/` when relevant. For non-trivial pure logic, add only small tests with a deliberate setup; mock MongoDB, Kubernetes, and InfluxDB boundaries instead of requiring a live cluster.
 
 Do not use `python3 api/main.py` as a quick validation command: it starts a long-running server and startup immediately depends on MongoDB, Kubernetes-related workers, and optional licensed modules. Use the container or Skaffold integration path only when its dependencies, Kubernetes context, values file, and `advanced` submodule are available.
 

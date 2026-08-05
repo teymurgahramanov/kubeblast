@@ -1,13 +1,11 @@
 import os
-import bson
-from core.log import logger
-from core import k8s
-from kubernetes import client
-from kubernetes import watch
-from pymongo import MongoClient
-from pymongo import UpdateOne
-from config import config
 import time
+
+import bson
+from config import config
+from core.log import logger
+from kubernetes import client, watch
+from pymongo import MongoClient, UpdateOne
 from services import k8s as k8s_service
 
 # MongoDB Configuration
@@ -85,9 +83,14 @@ def _bulk_update_statuses(pairs: list[tuple[str, str]]):
         if not oid:
             logger.warning(f"Skipping Mongo update due to invalid job id: {job_id}")
             continue
+        query: dict = {"_id": oid}
+        if status in ("starting", "running"):
+            # Do not let a stale active observation undo an accepted stop or
+            # regress a job that MongoDB already records as terminal.
+            query["status"] = {"$nin": ["stopping", "completed", "failed"]}
         ops.append(
             UpdateOne(
-                {"_id": oid},
+                query,
                 {"$set": {"status": status}},
             )
         )

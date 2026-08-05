@@ -84,7 +84,7 @@ const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const res = await axiosInstance.get(`/metrics/${jobId}`);
+      const res = await axiosInstance.get(`/jobs/${jobId}/metrics`);
       setMetrics(res.data);
       setError('');
     } catch (err) {

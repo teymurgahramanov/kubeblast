@@ -10,8 +10,8 @@ openapi.json
 helm/Chart.lock
 dev.values.yaml
 .test-data
-TODO.md
 scripts/
 *.lic
 .zed/*
 .ruff_cache
+TODO.md

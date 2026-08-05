@@ -9,7 +9,7 @@ from services import (
 
 router = APIRouter(prefix="/api/v1")
 
-@router.put("/jobs/approve/{job_id}", response_model=models.Job)
+@router.put("/jobs/{job_id}/approve", response_model=models.Job)
 async def approve_job(
     current_user: Annotated[models.User, Depends(auth.check_role(["moderator", "admin"]))],
     job_id: str,

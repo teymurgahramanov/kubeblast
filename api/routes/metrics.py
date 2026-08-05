@@ -8,7 +8,7 @@ from config import config
 router = APIRouter(prefix="/api/v1")
 
 
-@router.get("/metrics/{job_id}")
+@router.get("/jobs/{job_id}/metrics")
 async def get_job_metrics(
     job_id: str,
     current_user: Annotated[models.User, Depends(auth.check_role([]))],

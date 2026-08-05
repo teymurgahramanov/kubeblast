@@ -1,15 +1,69 @@
 import hashlib
+from pathlib import Path
 from time import sleep
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from config import config
 from core import db, models
 from core.log import logger
 from fastapi import HTTPException
-from services import auth, events, jmx, k8s, logs
+from services import auth, events, jmx, k8s, logs, verdicts
 from services import files_fs as files
 
 _PLAN_EDIT_STATUSES = frozenset({"ready", "completed", "failed"})
+
+
+def _object_id(job_id: str) -> ObjectId:
+    try:
+        return ObjectId(job_id)
+    except (InvalidId, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID") from exc
+
+
+def _transition_job(
+    job_id: str,
+    expected_statuses: tuple[models.JobStatus, ...],
+    new_status: models.JobStatus,
+    action: str,
+) -> None:
+    object_id = _object_id(job_id)
+    result = db.mongo.jobs.update_one(
+        {"_id": object_id, "status": {"$in": list(expected_statuses)}},
+        {"$set": {"status": new_status}},
+    )
+    if result.matched_count:
+        return
+
+    current_job = db.mongo.jobs.find_one({"_id": object_id}, {"status": 1})
+    if not current_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    expected = ", ".join(expected_statuses)
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            f"Cannot {action} job in status '{current_job.get('status', 'unknown')}'; "
+            f"expected: {expected}"
+        ),
+    )
+
+
+def _set_failed_if_transition_is_current(job_id: str, transition_status: models.JobStatus) -> None:
+    try:
+        db.mongo.jobs.update_one(
+            {"_id": _object_id(job_id), "status": transition_status},
+            {"$set": {"status": "failed"}},
+        )
+    except Exception as error:  # noqa: BLE001
+        logger.error(f"Failed to mark job {job_id} as failed: {error}")
+
+
+def _create_event_best_effort(job_id: str, message: str) -> None:
+    try:
+        events.create_event(job_id, message)
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Failed to record event for job {job_id}: {error}")
 
 
 def _job_approve(current_user, job_owner_username: str) -> str:
@@ -83,7 +137,7 @@ def get_jobs(
     return jobs, total
 
 def get_job(current_user, job_id):
-    job = db.mongo.jobs.find_one({"_id": ObjectId(job_id)})
+    job = db.mongo.jobs.find_one({"_id": _object_id(job_id)})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     if current_user.role not in ["admin", "moderator"] and job["owner"] != current_user.username:
@@ -192,43 +246,35 @@ def update_job_plan(current_user, job_id: str, file_content: bytes):
 
 
 def start_job(current_user, job_id):
-    job = get_job(current_user, job_id).dict()
-    if job["status"] != "ready":
-        raise HTTPException(status_code=400, detail="Cannot start job that is not ready")
+    job = get_job(current_user, job_id).model_dump()
+    _transition_job(job_id, ("ready",), "starting", "start")
+
     try:
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "starting"}}
-        )
         logger.info(f"Scheduling workload for job {job_id}")
-        events.create_event(job_id, "Workload scheduling started")
+        _create_event_best_effort(job_id, "Workload scheduling started")
         k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
-        events.create_event(job_id, "Workload scheduled successfully")
-        return {"message": f"Job {job_id} started"}
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Failed to schedule workload for job {job_id}: {e}")
-        events.create_event(job_id, f"Workload scheduling failed: {e}")
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "failed"}}
+        _create_event_best_effort(job_id, "Workload scheduled successfully")
+        return models.JobCommandResponse(
+            message="Job start accepted",
+            job_id=job_id,
+            status="starting",
         )
-        raise HTTPException(status_code=500, detail="Failed to schedule workload")
+    except Exception as e:
+        logger.error(f"Failed to schedule workload for job {job_id}: {e}")
+        _set_failed_if_transition_is_current(job_id, "starting")
+        _create_event_best_effort(job_id, f"Workload scheduling failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to schedule workload") from e
+
 
 def retry_job(current_user, job_id):
-    job = get_job(current_user, job_id).dict()
-
-    if job["status"] in ["pending","declined"]:
-        raise HTTPException(status_code=400, detail="Cannot reschedule job in current state")
+    job = get_job(current_user, job_id).model_dump()
+    _transition_job(job_id, ("completed", "failed"), "retrying", "retry")
 
     try:
         logger.info(f"Rescheduling job {job_id}")
-        events.create_event(job_id, "Workload rescheduling started")
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "retrying"}}
-        )
+        _create_event_best_effort(job_id, "Workload rescheduling started")
         logger.info(f"Deleting workload for job {job_id}")
-        events.create_event(job_id, "Workload deletion started")
+        _create_event_best_effort(job_id, "Workload deletion started")
         try:
             logs.delete_logs_for_job(job_id)
         except Exception as e:  # noqa: BLE001
@@ -241,49 +287,74 @@ def retry_job(current_user, job_id):
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to delete InfluxDB metrics for {job_id}: {e}")
         k8s.delete_workload(job_id)
-        events.create_event(job_id, "Workload deleted")
+        _create_event_best_effort(job_id, "Workload deleted")
         sleep(10)
         logger.info(f"Scheduling workload for job {job_id}")
-        events.create_event(job_id, "Workload scheduling started")
+        _create_event_best_effort(job_id, "Workload scheduling started")
         k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
-        events.create_event(job_id, "Workload scheduled successfully")
-        return {"message": f"Job {job_id} retried"}
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Failed to reschedule job {job_id}: {e}")
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "failed"}}
+        _create_event_best_effort(job_id, "Workload scheduled successfully")
+        return models.JobCommandResponse(
+            message="Job retry accepted",
+            job_id=job_id,
+            status="retrying",
         )
-        events.create_event(job_id, f"Workload scheduling failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retry job")
+    except Exception as e:
+        logger.error(f"Failed to reschedule job {job_id}: {e}")
+        _set_failed_if_transition_is_current(job_id, "retrying")
+        _create_event_best_effort(job_id, f"Workload scheduling failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retry job") from e
+
 
 def stop_job(current_user, job_id):
-    job = get_job(current_user, job_id).dict()
-
-    if job["status"] != "running":
-        raise HTTPException(status_code=400, detail="Can only stop running jobs")
+    get_job(current_user, job_id)
+    _transition_job(job_id, ("running",), "stopping", "stop")
 
     try:
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "stopping"}}
-        )
         k8s.stop_workload(job_id)
-        events.create_event(job_id, "Workload stopped")
-        logger.info(f"Job {job_id} stopped gracefully")
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "completed"}}
+        _create_event_best_effort(job_id, "Workload stop requested")
+        logger.info(f"Graceful stop requested for job {job_id}")
+        return models.JobCommandResponse(
+            message="Job stop accepted",
+            job_id=job_id,
+            status="stopping",
         )
-        return {"message": f"Job {job_id} stopped"}
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.error(f"Failed to stop job {job_id}: {e}")
-        events.create_event(job_id, f"Workload stopping failed: {e}")
-        db.mongo.jobs.update_one(
-            {"_id": ObjectId(job_id)},
-            {"$set": {"status": "failed"}}
+        _set_failed_if_transition_is_current(job_id, "stopping")
+        _create_event_best_effort(job_id, f"Workload stopping failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to stop job") from e
+
+
+def get_job_verdict(current_user, job_id: str) -> models.JobVerdict:
+    job = get_job(current_user, job_id)
+
+    if job.status != "completed":
+        reason = (
+            "Job execution failed; no result verdict was evaluated."
+            if job.status == "failed"
+            else f"Job execution is not completed (status: {job.status})."
         )
-        raise HTTPException(status_code=500, detail="Failed to stop job")
+        return models.JobVerdict(
+            job_id=job_id,
+            execution_status=job.status,
+            verdict="not_evaluated",
+            samples_total=0,
+            samples_failed=0,
+            error_rate=0.0,
+            reason=reason,
+        )
+
+    result_path = Path(config.STORAGE_DIR) / job_id / "result.jtl"
+    evaluation = verdicts.evaluate_jmeter_result(result_path)
+    return models.JobVerdict(
+        job_id=job_id,
+        execution_status=job.status,
+        verdict=evaluation.verdict,
+        samples_total=evaluation.samples_total,
+        samples_failed=evaluation.samples_failed,
+        error_rate=evaluation.error_rate,
+        reason=evaluation.reason,
+    )
 
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()

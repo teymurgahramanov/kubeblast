@@ -1,20 +1,129 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Chip, Accordion, AccordionSummary, AccordionDetails,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  CircularProgress, Alert
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
 } from '@mui/material';
-import { ExpandMore, Api } from '@mui/icons-material';
+import { Api, ExpandMore, Refresh } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import axiosInstance from "../utils/axiosInstance";
-import Menuselect from "./Menuselect";
+import axiosInstance from '../utils/axiosInstance';
+import Menuselect from './Menuselect';
 
 const methodColors = {
   get: { bg: '#10b981', text: '#ffffff' },
   post: { bg: '#3b82f6', text: '#ffffff' },
   put: { bg: '#f59e0b', text: '#ffffff' },
-  delete: { bg: '#ef4444', text: '#ffffff' },
-  patch: { bg: '#8b5cf6', text: '#ffffff' }
+};
+
+const visibleOperations = [
+  { method: 'post', pathSuffix: '/jobs' },
+  { method: 'put', pathSuffix: '/jobs/{job_id}/start' },
+  { method: 'get', pathSuffix: '/jobs/{job_id}/status' },
+];
+
+const descriptionSx = {
+  color: 'var(--text-secondary)',
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+};
+
+const codeBlockSx = {
+  m: 0,
+  p: 2,
+  overflowX: 'auto',
+  borderRadius: '8px',
+  backgroundColor: 'var(--background-light)',
+  border: '1px solid var(--border-color)',
+  color: 'var(--text-primary)',
+  fontFamily: 'monospace',
+  fontSize: '0.78rem',
+  lineHeight: 1.6,
+  whiteSpace: 'pre',
+};
+
+const resolveRef = (spec, ref) => {
+  if (!ref?.startsWith('#/')) return null;
+  return ref
+    .slice(2)
+    .split('/')
+    .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+    .reduce((current, part) => current?.[part], spec);
+};
+
+const resolveObject = (spec, value) => {
+  if (!value?.$ref) return value;
+  return resolveRef(spec, value.$ref) || value;
+};
+
+const schemaType = (spec, rawSchema) => {
+  if (!rawSchema) return 'any';
+  if (rawSchema.$ref) return rawSchema.$ref.split('/').pop();
+
+  const schema = resolveObject(spec, rawSchema);
+  if (schema.type === 'array') return `array<${schemaType(spec, schema.items)}>`;
+  if (schema.format) return `${schema.type || 'string'} (${schema.format})`;
+  return schema.type || 'object';
+};
+
+const SimpleSchema = ({ spec, rawSchema }) => {
+  const schema = resolveObject(spec, rawSchema);
+  const properties = schema?.properties || {};
+  const required = new Set(schema?.required || []);
+
+  if (Object.keys(properties).length === 0) {
+    return <Typography variant="body2" sx={descriptionSx}>{schemaType(spec, rawSchema)}</Typography>;
+  }
+
+  return (
+    <Stack divider={<Divider flexItem />}>
+      {Object.entries(properties).map(([name, property]) => (
+        <Box
+          key={name}
+          sx={{
+            py: 0.75,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'minmax(140px, 1fr) 1fr auto' },
+            gap: { xs: 0.25, sm: 1 },
+            alignItems: 'center',
+          }}
+        >
+          <Typography component="code" sx={{ fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700 }}>
+            {name}
+          </Typography>
+          <Typography variant="body2" sx={descriptionSx}>{schemaType(spec, property)}</Typography>
+          <Chip
+            label={required.has(name) ? 'required' : 'optional'}
+            size="small"
+            variant="outlined"
+            color={required.has(name) ? 'error' : 'default'}
+            sx={{ justifySelf: { sm: 'end' } }}
+          />
+        </Box>
+      ))}
+    </Stack>
+  );
+};
+
+const buildCurlExample = (baseUrl, method, pathSuffix) => {
+  const url = `${baseUrl}${pathSuffix.replace('{job_id}', 'JOB_ID')}`;
+  const authorization = '-H "Authorization: Bearer YOUR_PAT"';
+
+  if (method === 'post') {
+    return `curl --fail-with-body -X POST ${authorization} -F "file=@test-plan.jmx" "${url}"`;
+  }
+  if (method === 'put') {
+    return `curl --fail-with-body -X PUT ${authorization} "${url}"`;
+  }
+  return `curl --fail-with-body ${authorization} "${url}"`;
 };
 
 const ApiDocs = () => {
@@ -22,246 +131,127 @@ const ApiDocs = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState({});
+  const [retryCount, setRetryCount] = useState(0);
+
+  const effectiveBaseUrl = useMemo(
+    () => String(axiosInstance.defaults?.baseURL || `${window.location.origin}/api/v1`).replace(/\/+$/, ''),
+    [],
+  );
 
   useEffect(() => {
+    let active = true;
+
     const fetchSpec = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const response = await axiosInstance.get('/openapi.json');
-        setSpec(response.data);
-      } catch (err) {
-        setError('Failed to load API documentation');
-        console.error(err);
+        if (active) setSpec(response.data);
+      } catch (requestError) {
+        if (active) {
+          const detail = requestError.response?.data?.detail || requestError.message;
+          setError(detail ? `Failed to load API documentation: ${detail}` : 'Failed to load API documentation.');
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
+
     fetchSpec();
-  }, []);
+    return () => { active = false; };
+  }, [retryCount]);
 
-  const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setExpanded(prev => ({ ...prev, [panel]: isExpanded }));
-  };
+  const endpoints = useMemo(() => {
+    if (!spec?.paths) return [];
 
-  const groupEndpointsByTag = () => {
-    if (!spec?.paths) return {};
-    
-    const groups = {};
-    const excludedTags = ['token','oidc','pats','metrics','jobs_extra'];
-    
-    Object.entries(spec.paths).forEach(([path, methods]) => {
-      Object.entries(methods).forEach(([method, details]) => {
-        if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
-          const tags = details.tags || ['Other'];
-          tags.forEach(tag => {
-            if (excludedTags.includes(tag.toLowerCase())) return;
-            if (!groups[tag]) groups[tag] = [];
-            groups[tag].push({
-              path,
-              method: method.toUpperCase(),
-              ...details
-            });
-          });
-        }
-      });
+    return visibleOperations.flatMap(({ method, pathSuffix }) => {
+      const entry = Object.entries(spec.paths).find(([path]) => path.endsWith(pathSuffix));
+      if (!entry) return [];
+
+      const [path, pathItem] = entry;
+      const operation = pathItem[method];
+      if (!operation) return [];
+
+      return [{
+        ...operation,
+        path,
+        pathSuffix,
+        method: method.toUpperCase(),
+        parameters: [...(pathItem.parameters || []), ...(operation.parameters || [])],
+      }];
     });
-    
-    return groups;
-  };
+  }, [spec]);
 
   const renderParameters = (parameters) => {
-    if (!parameters || parameters.length === 0) return null;
-    
+    if (!parameters?.length) return null;
+
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'var(--text-secondary)' }}>
-          Parameters
-        </Typography>
-        <TableContainer sx={{ 
-          border: '1px solid var(--border-color)', 
-          borderRadius: '8px',
-          backgroundColor: 'background.paper'
-        }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: 'var(--background-light)' }}>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Location</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Type</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Required</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Description</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {parameters.map((param, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    <code style={{ 
-                      backgroundColor: 'var(--background-light)', 
-                      padding: '2px 6px', 
-                      borderRadius: '4px',
-                      fontSize: '0.8rem'
-                    }}>
-                      {param.name}
-                    </code>
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {param.in}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem' }}>
-                    {param.schema?.type || 'any'}
-                  </TableCell>
-                  <TableCell>
-                    {param.required ? (
-                      <Chip label="required" size="small" sx={{ 
-                        fontSize: '0.65rem', 
-                        height: 20,
-                        backgroundColor: '#fecaca',
-                        color: '#991b1b'
-                      }} />
-                    ) : (
-                      <Chip label="optional" size="small" sx={{ 
-                        fontSize: '0.65rem', 
-                        height: 20,
-                        backgroundColor: 'var(--background-light)',
-                        color: 'var(--text-secondary)'
-                      }} />
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {param.description || '-'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Parameters</Typography>
+        <Paper variant="outlined" sx={{ px: 1.5 }}>
+          <Stack divider={<Divider flexItem />}>
+            {parameters.map((rawParameter) => {
+              const parameter = resolveObject(spec, rawParameter);
+              return (
+                <Box key={`${parameter.in}-${parameter.name}`} sx={{ py: 0.75, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Typography component="code" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{parameter.name}</Typography>
+                  <Typography variant="body2" sx={descriptionSx}>{schemaType(spec, parameter.schema)}</Typography>
+                  <Chip label={parameter.required ? 'required' : 'optional'} size="small" variant="outlined" />
+                </Box>
+              );
+            })}
+          </Stack>
+        </Paper>
       </Box>
     );
   };
 
-  const renderRequestBody = (requestBody) => {
-    if (!requestBody) return null;
-    
-    const content = requestBody.content;
-    const contentType = Object.keys(content)[0];
-    const schema = content[contentType]?.schema;
-    
-    if (!schema) return null;
-
-    // Resolve $ref if present
-    const resolveRef = (ref) => {
-      if (!ref || !spec) return null;
-      const parts = ref.replace('#/', '').split('/');
-      let result = spec;
-      for (const part of parts) {
-        result = result?.[part];
-      }
-      return result;
-    };
-
-    const schemaToRender = schema.$ref ? resolveRef(schema.$ref) : schema;
-    const properties = schemaToRender?.properties || {};
-    const required = schemaToRender?.required || [];
-
-    if (Object.keys(properties).length === 0) return null;
+  const renderRequestBody = (rawRequestBody) => {
+    if (!rawRequestBody) return null;
+    const requestBody = resolveObject(spec, rawRequestBody);
 
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'var(--text-secondary)' }}>
-          Request Body
-          <Chip label={contentType} size="small" sx={{ ml: 1, fontSize: '0.65rem', height: 20 }} />
-        </Typography>
-        <TableContainer sx={{ 
-          border: '1px solid var(--border-color)', 
-          borderRadius: '8px',
-          backgroundColor: 'background.paper'
-        }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: 'var(--background-light)' }}>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Field</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Type</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Required</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Description</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.entries(properties).map(([name, prop]) => (
-                <TableRow key={name}>
-                  <TableCell>
-                    <code style={{ 
-                      backgroundColor: 'var(--background-light)', 
-                      padding: '2px 6px', 
-                      borderRadius: '4px',
-                      fontSize: '0.8rem'
-                    }}>
-                      {name}
-                    </code>
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem' }}>
-                    {prop.type || (prop.$ref ? prop.$ref.split('/').pop() : 'any')}
-                    {prop.format && <span style={{ color: 'var(--text-secondary)' }}> ({prop.format})</span>}
-                  </TableCell>
-                  <TableCell>
-                    {required.includes(name) ? (
-                      <Chip label="required" size="small" sx={{ 
-                        fontSize: '0.65rem', 
-                        height: 20,
-                        backgroundColor: '#fecaca',
-                        color: '#991b1b'
-                      }} />
-                    ) : (
-                      <Chip label="optional" size="small" sx={{ 
-                        fontSize: '0.65rem', 
-                        height: 20,
-                        backgroundColor: 'var(--background-light)',
-                        color: 'var(--text-secondary)'
-                      }} />
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {prop.description || prop.title || '-'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Request</Typography>
+        {Object.entries(requestBody.content || {}).map(([contentType, mediaType]) => (
+          <Paper key={contentType} variant="outlined" sx={{ px: 1.5, py: 1 }}>
+            <Chip label={contentType} size="small" sx={{ mb: 0.5 }} />
+            <SimpleSchema spec={spec} rawSchema={mediaType.schema} />
+          </Paper>
+        ))}
       </Box>
     );
   };
 
   const renderResponses = (responses) => {
     if (!responses) return null;
-    
+
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'var(--text-secondary)' }}>
-          Responses
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {Object.entries(responses).map(([code, details]) => (
-            <Chip
-              key={code}
-              label={`${code} ${details.description || ''}`}
-              size="small"
-              sx={{
-                fontSize: '0.75rem',
-                backgroundColor: code.startsWith('2') ? '#d1fae5' : 
-                               code.startsWith('4') ? '#fef3c7' : 
-                               code.startsWith('5') ? '#fecaca' : 'var(--background-light)',
-                color: code.startsWith('2') ? '#065f46' : 
-                       code.startsWith('4') ? '#92400e' : 
-                       code.startsWith('5') ? '#991b1b' : 'var(--text-primary)'
-              }}
-            />
-          ))}
-        </Box>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Responses</Typography>
+        <Stack spacing={0.75}>
+          {Object.entries(responses).map(([code, rawResponse]) => {
+            const response = resolveObject(spec, rawResponse);
+            const successful = code.startsWith('2');
+            return (
+              <Paper key={code} variant="outlined" sx={{ px: 1.5, py: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Chip label={code} size="small" color={successful ? 'success' : 'default'} />
+                  <Typography variant="body2">{response.description || 'No description'}</Typography>
+                </Stack>
+                {successful && Object.entries(response.content || {}).map(([contentType, mediaType]) => (
+                  <Box key={contentType} sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={descriptionSx}>{contentType}</Typography>
+                    <SimpleSchema spec={spec} rawSchema={mediaType.schema} />
+                  </Box>
+                ))}
+              </Paper>
+            );
+          })}
+        </Stack>
       </Box>
     );
   };
-
-  const groups = groupEndpointsByTag();
 
   if (loading) {
     return (
@@ -273,197 +263,113 @@ const ApiDocs = () => {
 
   if (error) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ p: 4 }}>
-          <Alert severity="error">{error}</Alert>
-        </Box>
+      <Box sx={{ minHeight: '100vh', p: { xs: 2, sm: 4 } }}>
+        <Alert
+          severity="error"
+          action={<Button color="inherit" startIcon={<Refresh />} onClick={() => setRetryCount((count) => count + 1)}>Retry</Button>}
+        >
+          {error}
+        </Alert>
       </Box>
     );
   }
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{ 
-        borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'background.paper',
-        position: 'sticky',
-        top: 0,
-        zIndex: 1100,
-        px: 3,
-        py: 1,
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr',
-        alignItems: 'center'
-      }}>
+      <Box
+        sx={{
+          borderBottom: '1px solid var(--border-color)',
+          backgroundColor: 'background.paper',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1100,
+          px: { xs: 1.5, sm: 3 },
+          py: 1,
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center',
+        }}
+      >
         <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
-          <Box
-            component="img"
-            src="/logo.svg"
-            alt="KubeBlast"
-            sx={{
-              height: 36,
-              width: 'auto',
-              '&:hover': { opacity: 0.8 }
-            }}
-          />
+          <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 36, width: 'auto', '&:hover': { opacity: 0.8 } }} />
         </Link>
-        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center' }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', display: { xs: 'none', sm: 'block' } }}>
           API Documentation
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'end' }}>
-          <Menuselect />
-        </Box>
+        <Box sx={{ justifySelf: 'end' }}><Menuselect /></Box>
       </Box>
 
-      {/* Content */}
-      <Box sx={{ maxWidth: 900, mx: 'auto', width: '100%', p: 3 }}>
-        {/* API Info */}
-        <Box sx={{ 
-          mb: 4, 
-          p: 3, 
-          backgroundColor: 'background.paper', 
-          borderRadius: '12px',
-          border: '1px solid var(--border-color)'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+      <Box sx={{ maxWidth: 900, mx: 'auto', width: '100%', p: { xs: 1.5, sm: 3 } }}>
+        <Paper variant="outlined" sx={{ mb: 3, p: { xs: 2, sm: 3 }, borderRadius: '12px' }}>
+          <Stack direction="row" spacing={1.5} useFlexGap sx={{ mb: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <Api sx={{ color: 'var(--primary-color)' }} />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {spec?.info?.title || 'API'}
-            </Typography>
-            {spec?.info?.version && (
-              <Chip 
-                label={`v${spec.info.version}`} 
-                size="small" 
-                sx={{ 
-                  backgroundColor: 'var(--primary-color)', 
-                  color: '#fff',
-                  fontWeight: 600
-                }} 
-              />
-            )}
-          </Box>
-          {spec?.info?.description && (
-            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
-              {spec.info.description}
-            </Typography>
-          )}
-        </Box>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>{spec?.info?.title || 'KubeBlast API'}</Typography>
+            <Chip label={`v${spec?.info?.version || 'unknown'}`} size="small" color="primary" />
+          </Stack>
+          <Typography variant="caption" sx={{ display: 'block', color: 'var(--text-secondary)' }}>API base URL</Typography>
+          <Typography component="code" sx={{ display: 'block', fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{effectiveBaseUrl}</Typography>
+        </Paper>
 
-        {/* Endpoints by Tag */}
-        {Object.entries(groups).map(([tag, endpoints]) => (
-          <Box key={tag} sx={{ mb: 3 }}>
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
-                fontWeight: 600, 
-                mb: 1.5, 
-                textTransform: 'capitalize',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>Auto-approve must be enabled for the automation user.</strong>{' '}
+          Otherwise new jobs remain <code>pending</code> until a moderator approves them.
+        </Alert>
+
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>Job automation endpoints</Typography>
+
+        {endpoints.length === 0 && (
+          <Alert severity="info">The OpenAPI document does not contain the job automation endpoints.</Alert>
+        )}
+
+        {endpoints.map((endpoint, index) => {
+          const panelId = `${endpoint.method}-${endpoint.path}-${index}`;
+          const methodStyle = methodColors[endpoint.method.toLowerCase()];
+          return (
+            <Accordion
+              key={panelId}
+              expanded={expanded[panelId] || false}
+              onChange={(_event, isExpanded) => setExpanded((previous) => ({ ...previous, [panelId]: isExpanded }))}
+              sx={{
+                mb: 1,
+                backgroundColor: 'background.paper',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px !important',
+                '&:before': { display: 'none' },
+                boxShadow: 'none',
               }}
             >
-              {tag}
-              <Chip 
-                label={endpoints.length} 
-                size="small" 
-                sx={{ 
-                  fontSize: '0.7rem', 
-                  height: 20,
-                  backgroundColor: 'var(--background-light)',
-                  color: 'var(--text-secondary)'
-                }} 
-              />
-            </Typography>
-            
-            {endpoints.map((endpoint, idx) => {
-              const panelId = `${tag}-${idx}`;
-              const methodStyle = methodColors[endpoint.method.toLowerCase()] || { bg: '#6b7280', text: '#fff' };
-              
-              return (
-                <Accordion 
-                  key={panelId}
-                  expanded={expanded[panelId] || false}
-                  onChange={handleAccordionChange(panelId)}
-                  sx={{
-                    mb: 1,
-                    backgroundColor: 'background.paper',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px !important',
-                    '&:before': { display: 'none' },
-                    boxShadow: 'none',
-                    '&.Mui-expanded': {
-                      margin: '0 0 8px 0'
-                    }
-                  }}
-                >
-                  <AccordionSummary 
-                    expandIcon={<ExpandMore />}
-                    sx={{
-                      '& .MuiAccordionSummary-content': {
-                        alignItems: 'center',
-                        gap: 2
-                      }
-                    }}
-                  >
-                    <Chip 
-                      label={endpoint.method}
-                      size="small"
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: '0.7rem',
-                        minWidth: 60,
-                        backgroundColor: methodStyle.bg,
-                        color: methodStyle.text
-                      }}
-                    />
-                    <Typography 
-                      sx={{ 
-                        fontFamily: 'monospace', 
-                        fontSize: '0.9rem',
-                        color: 'var(--text-primary)'
-                      }}
-                    >
-                      {endpoint.path}
-                    </Typography>
-                    {endpoint.summary && (
-                      <Typography 
-                        sx={{ 
-                          fontSize: '0.85rem', 
-                          color: 'var(--text-secondary)',
-                          ml: 'auto',
-                          display: { xs: 'none', md: 'block' }
-                        }}
-                      >
-                        {endpoint.summary}
-                      </Typography>
-                    )}
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ pt: 0 }}>
-                    {endpoint.description && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ color: 'var(--text-secondary)', mb: 2 }}
-                      >
-                        {endpoint.description}
-                      </Typography>
-                    )}
-                    
-                    {renderParameters(endpoint.parameters)}
-                    {renderRequestBody(endpoint.requestBody)}
-                    {renderResponses(endpoint.responses)}
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })}
-          </Box>
-        ))}
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minWidth: 0 }}>
+                  <Chip
+                    label={endpoint.method}
+                    size="small"
+                    sx={{ fontWeight: 700, minWidth: 60, backgroundColor: methodStyle.bg, color: methodStyle.text }}
+                  />
+                  <Typography sx={{ fontFamily: 'monospace', fontSize: '0.9rem', overflowWrap: 'anywhere' }}>
+                    {endpoint.path}
+                  </Typography>
+                </Stack>
+              </AccordionSummary>
+              <AccordionDetails sx={{ pt: 0 }}>
+                {endpoint.summary && <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{endpoint.summary}</Typography>}
+                {endpoint.description && <Typography variant="body2" sx={{ ...descriptionSx, mb: 2 }}>{endpoint.description}</Typography>}
+
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>curl example</Typography>
+                <Box component="pre" sx={{ ...codeBlockSx, mb: 2 }}>
+                  {buildCurlExample(effectiveBaseUrl, endpoint.method.toLowerCase(), endpoint.pathSuffix)}
+                </Box>
+
+                <Divider />
+                {renderParameters(endpoint.parameters)}
+                {renderRequestBody(endpoint.requestBody)}
+                {renderResponses(endpoint.responses)}
+              </AccordionDetails>
+            </Accordion>
+          );
+        })}
       </Box>
     </Box>
   );
 };
 
 export default ApiDocs;
-

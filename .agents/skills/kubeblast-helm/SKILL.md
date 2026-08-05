@@ -7,6 +7,17 @@ description: Modify or review Kubeblast's Helm chart, Kubernetes manifests, RBAC
 
 Use this skill for `helm/`, deployment-facing parts of `Dockerfile`, and `skaffold.yaml`.
 
+## Simplicity first
+
+- Make the smallest chart or deployment change that satisfies the request. Avoid unrelated cleanup and speculative configurability.
+- Prefer existing `.Values.env`, `envFromSecret`, helpers, labels, and template patterns over new values or template abstractions.
+- Do not add a dedicated value, helper, manifest, dependency, hook, init container, or controller when existing chart mechanisms can express the requirement clearly.
+- Keep templates explicit and readable. Avoid deeply nested conditionals, clever templating, and duplicated configuration surfaces.
+- Preserve defaults and upgrade behavior unless changing them is required. Treat every new option as long-term maintenance cost.
+- Validate only the relevant conditionals plus the normal chart path; do not expand the test matrix without a concrete risk.
+- Security, upgrade safety, and correct Kubernetes behavior take priority, but use the simplest solution that preserves them.
+- Stop when rendering and linting pass for the requested behavior. Remove obsolete template branches or values introduced by the change.
+
 ## Understand the deployment shape
 
 - The main chart is an application chart in `helm/Chart.yaml`.

@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.get(
-    "/logs/{job_id}",
+    "/jobs/{job_id}/logs",
     response_class=StreamingResponse,
     responses={
         200: {
@@ -23,14 +23,14 @@ router = APIRouter(prefix="/api/v1")
     summary="Stream Kubernetes pod logs",
     description="""
     ### How to Use
-    - Pod log lines are **stored in MongoDB** and **streamed** using Server-Sent Events (SSE), same pattern as `/events/{job_id}`.
+    - Pod log lines are **stored in MongoDB** and **streamed** using Server-Sent Events (SSE), same pattern as `/jobs/{job_id}/events`.
     - Each `data:` line is a JSON object: `{"job_id", "ts", "msg"}` where `msg` is one log line.
     - You **must pass a Bearer token** in the `Authorization` header.
     - The response **MUST be read as a stream**; it stays open while the job exists.
 
     ### Example `curl` Request:
     ```
-    curl -N -H "Authorization: Bearer <your_token>" http://localhost:8000/api/v1/logs/<job_id>
+    curl -N -H "Authorization: Bearer <your_token>" http://localhost:8000/api/v1/jobs/<job_id>/logs
     ```
     """,
 )

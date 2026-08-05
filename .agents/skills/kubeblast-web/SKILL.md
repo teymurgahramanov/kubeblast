@@ -7,6 +7,18 @@ description: Implement or debug Kubeblast's React web UI under web/src, includin
 
 Use this skill for the Vite React frontend in `web/`.
 
+## Simplicity first
+
+- Build the smallest UI that clearly satisfies the request. Prefer a short, direct screen over a generic or highly configurable component.
+- Reuse existing components and patterns before adding helpers, hooks, state, abstractions, dependencies, or design-system layers.
+- Keep state minimal and local. Do not add state for values that can be derived directly, and avoid effects when normal rendering or event handling is enough.
+- Do not create generic renderers, schema engines, workflow builders, or reusable frameworks for a single narrow use case.
+- Show only information and controls users need for the requested task. Hide or remove secondary detail when it makes the primary workflow harder to understand.
+- Prefer straightforward JSX and explicit conditions over clever composition or premature deduplication.
+- Add focused tests for visible behavior; avoid oversized fixtures and mocks when a small representative case is enough.
+- Accessibility, error handling, responsiveness, and security still matter, but implement them with the least complexity possible.
+- Stop when the requested behavior works and validation passes. Remove imports, state, helpers, and UI made obsolete by simplification.
+
 ## Follow existing architecture
 
 - Write JavaScript and JSX, not TypeScript, unless the user explicitly requests a migration.

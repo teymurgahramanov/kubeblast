@@ -8,6 +8,16 @@ disable-model-invocation: true
 
 Use this skill only after an explicit release request. Release operations publish artifacts and mutate remote repositories.
 
+## Simplicity first
+
+- Follow the existing release workflow with the fewest manual steps. Do not redesign or add release automation unless explicitly requested.
+- Avoid duplicating workflow-owned version bumps, packaging, tagging, publishing, or release-note generation.
+- Change only release content and metadata required for the requested version. Do not bundle unrelated cleanup.
+- Keep release notes concise, user-focused, and limited to verified changes. Do not invent migration guidance or broad narratives.
+- Run the smallest validation set that covers the files changed, then the required release gates. Do not create extra scripts or tooling for a one-time release.
+- Prefer an explicit checklist over new abstractions. Safety and reproducibility take priority, but use the simplest process that preserves them.
+- Stop after the requested preparation or approved publication step is complete; do not continue to later remote mutations without explicit approval.
+
 ## Safety gate
 
 - Never dispatch `.github/workflows/release.yaml`, commit, push, create a tag, or publish an image/chart without explicit user approval for that action.

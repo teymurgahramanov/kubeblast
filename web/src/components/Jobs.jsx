@@ -174,7 +174,7 @@ const Jobs = () => {
 
   const approveJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=true`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/${job_id}/approve?approved=true`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'ready' } : j));
       handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
@@ -182,7 +182,7 @@ const Jobs = () => {
 
   const declineJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${job_id}?approved=false`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/${job_id}/approve?approved=false`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'declined' } : j));
       handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
@@ -197,21 +197,21 @@ const Jobs = () => {
 
   const rescheduleJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/retry/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/${job_id}/retry`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'retrying' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
   const startJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/start/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/${job_id}/start`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'running' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
   const stopJob = async (job_id) => {
     try {
-      await axiosInstance.put(`/jobs/stop/${job_id}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
+      await axiosInstance.put(`/jobs/${job_id}/stop`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } });
       setJobs(jobs.map(j => j.id === job_id ? { ...j, status: 'stopping' } : j)); handleMenuClose();
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };

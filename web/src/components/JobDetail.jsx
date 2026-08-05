@@ -204,35 +204,35 @@ const JobDetail = () => {
   /* ── Job actions ───────────────────────────────────────────── */
   const approveJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${id}?approved=true`, {});
+      await axiosInstance.put(`/jobs/${id}/approve?approved=true`, {});
       setJob((p) => p?.id === id ? { ...p, status: 'ready' } : p);
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
   const declineJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/approve/${id}?approved=false`, {});
+      await axiosInstance.put(`/jobs/${id}/approve?approved=false`, {});
       setJob((p) => p?.id === id ? { ...p, status: 'declined' } : p);
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
   const startJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/start/${id}`, {});
+      await axiosInstance.put(`/jobs/${id}/start`, {});
       setJob((p) => p?.id === id ? { ...p, status: 'running' } : p);
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
   const stopJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/stop/${id}`, {});
+      await axiosInstance.put(`/jobs/${id}/stop`, {});
       setJob((p) => p?.id === id ? { ...p, status: 'stopping' } : p);
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
 
   const rescheduleJob = async (id) => {
     try {
-      await axiosInstance.put(`/jobs/retry/${id}`, {});
+      await axiosInstance.put(`/jobs/${id}/retry`, {});
       setJob((p) => p?.id === id ? { ...p, status: 'retrying' } : p);
     } catch (err) { setError(err?.response?.data?.detail || err?.message); }
   };
@@ -290,7 +290,7 @@ const JobDetail = () => {
       const controller = new AbortController();
       logsAbortRef.current = controller;
       setLogsStreaming(true);
-      const response = await fetch(`${axiosInstance.defaults.baseURL}/logs/${job_id}`, {
+      const response = await fetch(`${axiosInstance.defaults.baseURL}/jobs/${job_id}/logs`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
         signal: controller.signal,
       });
@@ -334,7 +334,7 @@ const JobDetail = () => {
       const controller = new AbortController();
       eventsAbortRef.current = controller;
       setEventsStreaming(true);
-      const response = await fetch(`${axiosInstance.defaults.baseURL}/events/${job_id}`, {
+      const response = await fetch(`${axiosInstance.defaults.baseURL}/jobs/${job_id}/events`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
         signal: controller.signal,
       });
@@ -377,7 +377,7 @@ const JobDetail = () => {
       if (!job_id) { setError('No job available.'); return; }
       if (!force && planLoadedForJobIdRef.current === job_id) return;
 
-      const response = await axiosInstance.get(`/files/${job_id}`, {
+      const response = await axiosInstance.get(`/jobs/${job_id}/files`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, Accept: 'application/xml' },
         params: { type: 'plan' }, responseType: 'text',
       });
@@ -413,7 +413,7 @@ const JobDetail = () => {
   const downloadResult = async (job_id) => {
     try {
       if (!job_id) { setError('No job available.'); return; }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
+      const response = await axiosInstance.get(`/jobs/${job_id}/files`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
         params: { type: 'result' }, responseType: 'blob',
       });
@@ -432,7 +432,7 @@ const JobDetail = () => {
   const downloadReport = async (job_id) => {
     try {
       if (!job_id) { setError('No job available.'); return; }
-      const response = await axiosInstance.get(`/files/${job_id}`, {
+      const response = await axiosInstance.get(`/jobs/${job_id}/files`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
         params: { type: 'report' }, responseType: 'blob',
       });
