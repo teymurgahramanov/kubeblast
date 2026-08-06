@@ -4,12 +4,12 @@ import {
   Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip,
   TextField, Select, FormControl, Pagination,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  LinearProgress, Skeleton, Divider, InputAdornment,
+  Skeleton, Divider, InputAdornment,
 } from '@mui/material';
 import {
   Delete, MoreVert, CheckCircle, Cancel,
   Autorenew, Add, PlayArrow, ListAlt, Stop,
-  Search, ViewModule, ViewList, Memory, DeveloperBoard, Dns,
+  Search, ViewModule, ViewList,
   AccessTime, FiberManualRecord,
 } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
@@ -26,14 +26,12 @@ const STATUS_CHIPS = [
   { value: 'failed',    label: 'Failed',    color: '#7f1d1d', activeColor: '#dc2626', inactiveBg: '#fee2e2' },
 ];
 
-const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor }) => (
+const CapacityValueCard = ({ label, value, minimum, maximum }) => (
   <Box sx={{
     p: 1.5,
     border: '1px solid var(--border-color)',
     borderRadius: '18px',
     backgroundColor: 'background.paper',
-    transition: 'transform 0.22s ease, box-shadow 0.22s ease',
-    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 14px 32px rgba(0,0,0,0.10)' },
     cursor: 'default',
     overflow: 'hidden',
     position: 'relative',
@@ -41,39 +39,102 @@ const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor
     aspectRatio: '1 / 1',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
+    alignItems: 'stretch',
   }}>
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, mb: (sub || progress !== undefined) ? 1 : 0, minWidth: 0 }}>
-      <Box sx={{ width: 38, height: 38, borderRadius: '12px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        {icon}
+    <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.58rem', whiteSpace: 'nowrap' }}>
+      {label}
+    </Typography>
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ width: 'min(92%, 132px)', aspectRatio: '120 / 68', display: 'grid', placeItems: 'center' }}>
+        {minimum !== undefined && maximum !== undefined ? (
+          <Box sx={{ width: 'fit-content', minWidth: 72, mx: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1.25 }}>
+            <Box>
+              <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.65rem', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                Min
+              </Typography>
+              <Typography sx={{ mt: 0.25, fontWeight: 800, color: 'primary.main', fontSize: '1.55rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {minimum}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.65rem', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                Max
+              </Typography>
+              <Typography sx={{ mt: 0.25, fontWeight: 800, color: 'text.primary', fontSize: '1.55rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {maximum}
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Typography sx={{ fontWeight: 800, color: 'text.primary', fontSize: '3rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {value}
+          </Typography>
+        )}
       </Box>
-      <Box sx={{ minWidth: 0, width: '100%' }}>
-        <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.58rem', display: 'block', mb: 0.3, whiteSpace: 'nowrap' }}>
-          {label}
+    </Box>
+  </Box>
+);
+
+const CapacityGaugeCard = ({ label, used, total, unit, percent, color }) => {
+  const clamped = Math.min(100, Math.max(0, percent || 0));
+
+  return (
+    <Box sx={{
+      p: 1.5,
+      border: '1px solid var(--border-color)',
+      borderRadius: '18px',
+      backgroundColor: 'background.paper',
+      cursor: 'default',
+      overflow: 'hidden',
+      position: 'relative',
+      width: '100%',
+      aspectRatio: '1 / 1',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      alignItems: 'stretch',
+    }}>
+      <Typography sx={{ color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.58rem', whiteSpace: 'nowrap' }}>
+        {label}
+      </Typography>
+
+      <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ position: 'relative', width: 'min(92%, 132px)', aspectRatio: '120 / 68' }}>
+          <Box
+            component="svg"
+            viewBox="0 0 120 68"
+            role="img"
+            aria-label={`${label} ${clamped.toFixed(0)} percent used`}
+            sx={{ width: '100%', display: 'block', overflow: 'visible' }}
+          >
+            <path d="M 10 60 A 50 50 0 0 1 110 60" pathLength="100" fill="none" stroke="var(--border-color)" strokeWidth="12" strokeLinecap="round" />
+            <path
+              d="M 10 60 A 50 50 0 0 1 110 60"
+              pathLength="100"
+              fill="none"
+              stroke={color}
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={`${clamped} 100`}
+            />
+          </Box>
+          <Typography sx={{ position: 'absolute', left: '50%', bottom: 3, transform: 'translateX(-50%)', fontWeight: 800, color: 'text.primary', fontSize: '1rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {clamped.toFixed(0)}%
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+        <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+          {used} {unit}
         </Typography>
-        <Typography sx={{ fontWeight: 700, lineHeight: 1.15, color: 'text.primary', fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {value}
+        <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+          {total} {unit}
         </Typography>
       </Box>
     </Box>
-    {sub && (
-      <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block', mb: progress !== undefined ? 0.8 : 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {sub}
-      </Typography>
-    )}
-    {progress !== undefined && (
-      <LinearProgress
-        variant="determinate"
-        value={Math.min(100, Math.max(0, progress))}
-        sx={{
-          height: 6, borderRadius: '3px',
-          bgcolor: 'var(--border-color)',
-          '& .MuiLinearProgress-bar': { borderRadius: '3px', bgcolor: progressColor || 'var(--primary-color)' },
-        }}
-      />
-    )}
-  </Box>
-);
+  );
+};
 
 const Jobs = () => {
   const navigate = useNavigate();
@@ -318,34 +379,53 @@ const Jobs = () => {
               <>
                 <Tooltip title="Available nodes matching selector/tolerations" arrow>
                   <span style={{ display: 'block', height: '100%' }}>
-                    <CapacityCard
-                      icon={<Dns sx={{ fontSize: 20, color: '#fff' }} />}
-                      iconBg="linear-gradient(135deg, #10b981, #34d399)"
-                      label="Nodes"
+                    <CapacityValueCard
+                      label="Nodes Available"
                       value={resources.nodesMatching ?? resources.nodesTotal ?? 0}
-                      sub="Matching available"
                     />
                   </span>
                 </Tooltip>
 
                 {(() => {
-                  const avail = formatCores(resources.remaining?.cpu_m || 0);
-                  const total = formatCores(resources.capacity?.cpu_m || 0);
-                  const pct = resources.capacity?.cpu_m
-                    ? ((resources.capacity.cpu_m - (resources.remaining?.cpu_m || 0)) / resources.capacity.cpu_m) * 100
-                    : 0;
+                  const totalValue = resources.capacity?.cpu_m || 0;
+                  const usedValue = Math.min(totalValue, Math.max(0, totalValue - (resources.remaining?.cpu_m || 0)));
+                  const total = formatCores(totalValue);
+                  const used = formatCores(usedValue);
+                  const pct = totalValue ? (usedValue / totalValue) * 100 : 0;
                   const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#326CE5';
                   return (
-                    <Tooltip title="Available vs total CPU across matching available nodes" arrow>
+                    <Tooltip title="Used CPU out of total capacity across matching available nodes" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
-                        <CapacityCard
-                          icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
-                          iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#326CE5,#7aa2f7'})`}
-                          label="CPU"
-                          value={`${avail} / ${total} cores`}
-                          sub="Available / Total"
-                          progress={pct}
-                          progressColor={color}
+                        <CapacityGaugeCard
+                          label="CPU Pool"
+                          used={used}
+                          total={total}
+                          unit="C"
+                          percent={pct}
+                          color={color}
+                        />
+                      </span>
+                    </Tooltip>
+                  );
+                })()}
+
+                {(() => {
+                  const totalValue = resources.capacity?.memory_bytes || 0;
+                  const usedValue = Math.min(totalValue, Math.max(0, totalValue - (resources.remaining?.memory_bytes || 0)));
+                  const total = formatGiB(totalValue);
+                  const used = formatGiB(usedValue);
+                  const pct = totalValue ? (usedValue / totalValue) * 100 : 0;
+                  const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#10b981';
+                  return (
+                    <Tooltip title="Used memory out of total capacity across matching available nodes" arrow>
+                      <span style={{ display: 'block', height: '100%' }}>
+                        <CapacityGaugeCard
+                          label="Memory Pool"
+                          used={used}
+                          total={total}
+                          unit="GiB"
+                          percent={pct}
+                          color={color}
                         />
                       </span>
                     </Tooltip>
@@ -359,12 +439,10 @@ const Jobs = () => {
                   return (
                     <Tooltip title="Default CPU requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
-                        <CapacityCard
-                          icon={<DeveloperBoard sx={{ fontSize: 20, color: '#fff' }} />}
-                          iconBg="linear-gradient(135deg, #8b5cf6, #a78bfa)"
-                          label="CPU Quota"
-                          value={`${cpuReq} / ${cpuLim}`}
-                          sub="Min / Max"
+                        <CapacityValueCard
+                          label="Job CPU"
+                          minimum={cpuReq}
+                          maximum={cpuLim}
                         />
                       </span>
                     </Tooltip>
@@ -378,36 +456,10 @@ const Jobs = () => {
                   return (
                     <Tooltip title="Default RAM requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
-                        <CapacityCard
-                          icon={<Memory sx={{ fontSize: 20, color: '#fff' }} />}
-                          iconBg="linear-gradient(135deg, #ec4899, #f472b6)"
-                          label="RAM Quota"
-                          value={`${memReq} / ${memLim}`}
-                          sub="Min / Max"
-                        />
-                      </span>
-                    </Tooltip>
-                  );
-                })()}
-
-                {(() => {
-                  const avail = formatGiB(resources.remaining?.memory_bytes || 0);
-                  const total = formatGiB(resources.capacity?.memory_bytes || 0);
-                  const pct = resources.capacity?.memory_bytes
-                    ? ((resources.capacity.memory_bytes - (resources.remaining?.memory_bytes || 0)) / resources.capacity.memory_bytes) * 100
-                    : 0;
-                  const color = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#10b981';
-                  return (
-                    <Tooltip title="Available vs total RAM across matching available nodes" arrow>
-                      <span style={{ display: 'block', height: '100%' }}>
-                        <CapacityCard
-                          icon={<Memory sx={{ fontSize: 20, color: '#fff' }} />}
-                          iconBg={`linear-gradient(135deg, ${pct > 85 ? '#ef4444,#f87171' : pct > 65 ? '#f59e0b,#fbbf24' : '#10b981,#34d399'})`}
-                          label="RAM"
-                          value={`${avail} / ${total} GiB`}
-                          sub="Available / Total"
-                          progress={pct}
-                          progressColor={color}
+                        <CapacityValueCard
+                          label="Job Memory"
+                          minimum={memReq}
+                          maximum={memLim}
                         />
                       </span>
                     </Tooltip>
