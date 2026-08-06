@@ -2,14 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip,
-  TextField, Select, FormControl, Pagination,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TextField, Select, FormControl,
   Skeleton, Divider, InputAdornment,
 } from '@mui/material';
 import {
   Delete, MoreVert, CheckCircle, Cancel,
   Autorenew, Add, PlayArrow, ListAlt, Stop,
-  Search, ViewModule, ViewList,
+  Search, SwapVert,
   AccessTime, FiberManualRecord,
 } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
@@ -152,7 +151,6 @@ const Jobs = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc');
-  const [viewMode, setViewMode] = useState('grid');
   const [goToPage, setGoToPage] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const userRole = getUserRole();
@@ -437,7 +435,7 @@ const Jobs = () => {
                   const cpuReq = formatCpuQuota(jr.requests);
                   const cpuLim = formatCpuQuota(jr.limits);
                   return (
-                    <Tooltip title="Default CPU requests/limits per job" arrow>
+                    <Tooltip title="CPU requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
                         <CapacityValueCard
                           label="Job CPU"
@@ -454,7 +452,7 @@ const Jobs = () => {
                   const memReq = formatMemoryQuota(jr.requests);
                   const memLim = formatMemoryQuota(jr.limits);
                   return (
-                    <Tooltip title="Default RAM requests/limits per job" arrow>
+                    <Tooltip title="Memory requests/limits per job" arrow>
                       <span style={{ display: 'block', height: '100%' }}>
                         <CapacityValueCard
                           label="Job Memory"
@@ -471,19 +469,20 @@ const Jobs = () => {
         </Box>
 
         <Box sx={{
-          mb: 2,
+          mb: 3,
+          px: 2,
+          py: 1.5,
           backgroundColor: 'background.paper',
-          borderRadius: '16px',
           border: '1px solid var(--border-color)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-          px: 2.5, pt: 2, pb: 1.5,
+          borderRadius: '16px',
+          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
         }}>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: { xs: 'wrap', lg: 'nowrap' } }}>
 
             <TextField
               size="small"
-              placeholder="Search by name, owner…"
+              placeholder="Search jobs…"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               slotProps={{
@@ -496,16 +495,75 @@ const Jobs = () => {
                 },
               }}
               sx={{
-                flex: '1 1 200px', maxWidth: 320,
-                '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: '0.875rem' },
+                flex: '1 1 320px', minWidth: 240,
+                '& .MuiOutlinedInput-root': {
+                  height: 46,
+                  borderRadius: '10px',
+                  fontSize: '0.9rem',
+                  backgroundColor: 'background.paper',
+                  '& fieldset': { borderColor: 'var(--border-color)' },
+                  '&:hover fieldset': { borderColor: 'text.disabled' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--primary-color)' },
+                },
               }}
             />
 
-            <FormControl size="small" sx={{ minWidth: 155, flexShrink: 0 }}>
+            <FormControl size="small" sx={{ width: 190, flexShrink: 0 }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                renderValue={(value) => {
+                  const selected = STATUS_CHIPS.find(chip => chip.value === value) || STATUS_CHIPS[0];
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {value === 'all' ? (
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 5px)', gap: '3px' }}>
+                          {STATUS_CHIPS.slice(1, 5).map(chip => (
+                            <Box key={chip.value} sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: chip.activeColor }} />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: selected.activeColor }} />
+                      )}
+                      <Typography sx={{ fontSize: '0.86rem', color: 'text.primary' }}>
+                        {value === 'all' ? 'All Statuses' : selected.label}
+                      </Typography>
+                    </Box>
+                  );
+                }}
+                sx={{
+                  height: 46,
+                  borderRadius: '10px',
+                  backgroundColor: 'background.paper',
+                  '& fieldset': { borderColor: 'var(--border-color)' },
+                  '&:hover fieldset': { borderColor: 'text.disabled' },
+                }}
+              >
+                {STATUS_CHIPS.map(chip => (
+                  <MenuItem key={chip.value} value={chip.value}>
+                    {chip.value === 'all' ? 'All Statuses' : chip.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ width: 180, flexShrink: 0 }}>
               <Select
                 value={sortBy}
+                startAdornment={(
+                  <InputAdornment position="start">
+                    <SwapVert sx={{ fontSize: 19, color: 'var(--text-secondary)' }} />
+                  </InputAdornment>
+                )}
                 onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-                sx={{ fontSize: '0.875rem', borderRadius: '10px' }}
+                sx={{
+                  height: 46,
+                  fontSize: '0.86rem',
+                  borderRadius: '10px',
+                  backgroundColor: 'background.paper',
+                  '& fieldset': { borderColor: 'var(--border-color)' },
+                  '&:hover fieldset': { borderColor: 'text.disabled' },
+                }}
               >
                 <MenuItem value="created_desc">Newest first</MenuItem>
                 <MenuItem value="created_asc">Oldest first</MenuItem>
@@ -513,243 +571,36 @@ const Jobs = () => {
             </FormControl>
 
 
-
-            <Box sx={{ flex: 1 }} />
-
-            {totalJobs > 0 && (
-              <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {totalJobs > pageSize
-                  ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalJobs)} of `
-                  : ''}
-                {totalJobs} job{totalJobs !== 1 ? 's' : ''}
-              </Typography>
-            )}
+            <Box sx={{ width: '1px', height: 34, bgcolor: 'var(--border-color)', flexShrink: 0, display: { xs: 'none', lg: 'block' } }} />
 
             <Button
               variant="contained"
               startIcon={<Add />}
               onClick={handleAddJob}
               sx={{
-                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
                 boxShadow: 'none',
+                minHeight: 46,
                 borderRadius: '10px',
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.875rem',
-                px: 2.2,
+                fontSize: '0.88rem',
+                px: 2,
                 flexShrink: 0,
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)',
-                },
               }}
             >
               New Job
             </Button>
           </Box>
-
-          <Box sx={{ height: 1, bgcolor: 'var(--border-color)', mx: -0.5, mb: 1.5 }} />
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-
-            {STATUS_CHIPS.map((chip) => {
-              const active = statusFilter === chip.value;
-              return (
-                <Box
-                  key={chip.value}
-                  onClick={() => { setStatusFilter(chip.value); setPage(1); }}
-                  sx={{
-                    px: 1.5, py: 0.4,
-                    borderRadius: '20px',
-                    fontSize: '0.76rem', fontWeight: 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    transition: 'all 0.15s',
-                    border: '1.5px solid',
-                    borderColor: active ? chip.activeColor : 'var(--border-color)',
-                    bgcolor: active ? chip.activeColor : chip.inactiveBg,
-                    color: active ? '#fff' : chip.color,
-                    '&:hover': { borderColor: chip.activeColor, opacity: 0.88 },
-                  }}
-                >
-                  {chip.label}
-                </Box>
-              );
-            })}
-
-            <Box sx={{ flex: 1, minWidth: 8 }} />
-
-            <Box sx={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
-              {[
-                { mode: 'grid',  Icon: ViewModule, label: 'Grid'  },
-                { mode: 'table', Icon: ViewList,   label: 'Table' },
-              ].map(({ mode, Icon, label }) => (
-                <Tooltip title={`${label} view`} key={mode}>
-                  <IconButton
-                    onClick={() => setViewMode(mode)}
-                    size="small"
-                    sx={{
-                      borderRadius: 0, px: 1.4, py: 0.75,
-                      bgcolor: viewMode === mode ? 'var(--primary-color)' : 'transparent',
-                      color:   viewMode === mode ? '#fff' : 'var(--text-secondary)',
-                      transition: 'all 0.15s',
-                      '&:hover': { bgcolor: viewMode === mode ? 'var(--primary-color)' : 'var(--background-light)' },
-                    }}
-                  >
-                    <Icon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              ))}
-            </Box>
-
-            <FormControl size="small" sx={{ minWidth: 100, flexShrink: 0 }}>
-              <Select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value) || 1); setPage(1); }}
-                sx={{ fontSize: '0.82rem', borderRadius: '8px' }}
-              >
-                {[5, 10, 20, 50].map(n => <MenuItem key={n} value={n}>{n} / page</MenuItem>)}
-              </Select>
-            </FormControl>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, flexShrink: 0 }}>
-              <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                Go to:
-              </Typography>
-              <TextField
-                size="small"
-                type="number"
-                value={goToPage}
-                onChange={(e) => setGoToPage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const num = parseInt(goToPage);
-                    const maxPage = Math.max(1, Math.ceil(totalJobs / pageSize));
-                    if (num >= 1 && num <= maxPage) setPage(num);
-                    setGoToPage('');
-                  }
-                }}
-                placeholder={String(page)}
-                sx={{ width: 58 }}
-                slotProps={{
-                  htmlInput: {
-                    min: 1,
-                    max: Math.max(1, Math.ceil(totalJobs / pageSize)),
-                    style: { textAlign: 'center', fontSize: '0.82rem', padding: '5px 6px' },
-                  },
-                }}
-              />
-              <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                / {Math.max(1, Math.ceil(totalJobs / pageSize))}
-              </Typography>
-            </Box>
-
-            {totalJobs > pageSize && (
-              <Pagination
-                count={Math.max(1, Math.ceil(totalJobs / pageSize))}
-                page={page}
-                onChange={(_e, v) => setPage(v)}
-                color="primary"
-                shape="rounded"
-                size="small"
-                sx={{ flexShrink: 0, '& .MuiPaginationItem-root': { fontWeight: 500 } }}
-              />
-            )}
-          </Box>
-
         </Box>
+
 
         <ErrorMessage message={error} />
 
         {jobs.length === 0 ? (
           <EmptyState />
-        ) : viewMode === 'table' ? (
-
-          <Box sx={{
-            backgroundColor: 'background.paper', borderRadius: '16px',
-            border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            overflow: 'hidden',
-          }}>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    {['#', 'Job Name', 'Status', 'Created At', ''].map((h, i) => (
-                      <TableCell
-                        key={i}
-                        align={i === 5 ? 'right' : 'left'}
-                        sx={{
-                          bgcolor: 'var(--background-light)',
-                          fontWeight: 700, fontSize: '0.7rem',
-                          textTransform: 'uppercase', letterSpacing: '0.07em',
-                          color: 'var(--text-secondary)',
-                          borderBottom: '2px solid var(--border-color)',
-                          py: 1.5, px: 2, whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {h}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {visibleRows.map((job, idx) => {
-                    const sc = getStatusColor(job.status);
-                    return (
-                      <TableRow
-                        key={job.id}
-                        onClick={() => navigate(`/jobs/${job.id}`)}
-                        sx={{
-                          cursor: 'pointer',
-                          transition: 'background 0.1s',
-                          '&:hover': { bgcolor: 'var(--background-light)' },
-                          '&:last-child td': { border: 0 },
-                        }}
-                      >
-                        <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.82rem', width: 52, py: 1.5, px: 2 }}>
-                          {(page - 1) * pageSize + idx + 1}
-                        </TableCell>
-                        <TableCell sx={{ py: 1.5, px: 2, maxWidth: 240 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{job.job_name}</Typography>
-                          {job.description && (
-                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block', mt: 0.2 }}>
-                              {job.description}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ py: 1.5, px: 2 }}>
-                          <Box sx={{
-                            display: 'inline-flex', alignItems: 'center', gap: 0.5,
-                            px: 1.4, py: 0.35,
-                            bgcolor: sc.bg, color: sc.text,
-                            borderRadius: '20px', fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap',
-                          }}>
-                            <FiberManualRecord sx={{ fontSize: '0.5rem' }} />
-                            {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.82rem', py: 1.5, px: 2, whiteSpace: 'nowrap' }}>
-                          {formatDate(job.created_at)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ py: 1.5, px: 2 }} onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, job.id); }}
-                            sx={{ '&:hover': { color: 'var(--primary-color)' } }}
-                          >
-                            <MoreVert fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-
         ) : (
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: 2 }}>
+          <>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: 2 }}>
             {visibleRows.map((job) => {
               const sc = getStatusColor(job.status);
               return (
@@ -814,7 +665,75 @@ const Jobs = () => {
                 </Box>
               );
             })}
-          </Box>
+            </Box>
+
+            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+              <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                {totalJobs} job{totalJobs !== 1 ? 's' : ''}
+              </Typography>
+
+              {totalJobs > 10 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                    <FormControl size="small" sx={{ width: 68 }}>
+                      <Select
+                        value={pageSize}
+                        onChange={(e) => { setPageSize(Number(e.target.value) || 10); setPage(1); }}
+                        sx={{
+                          width: 68,
+                          height: 32,
+                          fontSize: '0.78rem',
+                          borderRadius: '9px',
+                          bgcolor: 'action.hover',
+                          '& fieldset': { border: 0 },
+                          '& .MuiSelect-select': { textAlign: 'center', py: 0.5, pl: 1, pr: 3 },
+                        }}
+                      >
+                        {[10, 50, 100].map(n => <MenuItem key={n} value={n}>{n}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={goToPage}
+                      onChange={(e) => setGoToPage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const num = parseInt(goToPage);
+                          const maxPage = Math.max(1, Math.ceil(totalJobs / pageSize));
+                          if (num >= 1 && num <= maxPage) setPage(num);
+                          setGoToPage('');
+                        }
+                      }}
+                      placeholder={String(page)}
+                      sx={{
+                        width: 52,
+                        '& .MuiOutlinedInput-root': {
+                          height: 32,
+                          borderRadius: '9px',
+                          bgcolor: 'action.hover',
+                          '& fieldset': { border: 0 },
+                        },
+                      }}
+                      slotProps={{
+                        htmlInput: {
+                          min: 1,
+                          max: Math.max(1, Math.ceil(totalJobs / pageSize)),
+                          style: { textAlign: 'center', fontSize: '0.82rem', padding: '5px 6px' },
+                        },
+                      }}
+                    />
+                    <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                      / {Math.max(1, Math.ceil(totalJobs / pageSize))}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </>
         )}
 
         {selectedJob && (
