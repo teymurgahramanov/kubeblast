@@ -253,6 +253,10 @@ def start_job(current_user, job_id):
         logger.info(f"Scheduling workload for job {job_id}")
         _create_event_best_effort(job_id, "Workload scheduling started")
         k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
+        try:
+            logs.ensure_log_pump(job_id, "starting")
+        except Exception as error:  # noqa: BLE001
+            logger.warning(f"Failed to start log collector for job {job_id}: {error}")
         _create_event_best_effort(job_id, "Workload scheduled successfully")
         return models.JobCommandResponse(
             message="Job start accepted",
@@ -275,6 +279,7 @@ def retry_job(current_user, job_id):
         _create_event_best_effort(job_id, "Workload rescheduling started")
         logger.info(f"Deleting workload for job {job_id}")
         _create_event_best_effort(job_id, "Workload deletion started")
+        logs.stop_log_pump(job_id, wait=True)
         try:
             logs.delete_logs_for_job(job_id)
         except Exception as e:  # noqa: BLE001
@@ -292,6 +297,10 @@ def retry_job(current_user, job_id):
         logger.info(f"Scheduling workload for job {job_id}")
         _create_event_best_effort(job_id, "Workload scheduling started")
         k8s.schedule_workload(job_id, job["distributed"], job["parameter_files"])
+        try:
+            logs.ensure_log_pump(job_id, "retrying")
+        except Exception as error:  # noqa: BLE001
+            logger.warning(f"Failed to restart log collector for job {job_id}: {error}")
         _create_event_best_effort(job_id, "Workload scheduled successfully")
         return models.JobCommandResponse(
             message="Job retry accepted",
@@ -359,6 +368,7 @@ def get_job_verdict(current_user, job_id: str) -> models.JobVerdict:
 def delete_job(current_user, job_id):
     get_job(current_user, job_id).dict()
 
+    logs.stop_log_pump(job_id, wait=True)
     k8s.delete_workload(job_id)
 
     files.delete_file(job_id)

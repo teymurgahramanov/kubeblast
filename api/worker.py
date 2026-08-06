@@ -6,7 +6,9 @@ from config import config
 from core.log import logger
 from kubernetes import client, watch
 from pymongo import MongoClient, UpdateOne
+from services import events
 from services import k8s as k8s_service
+from services import logs
 
 # MongoDB Configuration
 MONGODB_URI = config.MONGODB_URI
@@ -101,8 +103,37 @@ def _bulk_update_statuses(pairs: list[tuple[str, str]]):
     except Exception as e:
         logger.error(f"Bulk Mongo update failed: {e}")
 
+def _sync_kubernetes_events(job_id: str, workload) -> None:
+    try:
+        records = k8s_service.list_job_events(job_id, workload)
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Failed to collect Kubernetes events for job {job_id}: {error}")
+        return
+    for record in records:
+        try:
+            events.create_kubernetes_event(job_id, record)
+        except Exception as error:  # noqa: BLE001
+            logger.warning(f"Failed to store Kubernetes event for job {job_id}: {error}")
+
+
+def _sync_log_capture(job_id: str, status: str) -> None:
+    if status not in ("starting", "retrying", "running", "stopping"):
+        return
+    try:
+        logs.ensure_log_pump(job_id, status)
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Failed to ensure log collector for job {job_id}: {error}")
+
+
 def _cleanup_workload(job_id: str, status: str):
     if status not in ("completed", "failed"):
+        return
+    try:
+        if not logs.finalize_log_capture(job_id):
+            logger.warning(f"Deferring cleanup until logs are captured for job {job_id}")
+            return
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Deferring cleanup after log capture failure for job {job_id}: {error}")
         return
     try:
         k8s_service.delete_workload(job_id)
@@ -132,10 +163,13 @@ def full_resync(batch_v1: client.BatchV1Api) -> str | None:
             status = determine_job_status(job)
             if status == "unknown":
                 continue
+            _sync_kubernetes_events(job_id, job)
             updates.append((job_id, status))
             if status in ("completed", "failed"):
                 terminal.append((job_id, status))
         _bulk_update_statuses(updates)
+        for job_id, status in updates:
+            _sync_log_capture(job_id, status)
         logger.info(f"Full resync: reconciled {len(updates)} jobs")
         # After restart / missed events: ensure terminal jobs get cleaned up too
         for job_id, status in terminal:
@@ -198,7 +232,9 @@ def process_job_update():
                 if status == "unknown":
                     continue
 
+                _sync_kubernetes_events(job_id, obj)
                 _bulk_update_statuses([(job_id, status)])
+                _sync_log_capture(job_id, status)
                 _cleanup_workload(job_id, status)
 
             # If the watch timed out naturally, loop and continue; keeps resync cadence

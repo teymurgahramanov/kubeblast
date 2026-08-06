@@ -27,6 +27,8 @@ class JobLifecycleTests(unittest.TestCase):
             patch.object(jobs.k8s, "stop_workload"),
             patch.object(jobs.events, "create_event"),
             patch.object(jobs.logs, "delete_logs_for_job"),
+            patch.object(jobs.logs, "ensure_log_pump"),
+            patch.object(jobs.logs, "stop_log_pump"),
             patch.object(jobs, "sleep"),
         ]
         self.mocks = [patcher.start() for patcher in self.patchers]
@@ -37,6 +39,8 @@ class JobLifecycleTests(unittest.TestCase):
         self.delete_workload = self.mocks[3]
         self.stop_workload = self.mocks[4]
         self.delete_logs = self.mocks[6]
+        self.ensure_log_pump = self.mocks[7]
+        self.stop_log_pump = self.mocks[8]
 
     def _stop_patchers(self):
         for patcher in reversed(self.patchers):
@@ -67,6 +71,7 @@ class JobLifecycleTests(unittest.TestCase):
 
         self.assertEqual(response.status, "starting")
         self.schedule_workload.assert_called_once_with(JOB_ID, False, ["users.csv"])
+        self.ensure_log_pump.assert_called_once_with(JOB_ID, "starting")
         self.collection.update_one.assert_called_once_with(
             {"_id": jobs.ObjectId(JOB_ID), "status": {"$in": ["ready"]}},
             {"$set": {"status": "starting"}},
@@ -110,6 +115,16 @@ class JobLifecycleTests(unittest.TestCase):
             {"_id": jobs.ObjectId(JOB_ID), "status": {"$in": ["running"]}},
             {"$set": {"status": "stopping"}},
         )
+
+    def test_retry_stops_old_collector_and_restarts_it(self):
+        self.set_job("completed")
+
+        response = jobs.retry_job(self.current_user, JOB_ID)
+
+        self.assertEqual(response.status, "retrying")
+        self.stop_log_pump.assert_called_once_with(JOB_ID, wait=True)
+        self.delete_logs.assert_called_once_with(JOB_ID)
+        self.ensure_log_pump.assert_called_once_with(JOB_ID, "retrying")
 
     def test_retry_rejects_non_terminal_job(self):
         self.set_job("running")

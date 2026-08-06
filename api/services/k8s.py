@@ -1,5 +1,10 @@
+import codecs
+import hashlib
+import math
 import os
 import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import cast
 
 import yaml
@@ -9,6 +14,8 @@ from fastapi import HTTPException
 from jinja2 import Template
 from kubernetes import client, stream
 from kubernetes.client.rest import ApiException
+from urllib3.exceptions import ReadTimeoutError
+
 from services import events
 from services import files_fs as files
 
@@ -35,46 +42,157 @@ def gen_labels(job_id,job_component):
 def gen_label_selector(job_id,job_component):
     return f"kubeblast/job-id={job_id},kubeblast/job-component={job_component}"
 
-def iter_pod_log_lines(job_id, job_status):
-    """
-    Yield raw log lines from the job's master pod (blocking iterator).
-    Used by the log pump to persist lines to MongoDB; clients consume via logs.stream_job_logs.
-    """
+class PodLogsUnavailableError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class KubernetesRecord:
+    source_id: str
+    ts: datetime
+    msg: str
+
+
+def _iter_log_lines(response):
+    buffer = ""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    try:
+        for chunk in response:
+            buffer += decoder.decode(chunk, final=False) if isinstance(chunk, bytes) else str(chunk)
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                yield line.removesuffix("\r")
+        buffer += decoder.decode(b"", final=True)
+        if buffer:
+            yield buffer.removesuffix("\r")
+    except ReadTimeoutError as error:
+        raise PodLogsUnavailableError("Pod log stream read timed out") from error
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+
+
+def _parse_log_timestamp(value: str) -> datetime:
+    try:
+        timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return datetime.now(timezone.utc)
+
+
+def iter_pod_log_records(
+    job_id: str,
+    *,
+    follow: bool,
+    since_time: datetime | None = None,
+):
+    """Capture the jmeter container's stdout/stderr, stripping only Kubernetes timestamps."""
     namespace = get_namespace()
     label_selector = gen_label_selector(job_id, "master")
+    core_v1 = client.CoreV1Api()
+    pod_list = core_v1.list_namespaced_pod(
+        namespace=namespace,
+        label_selector=label_selector,
+    )
+    if not pod_list.items:
+        raise PodLogsUnavailableError(f"No master pod found for job {job_id}")
+
+    pod = pod_list.items[0]
+    pod_name = pod.metadata.name
+    pod_uid = str(pod.metadata.uid)
+    options = {
+        "name": pod_name,
+        "namespace": namespace,
+        "container": "jmeter",
+        "follow": follow,
+        "timestamps": True,
+        "_preload_content": False,
+        "_request_timeout": (5, 10 if follow else 30),
+    }
+    if since_time is not None:
+        normalized = since_time if since_time.tzinfo else since_time.replace(tzinfo=timezone.utc)
+        elapsed_seconds = (datetime.now(timezone.utc) - normalized).total_seconds()
+        # Include one second of overlap; source_id upserts remove repeated lines.
+        options["since_seconds"] = max(1, math.ceil(elapsed_seconds) + 1)
+
     try:
-        logger.info(f"Looking for Pods with label selector: {label_selector}")
-        pod_list = client.CoreV1Api().list_namespaced_pod(
-            namespace=namespace,
-            label_selector=label_selector
+        response = core_v1.read_namespaced_pod_log(**options)
+    except ApiException as error:
+        if getattr(error, "status", None) in (400, 404, 409):
+            raise PodLogsUnavailableError(f"Pod logs are not ready for job {job_id}") from error
+        raise
+
+    for line_number, line in enumerate(_iter_log_lines(response)):
+        source_timestamp, separator, message = line.partition(" ")
+        if not separator:
+            source_timestamp = f"untimestamped:{line_number}"
+            message = line
+        source = f"{pod_uid}\0{source_timestamp}\0{message}".encode()
+        yield KubernetesRecord(
+            source_id=hashlib.sha256(source).hexdigest(),
+            ts=_parse_log_timestamp(source_timestamp),
+            msg=message,
         )
 
-        if not pod_list.items:
-            logger.warning(f"Nothing found for Job: {job_id}")
-            return
 
-        pod_name = pod_list.items[0].metadata.name
-        logger.info(f"Reading logs from pod: {pod_name}")
+def iter_pod_log_lines(job_id, job_status):
+    """Compatibility wrapper for callers that only need log messages."""
+    for record in iter_pod_log_records(job_id, follow=job_status == "running"):
+        yield record.msg
 
-        should_follow = job_status == "running"
 
-        logs = client.CoreV1Api().read_namespaced_pod_log(
-            name=pod_name,
-            namespace=namespace,
-            container="jmeter",
-            follow=should_follow,
-            _preload_content=False,
-            tail_lines=1000 if not should_follow else None,
+def _kubernetes_event_timestamp(event) -> datetime:
+    series = getattr(event, "series", None)
+    for value in (
+        getattr(event, "event_time", None),
+        getattr(series, "last_observed_time", None),
+        getattr(event, "last_timestamp", None),
+        getattr(event, "first_timestamp", None),
+        getattr(getattr(event, "metadata", None), "creation_timestamp", None),
+    ):
+        if isinstance(value, datetime):
+            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc)
+
+
+def _kubernetes_event_record(event) -> KubernetesRecord:
+    metadata = getattr(event, "metadata", None)
+    involved = getattr(event, "involved_object", None)
+    series = getattr(event, "series", None)
+    count = getattr(series, "count", None) or getattr(event, "count", None) or 1
+    reason = getattr(event, "reason", None) or "Unknown"
+    event_type = getattr(event, "type", None) or "Normal"
+    kind = getattr(involved, "kind", None) or "Object"
+    name = getattr(involved, "name", None) or "unknown"
+    message = getattr(event, "message", None) or reason
+    event_uid = getattr(metadata, "uid", None)
+    if not event_uid:
+        identity = f"{getattr(involved, 'uid', '')}\0{reason}\0{message}".encode()
+        event_uid = hashlib.sha256(identity).hexdigest()
+    return KubernetesRecord(
+        source_id=f"kubernetes:{event_uid}:{count}",
+        ts=_kubernetes_event_timestamp(event),
+        msg=f"Kubernetes {kind} {name} [{event_type}/{reason}]: {message}",
+    )
+
+
+def list_job_events(job_id: str, workload) -> list[KubernetesRecord]:
+    """List Kubernetes Events whose involved object is this Kubernetes Job."""
+    workload_uid = getattr(getattr(workload, "metadata", None), "uid", None)
+    if not workload_uid:
+        return []
+
+    try:
+        response = client.CoreV1Api().list_namespaced_event(
+            namespace=get_namespace(),
+            field_selector=f"involvedObject.uid={workload_uid}",
         )
+        return [_kubernetes_event_record(event) for event in response.items]
+    except Exception as error:  # noqa: BLE001
+        logger.warning(f"Failed to list Kubernetes Job events for {job_id}: {error}")
+        return []
 
-        for line in logs:
-            if isinstance(line, bytes):
-                line = line.decode("utf-8")
-            yield line.rstrip("\n")
-
-    except Exception as e:  # noqa: BLE001
-        logger.error(e)
-        yield "Waiting for logs ..."
 
 def schedule_slave_daemonset_and_service(job_id: str):
     """

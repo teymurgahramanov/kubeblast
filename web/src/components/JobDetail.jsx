@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
+import { readSSEStream } from '../utils/sse';
 import Editor from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-markup';
@@ -295,31 +296,20 @@ const JobDetail = () => {
         signal: controller.signal,
       });
       if (!response.ok) { const d = await response.json(); throw new Error(d.detail || `HTTP ${response.status}`); }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
       let content = '';
       const readStream = async () => {
         try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            for (const line of decoder.decode(value).split('\n')) {
-              if (!line || line.startsWith(':')) continue;
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                try {
-                  const obj = JSON.parse(data);
-                  content += `${obj.msg != null ? String(obj.msg) : data}\n`;
-                } catch { content += data + '\n'; }
-              } else if (line.startsWith('event: ')) {
-                content += `\n[${line.slice(7)}]\n`;
-              }
-            }
+          await readSSEStream(response.body, ({ event, data }) => {
+            if (event !== 'message') content += `\n[${event}]\n`;
+            try {
+              const obj = JSON.parse(data);
+              content += `${obj.msg != null ? String(obj.msg) : data}\n`;
+            } catch { content += data + '\n'; }
             setLogs(content);
-          }
+          });
         } catch (err) {
           if (err?.name !== 'AbortError' && !content) setError(err?.message || 'Error reading logs.');
-        } finally { reader.releaseLock(); setLogsStreaming(false); }
+        } finally { setLogsStreaming(false); }
       };
       readStream();
     } catch (err) { setLogsStreaming(false); setError(err?.message || 'Error fetching logs'); }
