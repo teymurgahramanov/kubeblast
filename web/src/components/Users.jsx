@@ -160,8 +160,8 @@ const Users = ({ setAddUser }) => {
       flex: 0.8,
       renderCell: (params) => {
         const statusColors = params.row.enabled 
-          ? { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' } // enabled: lighter green
-          : { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' }; // disabled: bright red
+          ? { bg: '#BBF7D0', text: '#047857', border: '#86EFAC' }
+          : { bg: '#FCA5A5', text: '#7F1D1D', border: '#EF4444' };
         
         return (
           <Box sx={{
@@ -212,7 +212,6 @@ const Users = ({ setAddUser }) => {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
         backgroundColor: 'background.paper',
@@ -266,7 +265,6 @@ const Users = ({ setAddUser }) => {
           </Button>
         </Box>
 
-        {/* Filters */}
         <Box
           sx={{
             mb: 2,

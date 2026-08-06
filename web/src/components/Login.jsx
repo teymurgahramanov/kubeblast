@@ -16,7 +16,6 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import ErrorMessage from './ErrorMessage';
 
-/* ─── Animated network canvas for the brand panel ─── */
 const BrandPanel = () => {
   const canvasRef = useRef(null);
 
@@ -176,7 +175,6 @@ const BrandPanel = () => {
         sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       />
 
-      {/* Brand content */}
       <Box className="login-brand-animate" sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <Box
           component="img"
@@ -211,7 +209,6 @@ const BrandPanel = () => {
   );
 };
 
-/* ═══════════════════════════════════════════════════════ */
 const Login = () => {
   const [credentials, setCredentials]   = useState({ username: '', password: '' });
   const [authMethod, setAuthMethod]     = useState('local');
@@ -225,7 +222,6 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ── Load app and authentication configuration on mount ── */
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
@@ -241,7 +237,6 @@ const Login = () => {
     fetchAppStats();
   }, []);
 
-  /* ── Handle OIDC callback params ── */
   useEffect(() => {
     const handleOIDCCallback = async () => {
       const params = new URLSearchParams(location.search);
@@ -328,14 +323,11 @@ const Login = () => {
   );
   const oidcEnabled = authenticationMethods.includes('oidc');
 
-  /* ════════════════════════════ RENDER ════════════════════════════ */
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex' }}>
 
-      {/* ── LEFT: Brand panel (hidden on mobile) ── */}
       <BrandPanel />
 
-      {/* ── RIGHT: Login form panel ── */}
       <Box
         sx={{
           flex: { xs: 1, md: '0 0 560px' },
@@ -370,12 +362,10 @@ const Login = () => {
       >
         <Box className="login-form-animate" sx={{ width: '100%', maxWidth: 380 }}>
 
-          {/* Mobile-only logo */}
           <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 4 }}>
             <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 76 }} />
           </Box>
 
-          {/* Greeting */}
           <Box sx={{ mb: 4 }}>
             <Typography
               variant="h5"
@@ -408,7 +398,6 @@ const Login = () => {
               </FormControl>
             )}
 
-            {/* Username */}
             <TextField
               fullWidth
               label="Username"
@@ -430,7 +419,6 @@ const Login = () => {
               }}
             />
 
-            {/* Password */}
             <TextField
               fullWidth
               type={showPassword ? 'text' : 'password'}
@@ -468,7 +456,6 @@ const Login = () => {
               }}
             />
 
-            {/* Submit */}
             <Button
               type="submit"
               fullWidth
@@ -501,7 +488,6 @@ const Login = () => {
               }
             </Button>
 
-            {/* OIDC / SSO */}
             {oidcEnabled && (
               <>
                 <Divider sx={{ my: 3, borderColor: 'rgba(148,163,184,0.15)' }}>
@@ -540,7 +526,6 @@ const Login = () => {
           </Box>
         </Box>
 
-        {/* Version & Edition */}
         {(appVersion || edition) && (
           <Typography sx={{
             position: 'absolute', bottom: 20,

@@ -208,7 +208,6 @@ def schedule_slave_daemonset_and_service(job_id: str):
     v1 = client.CoreV1Api()
     apps = client.AppsV1Api()
 
-    # Headless Service (create; ignore AlreadyExists)
     try:
         svc = client.V1Service(
             metadata=client.V1ObjectMeta(name=svc_name, labels=labels),
@@ -234,7 +233,6 @@ def schedule_slave_daemonset_and_service(job_id: str):
         logger.error(f"{msg} Error: {e}")
         raise HTTPException(status_code=500, detail=f"{msg} Error: {e}")
 
-    # DaemonSet
     try:
         ds_template_path = os.path.join(os.path.dirname(__file__), "../templates/ds.yaml.j2")
         with open(ds_template_path, "r") as file:
@@ -294,7 +292,6 @@ def watch_daemonset_and_get_slave_endpoints(job_id: str, timeout_s: int = 180, p
         last_ready = int(getattr(st, "number_ready", 0) or 0)
 
         if last_desired > 0 and last_ready >= last_desired:
-            # DS is ready; fetch endpoints
             try:
                 eps = cast(
                     client.V1Endpoints,
@@ -362,7 +359,6 @@ def schedule_workload(job_id, distributed, parameter_files):
                 delete_workload(job_id)
                 raise
 
-        # Create Job
         with open(job_template_path, 'r') as file:
             job_template_content = file.read()
 
@@ -399,7 +395,6 @@ def stop_workload(job_id):
     try:
         logger.info(f"Gracefully stopping workload with label selector: {label_selector}")
         
-        # Get pod
         pods = client.CoreV1Api().list_namespaced_pod(
             namespace=namespace,
             label_selector=label_selector
@@ -412,7 +407,6 @@ def stop_workload(job_id):
         pod = pods.items[0]
         pod_name = pod.metadata.name
         
-        # Execute shutdown.sh in the pod
         try:
             logger.info(f"Executing shutdown.sh in pod {pod_name}")
             exec_command = ['/bin/sh', '-c', 'shutdown.sh']
@@ -430,7 +424,6 @@ def stop_workload(job_id):
                 _preload_content=False
             )
             
-            # Read response
             output = ""
             while resp.is_open():
                 resp.update(timeout=1)

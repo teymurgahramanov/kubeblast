@@ -8,7 +8,6 @@ from core.log import logger
 from fastapi import HTTPException, Response
 from services import jobs
 
-# Convert STORAGE_DIR to Path object
 STORAGE_DIR = Path(config.STORAGE_DIR)
 
 

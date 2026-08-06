@@ -173,7 +173,6 @@ const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
 
   return (
     <Box sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-      {/* Response Times */}
       <Box sx={chartContainerSx}>
         <Typography sx={titleSx}>Response Times (ms)</Typography>
         <ResponsiveContainer width="100%" height={200}>
@@ -191,7 +190,6 @@ const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
         </ResponsiveContainer>
       </Box>
 
-      {/* Throughput */}
       <Box sx={chartContainerSx}>
         <Typography sx={titleSx}>Throughput (req/s)</Typography>
         <ResponsiveContainer width="100%" height={200}>
@@ -205,7 +203,6 @@ const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
         </ResponsiveContainer>
       </Box>
 
-      {/* Active Threads */}
       <Box sx={chartContainerSx}>
         <Typography sx={titleSx}>Active Threads</Typography>
         <ResponsiveContainer width="100%" height={200}>
@@ -219,7 +216,6 @@ const LiveMetrics = ({ jobId, jobStatus, displayTimeZone = 'UTC' }) => {
         </ResponsiveContainer>
       </Box>
 
-      {/* Errors */}
       <Box sx={chartContainerSx}>
         <Typography sx={titleSx}>Errors</Typography>
         <ResponsiveContainer width="100%" height={200}>

@@ -6,7 +6,6 @@ const axiosInstance = axios.create({
   baseURL: apiBaseUrl,
 });
 
-// Flag to prevent multiple simultaneous refresh requests
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -40,7 +39,6 @@ axiosInstance.interceptors.response.use(
     // Authentication requests handle their own 401 errors (for example, invalid login credentials).
     if (error.response?.status === 401 && !originalRequest.skipAuthRefresh && !originalRequest._retry) {
       if (isRefreshing) {
-        // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -57,14 +55,12 @@ axiosInstance.interceptors.response.use(
       const refreshToken = localStorage.getItem("refresh_token");
       
       if (!refreshToken) {
-        // No refresh token, redirect to login
         localStorage.clear();
         window.location.href = "/login";
         return Promise.reject(error);
       }
 
       try {
-        // Request new access token
         const response = await axios.post(
           `${apiBaseUrl}/token/refresh`,
           { refresh_token: refreshToken },
@@ -73,24 +69,19 @@ axiosInstance.interceptors.response.use(
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
         
-        // Store new tokens
         localStorage.setItem("access_token", access_token);
         if (newRefreshToken) {
           localStorage.setItem("refresh_token", newRefreshToken);
         }
 
-        // Update authorization header
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
 
-        // Process queued requests
         processQueue(null, access_token);
         isRefreshing = false;
 
-        // Retry original request
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear session and redirect to login
         processQueue(refreshError, null);
         isRefreshing = false;
         localStorage.clear();

@@ -19,7 +19,6 @@ import ErrorMessage from './ErrorMessage';
 import LiveMetrics from './LiveMetrics';
 import './planEditorPrism.css';
 
-/* ─── Tab definitions ─────────────────────────────────────────── */
 const BASE_TABS = [
   { label: 'Logs',   Icon: Visibility,  dotColor: '#7ee787' },
   { label: 'Events', Icon: ListAlt,     dotColor: '#79c0ff' },
@@ -93,13 +92,11 @@ function writeCachedAppStats(data) {
   }
 }
 
-/* ══════════════════════════════════════════════════════════════ */
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const userRole = getUserRole();
 
-  /* ── State ─────────────────────────────────────────────────── */
   const [job, setJob]                       = useState(null);
   const [error, setError]                   = useState('');
   const [activeTab, setActiveTab]           = useState(0);
@@ -120,7 +117,6 @@ const JobDetail = () => {
   /** Set after a successful plan GET for `job_id`; cleared when route `jobId` changes. */
   const planLoadedForJobIdRef = useRef(null);
 
-  /* ── App stats ─────────────────────────────────────────────── */
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
@@ -141,7 +137,6 @@ const JobDetail = () => {
     fetchAppStats();
   }, []);
 
-  /* ── Fetch job ─────────────────────────────────────────────── */
   const fetchJob = useCallback(async () => {
     if (!jobId) return;
     try {
@@ -173,7 +168,6 @@ const JobDetail = () => {
     }
   }, [isPlanEditable]);
 
-  /* ── Helpers ───────────────────────────────────────────────── */
   const getStatusColor = (status) => {
     switch ((status || '').toLowerCase()) {
       case 'pending': case 'starting': case 'stopping': case 'retrying':
@@ -202,7 +196,6 @@ const JobDetail = () => {
     } catch { return dateString; }
   }, [timezone]);
 
-  /* ── Job actions ───────────────────────────────────────────── */
   const approveJob = async (id) => {
     try {
       await axiosInstance.put(`/jobs/${id}/approve?approved=true`, {});
@@ -264,7 +257,6 @@ const JobDetail = () => {
     }
   };
 
-  /* ── Stream helpers ────────────────────────────────────────── */
   const stopLogsStream = () => {
     try { if (logsAbortRef.current) logsAbortRef.current.abort(); } catch {}
     logsAbortRef.current = null;
@@ -279,7 +271,6 @@ const JobDetail = () => {
 
   useEffect(() => () => { stopLogsStream(); stopEventsStream(); }, []);
 
-  /* ── View logs ─────────────────────────────────────────────── */
   const viewLogs = async (job_id, job_status) => {
     if (!['running', 'completed', 'failed'].includes(job_status)) {
       setError('Logs are only available for running, completed, or failed jobs.'); return;
@@ -315,7 +306,6 @@ const JobDetail = () => {
     } catch (err) { setLogsStreaming(false); setError(err?.message || 'Error fetching logs'); }
   };
 
-  /* ── View events ───────────────────────────────────────────── */
   const viewEvents = async (job_id) => {
     try {
       const token = localStorage.getItem('access_token');
@@ -399,7 +389,6 @@ const JobDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: (re)start when job identity/status changes
   }, [job?.id, job?.status]);
 
-  /* ── Download result ───────────────────────────────────────── */
   const downloadResult = async (job_id) => {
     try {
       if (!job_id) { setError('No job available.'); return; }
@@ -418,7 +407,6 @@ const JobDetail = () => {
     }
   };
 
-  /* ── Download report ──────────────────────────────────────── */
   const downloadReport = async (job_id) => {
     try {
       if (!job_id) { setError('No job available.'); return; }
@@ -437,13 +425,11 @@ const JobDetail = () => {
     }
   };
 
-  /* ── XML syntax highlighting ──────────────────────────────── */
   const highlightXml = useCallback((xml) => {
     if (!xml) return null;
     return <span dangerouslySetInnerHTML={{ __html: highlightXmlToHtml(xml) }} />;
   }, []);
 
-  /* ── Derived ───────────────────────────────────────────────── */
   const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
@@ -479,18 +465,15 @@ const JobDetail = () => {
     return () => cancelAnimationFrame(id);
   }, [isMetricsTab]);
 
-  /* ── Action button styles ──────────────────────────────────── */
   const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', px: 2.2, boxShadow: 'none' };
   const dangerBtn = { ...btnBase, color: '#ef4444', borderColor: '#ef4444', '&:hover': { bgcolor: '#fee2e2', borderColor: '#dc2626' } };
   const amberBtn  = { ...btnBase, color: '#d97706', borderColor: '#f59e0b', '&:hover': { bgcolor: '#fef3c7', borderColor: '#d97706' } };
 
-  /* ════════════════════════════════════════════════════════════ */
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppHeader title="Job Detail" />
 
       <Box className="page-container fade-in">
-        {/* ── Back button ───────────────────────────────────── */}
         <Box sx={{ mb: 2 }}>
           <Button
             startIcon={<ArrowBack sx={{ fontSize: 16 }} />}
@@ -507,7 +490,6 @@ const JobDetail = () => {
 
         <ErrorMessage message={error} />
 
-        {/* ── Hero Card ─────────────────────────────────────── */}
         <Box sx={{
           position: 'relative', overflow: 'hidden',
           backgroundColor: 'background.paper',
@@ -516,7 +498,6 @@ const JobDetail = () => {
           boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
           mb: 2.5,
         }}>
-          {/* Status accent bar */}
           {job && (
             <Box sx={{
               position: 'absolute', left: 0, top: 0, bottom: 0, width: 5,
@@ -544,7 +525,6 @@ const JobDetail = () => {
               </Box>
             ) : (
               <>
-                {/* Name + Status badge */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
                   <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.2, letterSpacing: '-0.4px' }}>
                     {job.name}
@@ -572,14 +552,12 @@ const JobDetail = () => {
                   </Box>
                 </Box>
 
-                {/* Description */}
                 {job.description && (
                   <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.8, lineHeight: 1.65, maxWidth: 680 }}>
                     {job.description}
                   </Typography>
                 )}
 
-                {/* Metadata row */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap', mb: 2.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, color: 'var(--text-secondary)' }}>
                     <AccessTime sx={{ fontSize: 13 }} />
@@ -591,18 +569,8 @@ const JobDetail = () => {
                       <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{job.owner}</Typography>
                     </Box>
                   )}
-                  {/* <Box sx={{
-                    display: 'flex', alignItems: 'center',
-                    bgcolor: 'var(--background-light)', px: 1, py: 0.3,
-                    borderRadius: '6px', border: '1px solid var(--border-color)',
-                  }}>
-                    <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                      ID: {job.id}
-                    </Typography>
-                  </Box> */}
                 </Box>
 
-                {/* Action buttons */}
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
                   {job.status === 'pending' && canModerate && (
                     <>
@@ -651,7 +619,6 @@ const JobDetail = () => {
           </Box>
         </Box>
 
-        {/* ── Terminal Panel ────────────────────────────────── */}
         {job && (
           <Box sx={{
             bgcolor: '#0d1117',
@@ -661,14 +628,12 @@ const JobDetail = () => {
             overflow: 'hidden',
           }}>
 
-            {/* Terminal title bar */}
             <Box sx={{
               display: 'flex', alignItems: 'center', gap: 0.5,
               px: 2.5, py: 1.3,
               borderBottom: '1px solid #21262d',
               bgcolor: '#161b22',
             }}>
-              {/* Tabs */}
               {JOB_DETAIL_TABS.map(({ label, Icon, dotColor }, idx) => (
                 <Box
                   key={idx}
@@ -862,7 +827,6 @@ const JobDetail = () => {
           </Box>
         )}
 
-        {/* ── Delete confirmation modal ──────────────────────── */}
         <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)}>
           <Box sx={{
             position: 'absolute', top: '50%', left: '50%',
@@ -874,7 +838,6 @@ const JobDetail = () => {
             outline: 'none', p: 4,
             border: '1px solid var(--border-color)',
           }}>
-            {/* Icon */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
               <Box sx={{
                 width: 64, height: 64, borderRadius: '50%',
@@ -885,11 +848,9 @@ const JobDetail = () => {
                 <Delete sx={{ fontSize: 30, color: '#ef4444' }} />
               </Box>
             </Box>
-            {/* Title */}
             <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1, color: 'text.primary' }}>
               Delete Job?
             </Typography>
-            {/* Job name */}
             {job && (
               <Typography variant="body2" sx={{ textAlign: 'center', mb: 1, color: 'var(--text-secondary)' }}>
                 <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -897,11 +858,9 @@ const JobDetail = () => {
                 </Box>
               </Typography>
             )}
-            {/* Warning */}
             <Typography variant="body2" sx={{ textAlign: 'center', color: 'var(--text-secondary)', mb: 3.5, lineHeight: 1.6 }}>
               This action cannot be undone. The job and all associated data will be permanently removed.
             </Typography>
-            {/* Buttons */}
             <Box sx={{ display: 'flex', gap: 1.5 }}>
               <Button
                 fullWidth variant="outlined"

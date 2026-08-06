@@ -3,13 +3,6 @@ import { Link } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
 import Menuselect from './Menuselect';
 
-/**
- * Shared sticky top header used by all authenticated pages.
- * Props:
- *   title  – page name shown in the centre (optional)
- *   left   – custom left-side JSX (overrides the logo link)
- *   right  – custom right-side JSX (appended before Menuselect)
- */
 const AppHeader = ({ title, left, right }) => (
   <Box
     component="header"
@@ -27,7 +20,6 @@ const AppHeader = ({ title, left, right }) => (
       backdropFilter: 'blur(8px)',
     }}
   >
-    {/* Left – logo link or custom slot */}
     {left ?? (
       <Link to="/jobs" style={{ textDecoration: 'none', justifySelf: 'start' }}>
         <Box
@@ -44,7 +36,6 @@ const AppHeader = ({ title, left, right }) => (
       </Link>
     )}
 
-    {/* Centre – page title */}
     {title ? (
       <Typography
         variant="h6"
@@ -56,7 +47,6 @@ const AppHeader = ({ title, left, right }) => (
       <Box />
     )}
 
-    {/* Right – extra actions + user menu */}
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, justifySelf: 'end' }}>
       {right}
       <Menuselect />

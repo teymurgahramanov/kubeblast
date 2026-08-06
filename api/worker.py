@@ -10,7 +10,6 @@ from services import events
 from services import k8s as k8s_service
 from services import logs
 
-# MongoDB Configuration
 MONGODB_URI = config.MONGODB_URI
 DB_NAME = config.MONGODB_NAME
 COLLECTION_NAME = "jobs"
@@ -41,7 +40,6 @@ def determine_job_status(job) -> str:
     failed = (getattr(status, "failed", 0) or 0)
     conditions = getattr(status, "conditions", None) or []
     
-    # Prefer terminal conditions first
     for cond in conditions:
         if getattr(cond, "type", None) == "Failed" and getattr(cond, "status", None) == "True":
             return "failed"
@@ -54,7 +52,6 @@ def determine_job_status(job) -> str:
         if getattr(cond, "type", None) == "Suspended" and getattr(cond, "status", None) == "True":
             return "starting"
     
-    # Live counters as fallback
     if active > 0:
         return "running"
     if succeeded > 0:
@@ -62,7 +59,6 @@ def determine_job_status(job) -> str:
     if failed > 0:
         return "failed"
     
-    # Job exists but nothing has started yet
     return "starting"
 
 def _safe_object_id(job_id: str):
@@ -190,7 +186,6 @@ def process_job_update():
         f"full_resync_interval_s={FULL_RESYNC_INTERVAL_S}, watch_timeout_s={WATCH_TIMEOUT_S})"
     )
 
-    # Ensure convergence after restart
     resource_version = None
     last_resync = 0.0
     backoff_s = 1.0

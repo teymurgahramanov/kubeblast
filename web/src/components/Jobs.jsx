@@ -18,18 +18,14 @@ import AppHeader from './AppHeader';
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
 
-/* ─── Status chip definitions ────────────────────────────────── */
 const STATUS_CHIPS = [
   { value: 'all',       label: 'All',       color: '#4f46e5', activeColor: '#4f46e5', inactiveBg: '#ede9fe' },
   { value: 'pending',   label: 'Pending',   color: '#374151', activeColor: '#4b5563', inactiveBg: '#f3f4f6' },
-  // { value: 'ready',     label: 'Ready',     color: '#92400e', activeColor: '#b45309', inactiveBg: '#fde68a' },
   { value: 'running',   label: 'Running',   color: '#1e40af', activeColor: '#2563eb', inactiveBg: '#dbeafe' },
   { value: 'completed', label: 'Completed', color: '#065f46', activeColor: '#059669', inactiveBg: '#d1fae5' },
   { value: 'failed',    label: 'Failed',    color: '#7f1d1d', activeColor: '#dc2626', inactiveBg: '#fee2e2' },
-  // { value: 'declined',  label: 'Declined',  color: '#7f1d1d', activeColor: '#dc2626', inactiveBg: '#fee2e2' },
 ];
 
-/* ─── Capacity card ───────────────────────────────────────────── */
 const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor }) => (
   <Box sx={{
     p: 1.5,
@@ -79,11 +75,9 @@ const CapacityCard = ({ icon, iconBg, label, value, sub, progress, progressColor
   </Box>
 );
 
-/* ══════════════════════════════════════════════════════════════ */
 const Jobs = () => {
   const navigate = useNavigate();
 
-  /* ── State ─────────────────────────────────────────────────── */
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(10);
@@ -97,14 +91,13 @@ const Jobs = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+  const [viewMode, setViewMode] = useState('grid');
   const [goToPage, setGoToPage] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(false);
   const [timezone, setTimezone] = useState('UTC');
 
-  /* ── App stats ─────────────────────────────────────────────── */
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
@@ -118,7 +111,6 @@ const Jobs = () => {
     fetchAppStats();
   }, []);
 
-  /* ── Fetch jobs ────────────────────────────────────────────── */
   const fetchJobs = useCallback(async () => {
     const token = localStorage.getItem('access_token');
     if (!token) { setError('Unauthorized: Please log in'); return; }
@@ -143,7 +135,6 @@ const Jobs = () => {
     return () => clearInterval(id);
   }, [fetchJobs]);
 
-  /* ── Cluster capacity ──────────────────────────────────────── */
   useEffect(() => {
     let intervalId = null;
     const fetchResources = async () => {
@@ -165,7 +156,6 @@ const Jobs = () => {
     return () => { document.removeEventListener('visibilitychange', handleVisibility); stopInterval(); };
   }, []);
 
-  /* ── Action handlers ───────────────────────────────────────── */
   const handleMenuOpen = (event, job_id) => { setAnchorEl(event.currentTarget); setSelectedJobId(job_id); };
   const handleMenuClose = () => { setAnchorEl(null); setSelectedJobId(null); };
   const handleAddJob = () => setOpenAddJob(true);
@@ -216,7 +206,6 @@ const Jobs = () => {
     } catch (error) { setError(error.response?.data?.detail || error.message); }
   };
 
-  /* ── Helpers ───────────────────────────────────────────────── */
   const getStatusColor = (status) => {
     switch ((status || '').toLowerCase()) {
       case 'pending': case 'starting': case 'stopping': case 'retrying':
@@ -268,7 +257,6 @@ const Jobs = () => {
     return '-';
   };
 
-  /* ── Derived data ──────────────────────────────────────────── */
   const rows = useMemo(() => jobs.map((job) => ({
     id: job.id, job_name: job.name, owner: job.owner,
     description: job.description || '', status: job.status, created_at: job.created_at,
@@ -282,10 +270,8 @@ const Jobs = () => {
     );
   }, [rows, searchText]);
 
-  /* ── Selected job (for single context menu) ────────────────── */
   const selectedJob = jobs.find(j => j.id === selectedJobId) || null;
 
-  /* ── Empty state ───────────────────────────────────────────── */
   const EmptyState = () => (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 12, gap: 2 }}>
       <Box sx={{
@@ -302,14 +288,12 @@ const Jobs = () => {
     </Box>
   );
 
-  /* ════════════════════════════════════════════════════════════ */
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppHeader title="Jobs" />
 
       <Box className="page-container fade-in">
 
-        {/* ── Cluster capacity dashboard ─────────────────────── */}
         <Box sx={{
           mb: 3, backgroundColor: 'background.paper', borderRadius: '16px',
           border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', p: 2.5,
@@ -332,7 +316,6 @@ const Jobs = () => {
               ))
             ) : (
               <>
-                {/* Nodes */}
                 <Tooltip title="Available nodes matching selector/tolerations" arrow>
                   <span style={{ display: 'block', height: '100%' }}>
                     <CapacityCard
@@ -345,7 +328,6 @@ const Jobs = () => {
                   </span>
                 </Tooltip>
 
-                {/* CPU */}
                 {(() => {
                   const avail = formatCores(resources.remaining?.cpu_m || 0);
                   const total = formatCores(resources.capacity?.cpu_m || 0);
@@ -370,7 +352,6 @@ const Jobs = () => {
                   );
                 })()}
 
-                {/* CPU Quota */}
                 {resources.jobResources && (() => {
                   const jr = resources.jobResources || {};
                   const cpuReq = formatCpuQuota(jr.requests);
@@ -390,7 +371,6 @@ const Jobs = () => {
                   );
                 })()}
 
-                {/* RAM Quota */}
                 {resources.jobResources && (() => {
                   const jr = resources.jobResources || {};
                   const memReq = formatMemoryQuota(jr.requests);
@@ -410,7 +390,6 @@ const Jobs = () => {
                   );
                 })()}
 
-                {/* RAM */}
                 {(() => {
                   const avail = formatGiB(resources.remaining?.memory_bytes || 0);
                   const total = formatGiB(resources.capacity?.memory_bytes || 0);
@@ -439,7 +418,6 @@ const Jobs = () => {
           </Box>
         </Box>
 
-        {/* ══ Unified Jobs Control Panel ════════════════════════ */}
         <Box sx={{
           mb: 2,
           backgroundColor: 'background.paper',
@@ -449,10 +427,8 @@ const Jobs = () => {
           px: 2.5, pt: 2, pb: 1.5,
         }}>
 
-          {/* Row 1: Search · Sort · View Toggle · New Job */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}>
 
-            {/* Search */}
             <TextField
               size="small"
               placeholder="Search by name, owner…"
@@ -473,7 +449,6 @@ const Jobs = () => {
               }}
             />
 
-            {/* Sort */}
             <FormControl size="small" sx={{ minWidth: 155, flexShrink: 0 }}>
               <Select
                 value={sortBy}
@@ -485,14 +460,10 @@ const Jobs = () => {
               </Select>
             </FormControl>
 
-            {/* Divider */}
-            {/* <Box sx={{ width: 1, height: 28, bgcolor: 'var(--border-color)', flexShrink: 0, display: { xs: 'none', sm: 'block' } }} /> */}
 
 
-            {/* Spacer */}
             <Box sx={{ flex: 1 }} />
 
-            {/* Total count */}
             {totalJobs > 0 && (
               <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 {totalJobs > pageSize
@@ -502,7 +473,6 @@ const Jobs = () => {
               </Typography>
             )}
 
-            {/* New Job */}
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -525,13 +495,10 @@ const Jobs = () => {
             </Button>
           </Box>
 
-          {/* Divider between rows */}
           <Box sx={{ height: 1, bgcolor: 'var(--border-color)', mx: -0.5, mb: 1.5 }} />
 
-          {/* Row 2: Status chips · Spacer · Page size · Go to page · Pagination */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
 
-            {/* Status filter chips */}
             {STATUS_CHIPS.map((chip) => {
               const active = statusFilter === chip.value;
               return (
@@ -557,10 +524,8 @@ const Jobs = () => {
               );
             })}
 
-            {/* Spacer */}
             <Box sx={{ flex: 1, minWidth: 8 }} />
 
-            {/* View Toggle */}
             <Box sx={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
               {[
                 { mode: 'grid',  Icon: ViewModule, label: 'Grid'  },
@@ -584,7 +549,6 @@ const Jobs = () => {
               ))}
             </Box>
 
-            {/* Page size */}
             <FormControl size="small" sx={{ minWidth: 100, flexShrink: 0 }}>
               <Select
                 value={pageSize}
@@ -595,7 +559,6 @@ const Jobs = () => {
               </Select>
             </FormControl>
 
-            {/* Go to page */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, flexShrink: 0 }}>
               <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 Go to:
@@ -628,7 +591,6 @@ const Jobs = () => {
               </Typography>
             </Box>
 
-            {/* Pagination */}
             {totalJobs > pageSize && (
               <Pagination
                 count={Math.max(1, Math.ceil(totalJobs / pageSize))}
@@ -646,12 +608,10 @@ const Jobs = () => {
 
         <ErrorMessage message={error} />
 
-        {/* ── Jobs content ───────────────────────────────────── */}
         {jobs.length === 0 ? (
           <EmptyState />
         ) : viewMode === 'table' ? (
 
-          /* ── TABLE VIEW ──────────────────────────────────── */
           <Box sx={{
             backgroundColor: 'background.paper', borderRadius: '16px',
             border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
@@ -715,9 +675,6 @@ const Jobs = () => {
                             {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                           </Box>
                         </TableCell>
-                        {/* <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.84rem', py: 1.5, px: 2 }}>
-                          {(userRole === 'admin' || userRole === 'moderator') && isPro && job.owner ? job.owner : '—'}
-                        </TableCell> */}
                         <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.82rem', py: 1.5, px: 2, whiteSpace: 'nowrap' }}>
                           {formatDate(job.created_at)}
                         </TableCell>
@@ -740,7 +697,6 @@ const Jobs = () => {
 
         ) : (
 
-          /* ── GRID VIEW ───────────────────────────────────── */
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: 2 }}>
             {visibleRows.map((job) => {
               const sc = getStatusColor(job.status);
@@ -759,7 +715,6 @@ const Jobs = () => {
                     '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 10px 28px rgba(0,0,0,0.1)' },
                   }}
                 >
-                  {/* Status accent bar */}
                   <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: sc.border }} />
 
                   <Box sx={{ p: 2.5, pl: 3 }}>
@@ -810,7 +765,6 @@ const Jobs = () => {
           </Box>
         )}
 
-        {/* ── Single context menu ────────────────────────────── */}
         {selectedJob && (
           <Menu
             anchorEl={anchorEl}
@@ -870,7 +824,6 @@ const Jobs = () => {
           </Menu>
         )}
 
-        {/* ── Delete confirmation modal ──────────────────────── */}
         <Modal open={Boolean(confirmDeleteId)} onClose={() => setConfirmDeleteId(null)}>
           <Box sx={{
             position: 'absolute', top: '50%', left: '50%',
@@ -882,7 +835,6 @@ const Jobs = () => {
             outline: 'none', p: 4,
             border: '1px solid var(--border-color)',
           }}>
-            {/* Icon */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
               <Box sx={{
                 width: 64, height: 64, borderRadius: '50%',
@@ -893,11 +845,9 @@ const Jobs = () => {
                 <Delete sx={{ fontSize: 30, color: '#ef4444' }} />
               </Box>
             </Box>
-            {/* Title */}
             <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1, color: 'text.primary' }}>
               Delete Job?
             </Typography>
-            {/* Job name */}
             {confirmDeleteId && (
               <Typography variant="body2" sx={{ textAlign: 'center', mb: 1, color: 'var(--text-secondary)' }}>
                 <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -905,11 +855,9 @@ const Jobs = () => {
                 </Box>
               </Typography>
             )}
-            {/* Warning text */}
             <Typography variant="body2" sx={{ textAlign: 'center', color: 'var(--text-secondary)', mb: 3.5, lineHeight: 1.6 }}>
               This action cannot be undone. The job and all associated data will be permanently removed.
             </Typography>
-            {/* Buttons */}
             <Box sx={{ display: 'flex', gap: 1.5 }}>
               <Button
                 fullWidth variant="outlined"

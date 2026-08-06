@@ -18,7 +18,6 @@ const Footer = () => {
         }
       } catch (error) {
         console.error('Failed to fetch app version:', error);
-        // Silently fail - footer will just not show version
       }
     };
 

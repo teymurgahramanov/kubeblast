@@ -95,7 +95,6 @@ def get_jobs(
     if owner:
         query["owner"] = owner
 
-    # Restrict regular users to their own jobs
     if current_user.role == "user":
         query["owner"] = current_user.username
 
@@ -116,14 +115,12 @@ def get_jobs(
 
     total = db.mongo.jobs.count_documents(query)
 
-    # Apply sorting (default: newest first)
     sort_direction = -1
     if sort_by == "created_asc":
         sort_direction = 1
 
     cursor = db.mongo.jobs.find(query).sort("created_at", sort_direction)
 
-    # Apply pagination
     if page_size:
         safe_page = max(page, 1)
         skip = (safe_page - 1) * page_size
@@ -373,7 +370,6 @@ def delete_job(current_user, job_id):
 
     files.delete_file(job_id)
 
-    # Clean up associated job events and stored log lines
     try:
         events.delete_events_for_job(job_id)
     except Exception as e:  # noqa: BLE001
@@ -383,7 +379,6 @@ def delete_job(current_user, job_id):
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Failed to delete job logs for {job_id}: {e}")
 
-    # Clean up associated InfluxDB metrics
     if config.INFLUXDB_ENABLED:
         try:
             from services.influxdb import delete_job_metrics

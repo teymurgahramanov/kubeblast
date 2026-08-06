@@ -6,7 +6,6 @@ import Menuselect from "./Menuselect";
 const Settings = () => {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
         backgroundColor: 'background.paper',
@@ -39,7 +38,6 @@ const Settings = () => {
         </Box>
       </Box>
 
-      {/* Content */}
       <Box sx={{ p: 3 }}>
         <Typography variant="body1" sx={{ color: 'var(--text-secondary)' }}>
           Settings page content will be added here.

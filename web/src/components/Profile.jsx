@@ -26,7 +26,6 @@ const Profile = () => {
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [timezone, setTimezone] = useState('UTC');
   
-  // PAT state
   const [pats, setPats] = useState([]);
   const [patDialogOpen, setPatDialogOpen] = useState(false);
   const [newPatName, setNewPatName] = useState('');
@@ -80,13 +79,11 @@ const Profile = () => {
     }
   };
 
-  // Fetch profile, PATs and app stats on mount
   useEffect(() => {
     fetchProfile();
     fetchAppStats();
   }, []);
 
-  // Fetch PATs only if Advanced edition
   useEffect(() => {
     if (isAdvanced) {
       fetchPats();
@@ -109,7 +106,7 @@ const Profile = () => {
       });
       
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
-      fetchProfile(); // Refresh data after update
+      fetchProfile();
     } catch (error) {
       setMessage({
         type: 'error',
@@ -256,7 +253,6 @@ const Profile = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
       <Box sx={{ 
         borderBottom: '1px solid var(--border-color)',
         backgroundColor: 'background.paper',
@@ -394,7 +390,6 @@ const Profile = () => {
           </Button>
         </Box>
 
-        {/* Personal Access Tokens Section - Advanced Edition Only */}
         {isAdvanced && (
         <Box sx={{ mt: 6 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -512,7 +507,6 @@ const Profile = () => {
         )}
       </Box>
 
-      {/* Create PAT Dialog */}
       <Dialog 
         open={patDialogOpen && !createdToken} 
         onClose={() => setPatDialogOpen(false)}
@@ -571,7 +565,6 @@ const Profile = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Token Created Dialog */}
       <Dialog 
         open={!!createdToken} 
         onClose={handleCloseTokenDialog}

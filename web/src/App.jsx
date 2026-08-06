@@ -39,7 +39,6 @@ const App = () => {
           } 
         />
         
-        {/* Jobs route with conditional rendering for adding and listing */}
         <Route
           path="/jobs"
           element={
@@ -58,7 +57,6 @@ const App = () => {
           }
         />
         
-        {/* Users route */}
         <Route
           path="/users"
           element={
@@ -68,7 +66,6 @@ const App = () => {
           }
         />
 
-        {/* Edit user route */}
         <Route
           path="/users/:username"
           element={
@@ -76,7 +73,6 @@ const App = () => {
           }
         />
 
-        {/* Profile route */}
         <Route
           path="/profile"
           element={
@@ -86,7 +82,6 @@ const App = () => {
           }
         />
 
-        {/* Settings route */}
         <Route
           path="/settings"
           element={
@@ -96,7 +91,6 @@ const App = () => {
           }
         />
 
-        {/* API Documentation route */}
         <Route
           path="/api-docs"
           element={
@@ -107,7 +101,6 @@ const App = () => {
         />
       </Routes>
 
-      {/* Add User Modal */}
       {addUser && (
         <div
           style={{

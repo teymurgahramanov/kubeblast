@@ -10,9 +10,6 @@ from core import db, models
 from core.log import logger
 
 
-# ============================================================================
-# CPU & MEMORY PARSING
-# ============================================================================
 
 _CPU_PATTERN = re.compile(r"^(\d+(\.\d+)?)(m|n|u)?$")
 _MEM_PATTERN = re.compile(r"^(\d+(\.\d+)?)([KMGTPE]i?)?$")
@@ -62,9 +59,6 @@ def parse_mem(mem: str) -> int:
     return int(float(value) * _MEM_UNITS.get(unit or "", 1))
 
 
-# ============================================================================
-# NODE FILTERING (availability + selector + tolerations)
-# ============================================================================
 
 def node_is_available(node: client.V1Node) -> bool:
     """Return True when a node can currently accept scheduled workloads."""
@@ -79,11 +73,9 @@ def node_is_available(node: client.V1Node) -> bool:
 def node_matches(node: client.V1Node, selector: dict, tolerations: list) -> bool:
     labels = node.metadata.labels or {}
 
-    # selector filter
     if selector and any(labels.get(k) != v for k, v in selector.items()):
         return False
 
-    # taints vs tolerations
     taints = getattr(node.spec, "taints", []) or []
     for t in taints:
         if t.effect in ("NoSchedule", "NoExecute"):
@@ -101,9 +93,6 @@ def node_matches(node: client.V1Node, selector: dict, tolerations: list) -> bool
     return True
 
 
-# ============================================================================
-# METRICS API (metrics.k8s.io)
-# ============================================================================
 
 
 def _fetch_pods_usage_by_node(node_names: List[str]) -> Dict[str, int]:
@@ -131,7 +120,6 @@ def _fetch_pods_usage_by_node(node_names: List[str]) -> Dict[str, int]:
             plural="pods",
         )
 
-        # Build a map of pod -> node from the k8s API
         pod_node_map: Dict[str, str] = {}
         token = None
         while True:
@@ -150,7 +138,6 @@ def _fetch_pods_usage_by_node(node_names: List[str]) -> Dict[str, int]:
             if not token:
                 break
 
-        # Aggregate metrics for pods on matching nodes
         for item in metrics_data.get("items", []):
             metadata = item.get("metadata", {})
             pod_key = f"{metadata.get('namespace', '')}/{metadata.get('name', '')}"
@@ -206,7 +193,6 @@ def _pod_requested_resources(pod: client.V1Pod) -> Dict[str, int]:
     pod_cpu = max(sum_cpu, max_init_cpu)
     pod_mem = max(sum_mem, max_init_mem)
 
-    # pod overhead (if set) is added on top
     overhead = getattr(pod.spec, "overhead", None) or {}
     if overhead:
         pod_cpu += parse_cpu(overhead.get("cpu", "0"))
@@ -264,9 +250,6 @@ def _fetch_pods_requests_by_node(node_names: List[str]) -> Dict[str, int]:
     return {"cpu_m": total_cpu, "memory_bytes": total_mem}
 
 
-# ============================================================================
-# MAIN CAPACITY CALCULATION
-# ============================================================================
 
 def compute_and_store_capacity() -> Dict:
     """
@@ -279,31 +262,24 @@ def compute_and_store_capacity() -> Dict:
         stats: { _id: "capacity", ... }
     """
 
-    # Fetch nodes
     nodes = client.CoreV1Api().list_node().items
 
-    # Apply availability, selector + tolerations
     sel = config.K8S_JOB_NODE_SELECTOR
     tol = config.K8S_JOB_TOLERATIONS
     matched = [n for n in nodes if node_is_available(n) and node_matches(n, sel, tol)]
     matched_names = [n.metadata.name for n in matched]
 
-    # ----- Allocatable totals -----
     total_alloc_cpu = sum(parse_cpu(n.status.allocatable["cpu"]) for n in matched)
     total_alloc_mem = sum(parse_mem(n.status.allocatable["memory"]) for n in matched)
 
-    # ----- Used by requests (scheduler semantics) -----
     used_requests = _fetch_pods_requests_by_node(matched_names)
 
-    # ----- Actual usage (metrics.k8s.io; best-effort) -----
     used_usage = _fetch_pods_usage_by_node(matched_names)
 
-    # ----- Remaining -----
     # "remaining" is schedulable remaining (allocatable - requested), matching kube-scheduler.
     remaining_cpu = max(0, total_alloc_cpu - used_requests["cpu_m"])
     remaining_mem = max(0, total_alloc_mem - used_requests["memory_bytes"])
 
-    # Build your Pydantic model (no 'allocated' in response; 'remaining' instead)
     cap = models.Capacity(
         nodesTotal=len(matched),
         nodesMatching=len(matched),
@@ -314,7 +290,6 @@ def compute_and_store_capacity() -> Dict:
         updatedAt=datetime.utcnow(),
     ).dict()
 
-    # Store into MongoDB
     db.mongo.stats.update_one({"_id": "capacity"}, {"$set": cap}, upsert=True)
 
     return cap

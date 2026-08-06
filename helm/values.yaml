@@ -1,12 +1,6 @@
-# Kubeblast Helm chart values
-
-# Name override for the release
 nameOverride: ""
-
-# Full name override for the release
 fullnameOverride: ""
 
-# Pod security context configuration for the non-root Kubeblast runtime.
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 10001
@@ -16,23 +10,16 @@ podSecurityContext:
   seccompProfile:
     type: RuntimeDefault
 
-# Container security context configuration for Kubeblast.
 containerSecurityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
       - ALL
 
-# Node selector for Kubeblast pod scheduling.
 nodeSelector: {}
-
-# Tolerations for Kubeblast pod scheduling
 tolerations: []
-
-# Affinity rules for Kubeblast pod scheduling
 affinity: {}
 
-# Resources configuration for Kubeblast container
 resources:
   requests:
     cpu: "50m"
@@ -41,148 +28,25 @@ resources:
     cpu: "100m"
     memory: "512Mi"
 
-# Environment variables for Kubeblast container.
-# Use envFromSecret to load environment variables from a secret.
+# Additional application environment variables. Use envFromSecret for secrets.
 env: []
-  # --- General ---
-  # - name: LICENSE_FILE
-  #   value: ""  # Full signed license file content; prefer loading it through envFromSecret
-  # - name: LOG_LEVEL
-  #   value: "INFO"  # Logging level (DEBUG, INFO, WARNING, ERROR)
-  # - name: SECRET_KEY
-  #   value: "your-secret-key"  # Secret key for JWT tokens and encryption (random by default)
-  # - name: TIMEZONE
-  #   value: "Europe/Berlin"  # Application timezone for API/UI datetime rendering (default: UTC)
-  # - name: PER_USER_CURRENT_JOBS_LIMIT
-  #   value: "3"  # Maximum number of current jobs per user
-  # - name: WORKER_WATCH_INTERVAL
-  #   value: "300"  # Worker full resync interval in seconds
-  # - name: WORKER_WATCH_TIMEOUT
-  #   value: "60"  # Kubernetes watch stream timeout in seconds
-  #
-  # --- Runtime ---
-  # - name: JMETER_MODE
-  #   value: "standalone"  # JMeter mode: "standalone" or "distributed"
-  # - name: K8S_METRICS_SERVER
-  #   value: "https://metrics-server.kube-system"  # Metrics Server URL for capacity data retrieval
-  # - name: K8S_JOB_PRIORITY_CLASS
-  #   value: ""  # Kubernetes priority class for job pods
-  # - name: K8S_JOB_IMAGE
-  #   value: "alpine/jmeter:5.6"  # JMeter Docker image for load testing
-  # - name: K8S_JOB_IMAGE_PULL_POLICY
-  #   value: "IfNotPresent"  # Image pull policy (Always, IfNotPresent, Never)
-  # - name: K8S_JOB_IMAGE_PULL_SECRETS
-  #   value: '[{"name": "regcred"}]'  # Image pull secrets (JSON array)
-  # - name: K8S_JOB_NODE_SELECTOR
-  #   value: '{"nodeType": "worker"}'  # Node selector for job placement (JSON)
-  # - name: K8S_JOB_TOLERATIONS
-  #   value: '[{"key": "dedicated", "operator": "Equal", "value": "loadtest", "effect": "NoSchedule"}]'  # Tolerations for job scheduling (JSON array)
-  # - name: K8S_JOB_RESOURCES
-  #   value: '{"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}'  # Resource requests/limits for job pods (JSON)
-  # - name: K8S_JOB_RESOURCES_MASTER
-  #   value: '{"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}'  # Resource requests/limits for the JMeter master job in distributed mode (JSON)
-  #
-  # --- MongoDB ---
-  # - name: MONGODB_URI
-  #   value: "mongodb+srv://user:password@cluster.example.com/kubeblast"  # Full URI override for external MongoDB; takes precedence over the fields below
-  # - name: MONGODB_HOST
-  #   value: "localhost"  # MongoDB host address
-  # - name: MONGODB_PORT
-  #   value: "27017"  # MongoDB port number
-  # - name: MONGODB_USER
-  #   value: "kubeblast"  # MongoDB username
-  # - name: MONGODB_PASS
-  #   value: "kubeblast"  # MongoDB password
-  # - name: MONGODB_NAME
-  #   value: "kubeblast"  # MongoDB database name
-  # - name: MONGODB_PARAMS
-  #   value: "?authSource=admin"  # Extra MongoDB URI params appended to connection string
-  #
-  # --- InfluxDB ---
-  # - name: INFLUXDB_ENABLED
-  #   value: "false"  # Enable InfluxDB for JMeter real-time metrics in the UI
-  # - name: INFLUXDB_URL
-  #   value: "http://influxdb:8086"  # InfluxDB base URL (default: http://localhost:8086)
-  # - name: INFLUXDB_DATABASE
-  #   value: "jmeter"  # InfluxDB database name for JMeter metrics
-  #
-  # --- LDAP ---
-  # - name: LDAP_ENABLED
-  #   value: "false"  # Enable LDAP authentication
-  # - name: LDAP_SERVER
-  #   value: "ldap://ldap.example.com:389"  # LDAP server address
-  # - name: LDAP_BASE_DN
-  #   value: "DC=example,DC=com"  # LDAP base distinguished name
-  # - name: LDAP_BIND_DN
-  #   value: "CN=admin,DC=example,DC=com"  # LDAP bind distinguished name
-  # - name: LDAP_BIND_PASSWORD
-  #   value: ""  # LDAP bind password
-  # - name: LDAP_USER_SEARCH_FILTER
-  #   value: "(&(objectClass=person)(sAMAccountName={username}))"  # LDAP user search filter
-  # - name: LDAP_GROUP_SEARCH_FILTER
-  #   value: "(&(objectClass=group)(member={dn}))"  # LDAP group search filter
-  # - name: LDAP_USER_ATTRIBUTES
-  #   value: "uid,sAMAccountName,cn,mail,memberOf"  # Comma-separated user attributes
-  # - name: LDAP_GROUP_ATTRIBUTES
-  #   value: "cn,member"  # Comma-separated group attributes
-  # - name: LDAP_USE_TLS
-  #   value: "false"  # Use TLS for LDAP connection
-  # - name: LDAP_VERIFY_CERT
-  #   value: "false"  # Verify LDAP server certificate
-  #
-  # --- OIDC ---
-  # - name: OIDC_ENABLED
-  #   value: "false"  # Enable OIDC authentication
-  # - name: OIDC_CLIENT_ID
-  #   value: ""  # OIDC client ID
-  # - name: OIDC_CLIENT_SECRET
-  #   value: ""  # OIDC client secret
-  # - name: OIDC_REDIRECT_URI
-  #   value: "http://localhost:3000/login"  # Redirect URI for frontend
-  # - name: OIDC_AUTH_URL
-  #   value: ""  # OIDC authorization endpoint
-  # - name: OIDC_TOKEN_URL
-  #   value: ""  # OIDC token endpoint
-  # - name: OIDC_USERINFO_URL
-  #   value: ""  # OIDC userinfo endpoint
-  # - name: OIDC_SCOPES
-  #   value: "openid profile email"  # Space-separated scopes
-  # - name: OIDC_ROLE_MAPPING
-  #   value: '{"realm_admin":"admin","myclient:editor":"moderator"}'  # Map claims to RBAC roles (JSON)
-  # - name: OIDC_DEFAULT_ROLE
-  #   value: "user"  # Default RBAC role when no mapping matches
-  # - name: OIDC_AUTO_CREATE_USERS
-  #   value: "true"  # Auto-create users on first OIDC login
-
-# Reference to a secret containing application environment variables.
-# Store LICENSE_FILE, MONGODB_URI/MONGODB_PASS, and credential-bearing
-# INFLUXDB_URL values in this secret instead of adding them directly to env.
 envFromSecret: ""
 
-# MongoDB configuration
-# Uses the Bitnami MongoDB chart from oci://registry-1.docker.io/bitnamicharts/mongodb.
-# For external MongoDB, set "enabled" to false and provide MONGODB_URI and
-# MONGODB_NAME through env or envFromSecret. The host/port/user/password variables
-# remain available when a full URI is not required.
 mongodb:
   enabled: true
   architecture: "standalone"
   useStatefulSet: true
   auth:
     enabled: true
-    # The root password is generated by the subchart when empty.
     rootPassword: ""
-    # Kubeblast uses the first username, password, and database from these lists.
     usernames:
       - "kubeblast"
     passwords:
       - "kubeblast"
     databases:
       - "kubeblast"
-    # Set this to a Secret with `mongodb-passwords` and `mongodb-root-password` keys.
     existingSecret: ""
   image:
-    # Multi-platform digest for bitnami/mongodb:latest used by chart 19.1.22 (MongoDB 8.3.7).
     digest: "sha256:6b25f1600ac5576d7ee45c0c76bc28dbb28a61ded80ebf75baaa226a431fe57d"
     pullPolicy: "IfNotPresent"
     pullSecrets: []
@@ -205,18 +69,11 @@ mongodb:
   extraVolumes: []
   extraVolumeMounts: []
 
-# InfluxDB configuration (JMeter real-time metrics)
-# Uses the official influxdata/influxdb Helm chart.
-# If disabled, real-time metrics features are not available.
-# For external InfluxDB, set "enabled" to false and provide INFLUXDB_ENABLED=true,
-# INFLUXDB_URL, and INFLUXDB_DATABASE through env or envFromSecret.
-# Kubeblast requires an InfluxDB 1.x-compatible /write and /query API.
 influxdb:
   enabled: true
   image:
     repository: "influxdb"
-    # The Alpine image used by the subchart has no ARM64 manifest. Pin the
-    # multi-platform Debian-based InfluxDB 1.8.10 image by digest instead.
+    # Use Debian-based InfluxDB 1.8.10 because the subchart's Alpine image has no ARM64 manifest.
     tag: "1.8.10@sha256:299ebda2c7e308dbef42e26ac9b8fd1d9b3bcb8a0aee80c6509aa0219c1d0290"
     pullPolicy: "IfNotPresent"
   initScripts:
@@ -239,58 +96,39 @@ influxdb:
       enabled: true
       flux-enabled: true
 
-# Storage PVC configuration
 pvc:
-  # If you want to use an existing PVC, set existingClaim to the PVC name
-  # When existingClaim is set, a new PVC will not be created
   existingClaim: ""
-  # PVC creation settings (used only if existingClaim is empty)
   storageClassName: ""
   size: "2Gi"
   accessMode: "ReadWriteMany"
   annotations: {}
   labels: {}
 
-# Additional annotations for Kubeblast pod
 podAnnotations: {}
-
-# Additional labels for Kubeblast pod
 podLabels: {}
-
-# Extra volumes to add to the Kubeblast pod
 extraVolumes: []
-
-# Extra volume mounts to add to the Kubeblast container
 extraVolumeMounts: []
 
-# Kubeblast container image configuration
 image:
   repository: teymurgahramanov/kubeblast
   tag: ""
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
 
-# Internal ports used by the non-root Kubeblast container.
 containerPort:
   web: 8080
   api: 8000
 
-# Kubeblast service configuration.
 service:
   port:
-    web: 80    # Web interface service port
-    api: 8000  # API service port
+    web: 80
+    api: 8000
 
-# Kubeblast service account annotations
 serviceAccount:
   annotations: {}
 
-# Kubeblast Ingress configuration
 ingress:
   enabled: false
-  # Large CSV uploads may require an ingress-specific body-size annotation, for example:
-  # annotations:
-  #   nginx.ingress.kubernetes.io/proxy-body-size: "110m"
   annotations: {}
   className: ""
   host: ""
