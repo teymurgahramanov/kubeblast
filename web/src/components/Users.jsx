@@ -10,7 +10,7 @@ import EditUser from "./EditUser";
 import ErrorMessage from './ErrorMessage';
 import AddUser from "./AddUser";
 
-const Users = ({ setAddUser }) => {
+const Users = () => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -248,7 +248,7 @@ const Users = ({ setAddUser }) => {
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
           <Button
             variant="contained"
-            onClick={() => setAddUser(true)}
+            onClick={() => setAddUserState(true)}
             startIcon={<PersonAdd />}
             sx={{
               background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Jobs from './components/Jobs';
@@ -6,7 +5,6 @@ import JobDetail from './components/JobDetail';
 import Users from './components/Users';
 import PrivateRoute from './components/PrivateRoute';
 import { getUserRole } from './utils/auth';
-import AddUser from './components/AddUser';
 import FormEditUser from './components/EditUser';
 
 import Profile from './components/Profile';
@@ -20,8 +18,6 @@ const AdminRoute = ({ children }) => {
 };
 
 const App = () => {
-  const [addUser, setAddUser] = useState(false);
-
   const isAuthenticated = () => {
     return !!localStorage.getItem('access_token');
   };
@@ -61,7 +57,7 @@ const App = () => {
           path="/users"
           element={
             <AdminRoute>
-              <Users setAddUser={setAddUser} />
+              <Users />
             </AdminRoute>
           }
         />
@@ -101,36 +97,6 @@ const App = () => {
         />
       </Routes>
 
-      {addUser && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1300,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '90%',
-              maxWidth: 600,
-              backgroundColor: 'var(--background-light)',
-              borderRadius: '8px',
-              padding: '2rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <AddUser onClose={() => setAddUser(false)} />
-          </div>
-        </div>
-      )}
     </Router>
   );
 };

@@ -469,7 +469,7 @@ const Jobs = () => {
         </Box>
 
         <Box sx={{
-          mb: 3,
+          mb: 1,
           px: 2,
           py: 1.5,
           backgroundColor: 'background.paper',
@@ -593,6 +593,72 @@ const Jobs = () => {
           </Box>
         </Box>
 
+        <Box sx={{ mb: 3, px: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+          <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+            {totalJobs}
+          </Typography>
+
+          {totalJobs > 10 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+              <FormControl size="small" sx={{ width: 68 }}>
+                <Select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value) || 10); setPage(1); }}
+                  sx={{
+                    width: 68,
+                    height: 32,
+                    fontSize: '0.78rem',
+                    borderRadius: '9px',
+                    bgcolor: 'action.hover',
+                    '& fieldset': { border: 0 },
+                    '& .MuiSelect-select': { textAlign: 'center', py: 0.5, pl: 1, pr: 3 },
+                  }}
+                >
+                  {[10, 50, 100].map(n => <MenuItem key={n} value={n}>{n}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                <TextField
+                  size="small"
+                  type="text"
+                  value={goToPage}
+                  onChange={(e) => setGoToPage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const num = parseInt(goToPage);
+                      const maxPage = Math.max(1, Math.ceil(totalJobs / pageSize));
+                      if (num >= 1 && num <= maxPage) setPage(num);
+                      setGoToPage('');
+                    }
+                  }}
+                  placeholder={String(page)}
+                  sx={{
+                    width: 52,
+                    '& .MuiOutlinedInput-root': {
+                      height: 32,
+                      borderRadius: '9px',
+                      bgcolor: 'action.hover',
+                      '& fieldset': { border: 0 },
+                    },
+                  }}
+                  slotProps={{
+                    htmlInput: {
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*',
+                      min: 1,
+                      max: Math.max(1, Math.ceil(totalJobs / pageSize)),
+                      style: { textAlign: 'center', fontSize: '0.82rem', padding: '5px 6px' },
+                    },
+                  }}
+                />
+                <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                  / {Math.max(1, Math.ceil(totalJobs / pageSize))}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Box>
 
         <ErrorMessage message={error} />
 
@@ -667,72 +733,7 @@ const Jobs = () => {
             })}
             </Box>
 
-            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-              <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                {totalJobs} job{totalJobs !== 1 ? 's' : ''}
-              </Typography>
 
-              {totalJobs > 10 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
-                    <FormControl size="small" sx={{ width: 68 }}>
-                      <Select
-                        value={pageSize}
-                        onChange={(e) => { setPageSize(Number(e.target.value) || 10); setPage(1); }}
-                        sx={{
-                          width: 68,
-                          height: 32,
-                          fontSize: '0.78rem',
-                          borderRadius: '9px',
-                          bgcolor: 'action.hover',
-                          '& fieldset': { border: 0 },
-                          '& .MuiSelect-select': { textAlign: 'center', py: 0.5, pl: 1, pr: 3 },
-                        }}
-                      >
-                        {[10, 50, 100].map(n => <MenuItem key={n} value={n}>{n}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={goToPage}
-                      onChange={(e) => setGoToPage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const num = parseInt(goToPage);
-                          const maxPage = Math.max(1, Math.ceil(totalJobs / pageSize));
-                          if (num >= 1 && num <= maxPage) setPage(num);
-                          setGoToPage('');
-                        }
-                      }}
-                      placeholder={String(page)}
-                      sx={{
-                        width: 52,
-                        '& .MuiOutlinedInput-root': {
-                          height: 32,
-                          borderRadius: '9px',
-                          bgcolor: 'action.hover',
-                          '& fieldset': { border: 0 },
-                        },
-                      }}
-                      slotProps={{
-                        htmlInput: {
-                          min: 1,
-                          max: Math.max(1, Math.ceil(totalJobs / pageSize)),
-                          style: { textAlign: 'center', fontSize: '0.82rem', padding: '5px 6px' },
-                        },
-                      }}
-                    />
-                    <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                      / {Math.max(1, Math.ceil(totalJobs / pageSize))}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Box>
           </>
         )}
 
