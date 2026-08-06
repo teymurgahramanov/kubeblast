@@ -18,6 +18,13 @@ Use this skill for `helm/`, deployment-facing parts of `Dockerfile`, and `skaffo
 - Security, upgrade safety, and correct Kubernetes behavior take priority, but use the simplest solution that preserves them.
 - Stop when rendering and linting pass for the requested behavior. Remove obsolete template branches or values introduced by the change.
 
+## Comment discipline
+
+- Do not add decorative section banners, YAML labels that restate keys, commented-out values, or long commented example catalogs.
+- Never hide Helm directives behind YAML comments like `# {{ ... }}`. Use normal Helm templating syntax.
+- Keep `helm/values.yaml` concise. Document only non-obvious defaults, security-sensitive settings, compatibility constraints, or migration risks.
+- Add comments only when they help operators avoid a real mistake; otherwise prefer clear value names and README documentation.
+
 ## Understand the deployment shape
 
 - The main chart is an application chart in `helm/Chart.yaml`.
@@ -29,9 +36,9 @@ Use this skill for `helm/`, deployment-facing parts of `Dockerfile`, and `skaffo
 
 ## Make chart changes coherently
 
-1. Add or change the user-facing setting in `helm/values.yaml`, including a useful comment and safe default.
+1. Add or change the user-facing setting in `helm/values.yaml` with a safe default and no redundant comment.
 2. Consume it in the relevant file under `helm/templates/` or the MongoDB subchart.
-3. Update `README.md` when installation or operator behavior changes. Keep `helm/values.yaml` as the complete environment-variable reference.
+3. Update `README.md` when installation, environment variables, or operator behavior changes. Do not turn `helm/values.yaml` into a commented-out reference catalog.
 4. For application environment variables, prefer the generic `.Values.env` and `envFromSecret` mechanisms. Add dedicated values only when the chart must calculate or wire a value.
 5. Quote string values in templates. Use `toYaml` plus `nindent` for maps and lists, and guard optional blocks with `with` or `if`.
 6. Preserve existing labels and helper-generated names so selectors, upgrades, and cleanup remain stable.

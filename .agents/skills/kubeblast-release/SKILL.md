@@ -18,6 +18,12 @@ Use this skill only after an explicit release request. Release operations publis
 - Prefer an explicit checklist over new abstractions. Safety and reproducibility take priority, but use the simplest process that preserves them.
 - Stop after the requested preparation or approved publication step is complete; do not continue to later remote mutations without explicit approval.
 
+## Comment discipline
+
+- Do not add decorative section banners, commented-out examples/code, or comments that restate the surrounding file structure.
+- When release prep touches code, Helm templates, or values files, keep comments limited to non-obvious compatibility, security, migration, or operational constraints.
+- Prefer concise release notes and README documentation over stuffing commented reference material into source or chart values.
+
 ## Safety gate
 
 - Never dispatch `.github/workflows/release.yaml`, commit, push, create a tag, or publish an image/chart without explicit user approval for that action.

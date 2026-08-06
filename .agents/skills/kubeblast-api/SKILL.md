@@ -18,6 +18,12 @@ Use this skill for changes under `api/` and for cross-layer work whose source of
 - Correctness, authorization, and data safety take priority over simplicity, but choose the simplest solution that preserves them.
 - Stop when the requested behavior works and validation passes. Remove dead code made obsolete by the simplification.
 
+## Comment discipline
+
+- Do not add decorative section banners, JSX/YAML labels, step-by-step narration, or comments that restate the code.
+- Do not leave commented-out code or long commented example blocks in source, templates, or values files.
+- Add comments only for non-obvious behavior, security constraints, compatibility requirements, migration risks, or intentional exceptions.
+
 ## Map the change before editing
 
 1. Trace HTTP behavior from `api/routes/` into `api/services/`, then into `api/core/` or `api/templates/`.
@@ -42,7 +48,7 @@ Use this skill for changes under `api/` and for cross-layer work whose source of
 When adding an environment variable:
 
 1. Parse and default it in `api/config.py`.
-2. Add a documented example under `env` in `helm/values.yaml`.
+2. Document it in the smallest appropriate place without adding long commented-out examples to `helm/values.yaml`.
 3. Update `helm/templates/deployment.yaml` only if the chart must synthesize the value rather than pass it through `.Values.env` or `envFromSecret`.
 4. Never hardcode credentials. Prefer `envFromSecret` for sensitive deployment values.
 

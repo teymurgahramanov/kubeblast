@@ -19,6 +19,12 @@ Use this skill for the Vite React frontend in `web/`.
 - Accessibility, error handling, responsiveness, and security still matter, but implement them with the least complexity possible.
 - Stop when the requested behavior works and validation passes. Remove imports, state, helpers, and UI made obsolete by simplification.
 
+## Comment discipline
+
+- Do not add decorative section banners, JSX labels, step-by-step narration, or comments that restate visible UI structure.
+- Do not leave commented-out JSX, placeholder blocks, or old alternatives in components.
+- Add comments only for non-obvious behavior, cleanup-sensitive effects, browser quirks, security constraints, or intentional exceptions.
+
 ## Follow existing architecture
 
 - Write JavaScript and JSX, not TypeScript, unless the user explicitly requests a migration.
