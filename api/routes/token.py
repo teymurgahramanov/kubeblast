@@ -1,7 +1,7 @@
 from services import auth
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 from datetime import timedelta
 from core import models
 from core.log import logger
@@ -18,15 +18,15 @@ async def login(
 
 
 @router.post("/token/refresh", response_model=models.Token)
-async def refresh_token(refresh_token: str):
+async def refresh_token(request: models.RefreshTokenRequest):
     try:
-        username = auth.verify_refresh_token(refresh_token)
+        username = auth.verify_refresh_token(request.refresh_token)
         
         user = auth.get_user(username)
-        if not user:
+        if not user or not user.enabled:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
+                detail="User not found or inactive"
             )
         
         access_token = auth.create_access_token(
@@ -37,7 +37,7 @@ async def refresh_token(refresh_token: str):
         return models.Token(
             access_token=access_token,
             token_type="bearer",
-            refresh_token=refresh_token
+            refresh_token=request.refresh_token
         )
         
     except HTTPException:

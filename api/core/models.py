@@ -28,6 +28,9 @@ class Token(BaseModel):
     token_type: str
     refresh_token: str | None = None
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
 class User(BaseModel):
     username: str
     full_name: str | None = None

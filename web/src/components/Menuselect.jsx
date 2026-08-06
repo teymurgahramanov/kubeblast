@@ -36,9 +36,14 @@ const Menuselect = () => {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post('/logout');
+    } catch {
+    } finally {
+      localStorage.clear();
+      navigate('/login');
+    }
   };
 
   const handleNavigation = (path) => {
