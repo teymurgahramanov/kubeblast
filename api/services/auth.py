@@ -156,6 +156,9 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
         case _:
             return False
 
+def is_login_allowed(user: models.User) -> bool:
+    return config.LICENSE_VALID or user.role == "admin"
+
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -181,7 +184,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     except InvalidTokenError:
         raise credentials_exception
     user = get_user(username)
-    if user is None:
+    if user is None or not is_login_allowed(user):
         raise credentials_exception
     return user
 
@@ -301,6 +304,11 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not is_login_allowed(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Community mode allows admin login only",
         )
     
     access_token = create_access_token(

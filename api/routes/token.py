@@ -28,6 +28,11 @@ async def refresh_token(request: models.RefreshTokenRequest):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found or inactive"
             )
+        if not auth.is_login_allowed(user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Community mode allows admin login only"
+            )
         
         access_token = auth.create_access_token(
             data={"sub": user.username, "role": user.role},

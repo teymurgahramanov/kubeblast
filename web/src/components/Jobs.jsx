@@ -151,7 +151,6 @@ const Jobs = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc');
-  const [goToPage, setGoToPage] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(false);
@@ -618,43 +617,52 @@ const Jobs = () => {
                 </Select>
               </FormControl>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
-                <TextField
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35 }}>
+                <IconButton
                   size="small"
-                  type="text"
-                  value={goToPage}
-                  onChange={(e) => setGoToPage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const num = parseInt(goToPage);
-                      const maxPage = Math.max(1, Math.ceil(totalJobs / pageSize));
-                      if (num >= 1 && num <= maxPage) setPage(num);
-                      setGoToPage('');
-                    }
-                  }}
-                  placeholder={String(page)}
+                  disabled={page <= 1}
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
                   sx={{
-                    width: 52,
-                    '& .MuiOutlinedInput-root': {
-                      height: 32,
-                      borderRadius: '9px',
-                      bgcolor: 'action.hover',
-                      '& fieldset': { border: 0 },
-                    },
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    bgcolor: 'action.hover',
+                    color: 'var(--text-secondary)',
+                    '&:hover': { bgcolor: 'action.selected' },
+                    '&.Mui-disabled': { opacity: 0.45 },
                   }}
-                  slotProps={{
-                    htmlInput: {
-                      inputMode: 'numeric',
-                      pattern: '[0-9]*',
-                      min: 1,
-                      max: Math.max(1, Math.ceil(totalJobs / pageSize)),
-                      style: { textAlign: 'center', fontSize: '0.82rem', padding: '5px 6px' },
-                    },
+                >
+                  <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>‹</Box>
+                </IconButton>
+                <Box sx={{
+                  width: 68,
+                  height: 32,
+                  borderRadius: '9px',
+                  bgcolor: 'action.hover',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Typography sx={{ color: 'text.primary', fontSize: '0.78rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    {page} / {Math.max(1, Math.ceil(totalJobs / pageSize))}
+                  </Typography>
+                </Box>
+                <IconButton
+                  size="small"
+                  disabled={page >= Math.max(1, Math.ceil(totalJobs / pageSize))}
+                  onClick={() => setPage(prev => Math.min(Math.max(1, Math.ceil(totalJobs / pageSize)), prev + 1))}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '9px',
+                    bgcolor: 'action.hover',
+                    color: 'var(--text-secondary)',
+                    '&:hover': { bgcolor: 'action.selected' },
+                    '&.Mui-disabled': { opacity: 0.45 },
                   }}
-                />
-                <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                  / {Math.max(1, Math.ceil(totalJobs / pageSize))}
-                </Typography>
+                >
+                  <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>›</Box>
+                </IconButton>
               </Box>
             </Box>
           )}
