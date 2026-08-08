@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Typography, Avatar, Divider } from '@mui/material';
-import { Logout, People, Person, DarkMode, LightMode } from '@mui/icons-material';
+import { Logout, People, Person, DarkMode, LightMode, Help } from '@mui/icons-material';
 import { ColorModeContext } from '../lib/theme';
 import { getUserRole, getUsername } from '../utils/auth';
 import axiosInstance from "../utils/axiosInstance";
@@ -49,6 +49,11 @@ const Menuselect = () => {
   const handleNavigation = (path) => {
     navigate(path);
     handleClose();
+  };
+
+  const handleHelp = () => {
+    handleClose();
+    window.location.href = 'https://kubeblast.io/help';
   };
 
 
@@ -128,6 +133,13 @@ const Menuselect = () => {
             <ListItemText>Users</ListItemText>
           </MenuItem>
         )}
+
+        <MenuItem onClick={handleHelp}>
+          <ListItemIcon>
+            <Help fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Help</ListItemText>
+        </MenuItem>
 
         <MenuItem onClick={handleLogout} sx={{ color: 'var(--danger-color)' }}>
           <ListItemIcon>
