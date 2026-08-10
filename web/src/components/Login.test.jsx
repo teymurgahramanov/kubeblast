@@ -41,12 +41,19 @@ describe('Login authentication methods', () => {
 
   it('does not show unconfigured authentication methods', async () => {
     axiosInstance.get.mockResolvedValue({
-      data: { AUTHENTICATION_METHODS: ['local'] },
+      data: {
+        AUTHENTICATION_METHODS: ['local'],
+        APP_VERSION: '1.3.0',
+        EDITION: 'Community',
+      },
     });
 
     renderLogin();
 
     expect(await screen.findByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+    expect(await screen.findByLabelText('Application version and edition')).toHaveTextContent('1.3.0 Community');
+    expect(screen.queryByText('Welcome!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kubernetes Native')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Authentication Method')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Continue with SSO' })).not.toBeInTheDocument();
   });

@@ -1,14 +1,29 @@
 import { useState } from 'react';
 import {
-  Box, Typography, TextField, Button, IconButton, Select, MenuItem,
-  FormControl, InputLabel, FormControlLabel, Checkbox, Divider,
+  Box, Button, Checkbox, CircularProgress, Divider, FormControl,
+  FormControlLabel, IconButton, InputLabel, MenuItem, Select,
+  TextField, Typography,
 } from '@mui/material';
 import { Close, Edit } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import ErrorMessage from './ErrorMessage';
 
 const inputSx = {
-  '& .MuiOutlinedInput-root': { borderRadius: '10px' },
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '10px',
+    backgroundColor: 'background.paper',
+  },
+};
+
+const optionSx = {
+  m: 0,
+  px: 1.5,
+  py: 1.1,
+  minHeight: 58,
+  border: '1px solid var(--border-color)',
+  borderRadius: '10px',
+  alignItems: 'center',
+  '& .MuiFormControlLabel-label': { flex: 1 },
 };
 
 const EditUser = ({ user, onClose, onUpdate }) => {
@@ -23,21 +38,26 @@ const EditUser = ({ user, onClose, onUpdate }) => {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = (e) => {
-    const { name, value, checked } = e.target;
-    setUserData(prev => ({
-      ...prev,
-      [name]: e.target.type === 'checkbox' ? checked : value,
+  const handleInputChange = (event) => {
+    const { name, value, checked } = event.target;
+    setUserData((currentData) => ({
+      ...currentData,
+      [name]: event.target.type === 'checkbox' ? checked : value,
     }));
+    if (error) setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (userData.password && userData.password !== userData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+
+    setIsSubmitting(true);
+    setError('');
     try {
       const dataToUpdate = {
         full_name: userData.full_name,
@@ -55,104 +75,181 @@ const EditUser = ({ user, onClose, onUpdate }) => {
       await axiosInstance.put(`/users/${user.username}`, formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
+      setIsSubmitting(false);
       onUpdate();
       onClose();
-    } catch (err) {
-      setError(err.response?.data?.detail || err.message);
+    } catch (submitError) {
+      setError(submitError.response?.data?.detail || submitError.message);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+    <Box sx={{ p: { xs: 2.25, sm: 3.5 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
           <Box sx={{
-            width: 36, height: 36, borderRadius: '10px',
-            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 44,
+            height: 44,
+            borderRadius: '12px',
+            backgroundColor: 'secondary.main',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
           }}>
-            <Edit sx={{ fontSize: 18, color: '#fff' }} />
+            <Edit sx={{ fontSize: 21, color: 'secondary.contrastText' }} />
           </Box>
-          <Box>
-            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: 'text.primary', lineHeight: 1.2 }}>
-              Edit User
+          <Box sx={{ minWidth: 0 }}>
+            <Typography id="edit-user-title" sx={{ fontWeight: 700, fontSize: '1.15rem', color: 'text.primary', lineHeight: 1.25 }}>
+              Edit user
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              {user.username}
+            <Typography sx={{ mt: 0.35, fontSize: '0.8rem', color: 'text.secondary' }} noWrap>
+              Update access for {user.username}
             </Typography>
           </Box>
         </Box>
-        <IconButton size="medium" onClick={onClose} sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text-primary)' } }}>
-          <Close sx={{ fontSize: 18 }} />
+        <IconButton
+          aria-label="Close edit user dialog"
+          size="small"
+          onClick={onClose}
+          disabled={isSubmitting}
+          sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text-primary)' } }}
+        >
+          <Close sx={{ fontSize: 19 }} />
         </IconButton>
       </Box>
 
-      <Divider sx={{ mb: 2.5, mt: 1.5 }} />
-
+      <Divider sx={{ my: 2.5 }} />
       <ErrorMessage message={error} />
 
-      <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5 }}>
-            <TextField size="medium" label="Full Name" name="full_name"
-              value={userData.full_name} onChange={handleInputChange} sx={inputSx} />
-            <TextField size="medium" label="Email" name="email" type="email"
-              value={userData.email} onChange={handleInputChange} sx={inputSx} />
+      <Box component="form" onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', mb: 1.5 }}>
+              Account details
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                label="Full name"
+                name="full_name"
+                value={userData.full_name}
+                onChange={handleInputChange}
+                autoComplete="name"
+                sx={inputSx}
+              />
+              <TextField
+                label="Email"
+                name="email"
+                type="email"
+                value={userData.email}
+                onChange={handleInputChange}
+                autoComplete="email"
+                sx={inputSx}
+              />
+              <FormControl sx={{ ...inputSx, gridColumn: { sm: '1 / -1' } }}>
+                <InputLabel>Role</InputLabel>
+                <Select label="Role" name="role" value={userData.role} onChange={handleInputChange} required>
+                  <MenuItem value="user">User</MenuItem>
+                  <MenuItem value="moderator">Moderator</MenuItem>
+                  <MenuItem value="admin">Admin</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
           </Box>
 
-          <FormControl size="medium" sx={inputSx}>
-            <InputLabel>Role</InputLabel>
-            <Select label="Role" name="role" value={userData.role} onChange={handleInputChange} required>
-              <MenuItem value="user">User</MenuItem>
-              <MenuItem value="moderator">Moderator</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5 }}>
-            <TextField size="medium" label="New Password" name="password" type="password"
-              value={userData.password} onChange={handleInputChange} sx={inputSx}
-              placeholder="Leave blank to keep" />
-            {userData.password && (
-              <TextField size="medium" required label="Confirm Password" name="confirmPassword" type="password"
-                value={userData.confirmPassword} onChange={handleInputChange} sx={inputSx} />
-            )}
+          <Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', mb: 0.4 }}>
+              Change password
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mb: 1.5 }}>
+              Leave this section blank to keep the current password.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                label="New password"
+                name="password"
+                type="password"
+                value={userData.password}
+                onChange={handleInputChange}
+                autoComplete="new-password"
+                sx={inputSx}
+              />
+              <TextField
+                label="Confirm password"
+                name="confirmPassword"
+                type="password"
+                value={userData.confirmPassword}
+                onChange={handleInputChange}
+                autoComplete="new-password"
+                required={Boolean(userData.password)}
+                disabled={!userData.password}
+                error={Boolean(userData.confirmPassword && userData.password !== userData.confirmPassword)}
+                sx={inputSx}
+              />
+            </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 3 }}>
-            <FormControlLabel
-              control={<Checkbox checked={userData.enabled} onChange={handleInputChange} name="enabled" size="medium"
-                sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--primary-color)' } }} />}
-              label={<Typography sx={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Enabled</Typography>}
-            />
-            <FormControlLabel
-              control={<Checkbox checked={userData.auto_approve} onChange={handleInputChange} name="auto_approve" size="medium"
-                sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--primary-color)' } }} />}
-              label={<Typography sx={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Auto-approve Jobs</Typography>}
-            />
+          <Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', mb: 1.5 }}>
+              Access settings
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+              <FormControlLabel
+                sx={optionSx}
+                control={(
+                  <Checkbox
+                    checked={userData.enabled}
+                    onChange={handleInputChange}
+                    name="enabled"
+                    sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--primary-color)' } }}
+                  />
+                )}
+                label={(
+                  <Box>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'text.primary' }}>Enabled</Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Allow this user to sign in</Typography>
+                  </Box>
+                )}
+              />
+              <FormControlLabel
+                sx={optionSx}
+                control={(
+                  <Checkbox
+                    checked={userData.auto_approve}
+                    onChange={handleInputChange}
+                    name="auto_approve"
+                    sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--primary-color)' } }}
+                  />
+                )}
+                label={(
+                  <Box>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'text.primary' }}>Auto-approve jobs</Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Skip manual job approval</Typography>
+                  </Box>
+                )}
+              />
+            </Box>
           </Box>
 
           <Divider />
 
-          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
-            <Button onClick={onClose} variant="outlined"
-              sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, px: 2.5, py: 0.8, fontSize: '0.9rem' }}
-            >
+          <Box sx={{ display: 'flex', gap: 1.25, justifyContent: 'flex-end' }}>
+            <Button onClick={onClose} variant="outlined" disabled={isSubmitting} sx={{ px: 2.5, minHeight: 42 }}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained"
-              sx={{
-                borderRadius: '10px', textTransform: 'none', fontWeight: 600, px: 2.5, py: 0.8, fontSize: '0.9rem',
-                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-                boxShadow: 'none',
-                '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-              }}
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={17} color="inherit" /> : <Edit fontSize="small" />}
+              sx={{ px: 2.5, minHeight: 42 }}
             >
-              Save Changes
+              {isSubmitting ? 'Saving…' : 'Save changes'}
             </Button>
           </Box>
         </Box>
-      </form>
+      </Box>
     </Box>
   );
 };

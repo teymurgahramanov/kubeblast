@@ -1,5 +1,6 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import { createTheme } from '@mui/material/styles';
+import { blue, green, orange, purple, red } from '@mui/material/colors';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 
 export const ColorModeContext = createContext({
@@ -11,18 +12,31 @@ const getDesignTokens = (mode) => ({
   palette: {
     mode,
     primary: {
-      main: '#326CE5',
-      dark: '#2c5282'
+      main: mode === 'light' ? blue[700] : blue[200],
+      dark: mode === 'light' ? blue[800] : blue[400]
+    },
+    secondary: {
+      main: mode === 'light' ? purple[500] : purple[200]
     },
     background: mode === 'light'
-      ? { default: '#f5f7fa', paper: '#ffffff' }
-      : { default: '#0b1220', paper: '#0f172a' },
+      ? { default: '#F5F5F5', paper: '#FFFFFF' }
+      : { default: '#121212', paper: '#1E1E1E' },
     text: mode === 'light'
-      ? { primary: '#2d3748', secondary: '#718096' }
-      : { primary: '#e5e7eb', secondary: '#94a3b8' },
-    success: { main: mode === 'light' ? '#48bb78' : '#10b981' },
-    warning: { main: mode === 'light' ? '#ecc94b' : '#f59e0b' },
-    error: { main: mode === 'light' ? '#e53e3e' : '#ef4444' }
+      ? { primary: 'rgba(0, 0, 0, 0.87)', secondary: 'rgba(0, 0, 0, 0.60)' }
+      : { primary: 'rgba(255, 255, 255, 0.87)', secondary: 'rgba(255, 255, 255, 0.60)' },
+    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+    action: mode === 'light'
+      ? {
+          hover: 'rgba(0, 0, 0, 0.04)',
+          selected: 'rgba(25, 118, 210, 0.08)'
+        }
+      : {
+          hover: 'rgba(255, 255, 255, 0.08)',
+          selected: 'rgba(144, 202, 249, 0.16)'
+        },
+    success: { main: mode === 'light' ? green[800] : green[400] },
+    warning: { main: mode === 'light' ? orange[800] : orange[400] },
+    error: { main: mode === 'light' ? red[700] : red[500] }
   },
   shape: {
     borderRadius: 12
@@ -38,7 +52,11 @@ const getDesignTokens = (mode) => ({
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { textTransform: 'none', borderRadius: 8 }
+        root: { textTransform: 'none', borderRadius: 10, fontWeight: 600 },
+        contained: {
+          boxShadow: 'none',
+          '&:hover': { boxShadow: 'none' }
+        }
       }
     },
     MuiPaper: {

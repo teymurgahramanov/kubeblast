@@ -509,9 +509,7 @@ const JobDetail = () => {
     return () => cancelAnimationFrame(id);
   }, [isMetricsTab]);
 
-  const btnBase = { borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', px: 2.2, boxShadow: 'none' };
-  const dangerBtn = { ...btnBase, color: '#ef4444', borderColor: '#ef4444', '&:hover': { bgcolor: '#fee2e2', borderColor: '#dc2626' } };
-  const amberBtn  = { ...btnBase, color: '#d97706', borderColor: '#f59e0b', '&:hover': { bgcolor: '#fef3c7', borderColor: '#d97706' } };
+  const btnBase = { fontSize: '0.875rem', px: 2.2 };
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -679,29 +677,27 @@ const JobDetail = () => {
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
                   {job.status === 'pending' && canModerate && (
                     <>
-                      <Button variant="contained" startIcon={<CheckCircle sx={{ fontSize: 16 }} />}
-                        onClick={() => approveJob(job.id)}
-                        sx={{ ...btnBase, background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: 'none', '&:hover': { background: 'linear-gradient(135deg,#047857,#059669)' } }}
+                      <Button color="success" variant="contained" startIcon={<CheckCircle sx={{ fontSize: 16 }} />}
+                        onClick={() => approveJob(job.id)} sx={btnBase}
                       >Approve</Button>
-                      <Button variant="outlined" startIcon={<Cancel sx={{ fontSize: 16 }} />}
-                        onClick={() => declineJob(job.id)} sx={dangerBtn}
+                      <Button color="error" variant="outlined" startIcon={<Cancel sx={{ fontSize: 16 }} />}
+                        onClick={() => declineJob(job.id)} sx={btnBase}
                       >Decline</Button>
                     </>
                   )}
                   {job.status === 'ready' && (
                     <Button variant="contained" startIcon={<PlayArrow sx={{ fontSize: 16 }} />}
-                      onClick={() => startJob(job.id)}
-                      sx={{ ...btnBase, background: 'linear-gradient(135deg,#326CE5,#1e40af)', boxShadow: 'none', '&:hover': { background: 'linear-gradient(135deg,#2563eb,#1e3a8a)' } }}
+                      onClick={() => startJob(job.id)} sx={btnBase}
                     >Start</Button>
                   )}
                   {job.status === 'running' && (
-                    <Button variant="outlined" startIcon={<Stop sx={{ fontSize: 16 }} />}
-                      onClick={() => stopJob(job.id)} sx={dangerBtn}
+                    <Button color="error" variant="outlined" startIcon={<Stop sx={{ fontSize: 16 }} />}
+                      onClick={() => stopJob(job.id)} sx={btnBase}
                     >Stop</Button>
                   )}
                   {(job.status === 'failed' || job.status === 'completed') && (
-                    <Button variant="outlined" startIcon={<Autorenew sx={{ fontSize: 16 }} />}
-                      onClick={() => rescheduleJob(job.id)} sx={amberBtn}
+                    <Button color="warning" variant="outlined" startIcon={<Autorenew sx={{ fontSize: 16 }} />}
+                      onClick={() => rescheduleJob(job.id)} sx={btnBase}
                     >Retry</Button>
                   )}
                   {job.status === 'completed' && (
@@ -715,8 +711,8 @@ const JobDetail = () => {
                     </>
                   )}
                   <Box sx={{ flex: 1 }} />
-                  <Button variant="outlined" startIcon={<Delete sx={{ fontSize: 16 }} />}
-                    onClick={() => setConfirmDelete(true)} sx={dangerBtn}
+                  <Button color="error" variant="outlined" startIcon={<Delete sx={{ fontSize: 16 }} />}
+                    onClick={() => setConfirmDelete(true)} sx={btnBase}
                   >Delete</Button>
                 </Box>
               </>
@@ -773,19 +769,10 @@ const JobDetail = () => {
                   type="button"
                   size="small"
                   variant="outlined"
+                  color="warning"
                   startIcon={<Edit sx={{ fontSize: 16 }} />}
                   onClick={enterPlanEditMode}
-                  sx={{
-                    ml: 'auto',
-                    flexShrink: 0,
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.8rem',
-                    borderRadius: '8px',
-                    color: '#e3b341',
-                    borderColor: 'rgba(227,179,65,0.55)',
-                    '&:hover': { borderColor: '#e3b341', bgcolor: 'rgba(227,179,65,0.08)' },
-                  }}
+                  sx={{ ml: 'auto', flexShrink: 0, fontSize: '0.8rem' }}
                 >
                   Edit
                 </Button>
@@ -796,18 +783,10 @@ const JobDetail = () => {
                     type="button"
                     size="small"
                     variant="outlined"
+                    color="inherit"
                     disabled={planSaving}
                     onClick={cancelPlanEdit}
-                    sx={{
-                      flexShrink: 0,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      borderRadius: '8px',
-                      color: '#8b949e',
-                      borderColor: '#30363d',
-                      '&:hover': { borderColor: '#484f58', bgcolor: 'rgba(255,255,255,0.04)' },
-                    }}
+                    sx={{ flexShrink: 0, fontSize: '0.8rem' }}
                   >
                     Cancel
                   </Button>
@@ -815,21 +794,11 @@ const JobDetail = () => {
                     type="button"
                     size="small"
                     variant="contained"
+                    color="warning"
                     disabled={planSaving}
                     startIcon={planSaving ? <CircularProgress size={14} color="inherit" /> : <Save sx={{ fontSize: 16 }} />}
                     onClick={() => savePlan(job.id)}
-                    sx={{
-                      flexShrink: 0,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      borderRadius: '8px',
-                      bgcolor: '#e3b341',
-                      color: '#1c1917',
-                      boxShadow: 'none',
-                      '&:hover': { bgcolor: '#f5d565', boxShadow: 'none' },
-                      '&.Mui-disabled': { bgcolor: 'rgba(227,179,65,0.35)', color: '#1c1917' },
-                    }}
+                    sx={{ flexShrink: 0, fontSize: '0.8rem' }}
                   >
                     Save plan
                   </Button>
@@ -946,11 +915,11 @@ const JobDetail = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
               <Box sx={{
                 width: 64, height: 64, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
+                backgroundColor: 'action.hover',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '3px solid #fca5a5',
+                border: '3px solid', borderColor: 'error.main',
               }}>
-                <Delete sx={{ fontSize: 30, color: '#ef4444' }} />
+                <Delete sx={{ fontSize: 30, color: 'error.main' }} />
               </Box>
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1, color: 'text.primary' }}>
@@ -975,14 +944,9 @@ const JobDetail = () => {
                 Cancel
               </Button>
               <Button
-                fullWidth variant="contained"
+                fullWidth variant="contained" color="error"
                 onClick={() => { setConfirmDelete(false); deleteJob(job.id); }}
-                sx={{
-                  borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2,
-                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  boxShadow: 'none',
-                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
-                }}
+                sx={{ py: 1.2 }}
               >
                 Delete
               </Button>

@@ -771,35 +771,35 @@ const Jobs = () => {
             {selectedJob.status === 'pending' && (userRole === 'admin' || userRole === 'moderator') && isPro && (
               <>
                 <MenuItem onClick={(e) => { e.stopPropagation(); approveJob(selectedJob.id); }}>
-                  <CheckCircle sx={{ fontSize: 17, color: '#10b981' }} /> Approve
+                  <CheckCircle sx={{ fontSize: 17, color: 'success.main' }} /> Approve
                 </MenuItem>
                 <MenuItem onClick={(e) => { e.stopPropagation(); declineJob(selectedJob.id); }}>
-                  <Cancel sx={{ fontSize: 17, color: '#ef4444' }} /> Decline
+                  <Cancel sx={{ fontSize: 17, color: 'error.main' }} /> Decline
                 </MenuItem>
                 <Divider sx={{ my: 0.5 }} />
               </>
             )}
             {selectedJob.status === 'ready' && (
               <MenuItem onClick={(e) => { e.stopPropagation(); startJob(selectedJob.id); }}>
-                <PlayArrow sx={{ fontSize: 17, color: '#10b981' }} /> Start
+                <PlayArrow sx={{ fontSize: 17, color: 'success.main' }} /> Start
               </MenuItem>
             )}
             {selectedJob.status === 'running' && (
               <MenuItem onClick={(e) => { e.stopPropagation(); stopJob(selectedJob.id); }}>
-                <Stop sx={{ fontSize: 17, color: '#ef4444' }} /> Stop
+                <Stop sx={{ fontSize: 17, color: 'error.main' }} /> Stop
               </MenuItem>
             )}
             {(selectedJob.status === 'failed' || selectedJob.status === 'completed') && (
               <MenuItem onClick={(e) => { e.stopPropagation(); rescheduleJob(selectedJob.id); }}>
-                <Autorenew sx={{ fontSize: 17, color: '#f59e0b' }} /> Retry
+                <Autorenew sx={{ fontSize: 17, color: 'warning.main' }} /> Retry
               </MenuItem>
             )}
             <Divider sx={{ my: 0.5 }} />
             <MenuItem
               onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(selectedJob.id); handleMenuClose(); }}
-              sx={{ color: '#ef4444 !important', '&:hover': { bgcolor: '#fee2e2 !important' } }}
+              sx={{ color: 'error.main', '&:hover': { bgcolor: 'action.hover' } }}
             >
-              <Delete sx={{ fontSize: 17, color: '#ef4444' }} /> Delete
+              <Delete sx={{ fontSize: 17, color: 'error.main' }} /> Delete
             </MenuItem>
           </Menu>
         )}
@@ -818,11 +818,11 @@ const Jobs = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
               <Box sx={{
                 width: 64, height: 64, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
+                backgroundColor: 'action.hover',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '3px solid #fca5a5',
+                border: '3px solid', borderColor: 'error.main',
               }}>
-                <Delete sx={{ fontSize: 30, color: '#ef4444' }} />
+                <Delete sx={{ fontSize: 30, color: 'error.main' }} />
               </Box>
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center', mb: 1, color: 'text.primary' }}>
@@ -847,14 +847,9 @@ const Jobs = () => {
                 Cancel
               </Button>
               <Button
-                fullWidth variant="contained"
+                fullWidth variant="contained" color="error"
                 onClick={() => { deleteJob(confirmDeleteId); setConfirmDeleteId(null); }}
-                sx={{
-                  borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.2,
-                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  boxShadow: 'none',
-                  '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
-                }}
+                sx={{ py: 1.2 }}
               >
                 Delete
               </Button>

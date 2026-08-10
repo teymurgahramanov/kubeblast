@@ -16,7 +16,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import ErrorMessage from './ErrorMessage';
 
-const BrandPanel = () => {
+const LoginBackground = ({ children }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ const BrandPanel = () => {
           vx: (Math.random() - 0.5) * (isHub ? 0.15 : 0.35),
           vy: (Math.random() - 0.5) * (isHub ? 0.15 : 0.35),
           r: isHub ? 2.5 + Math.random() * 1.5 : 1 + Math.random() * 1.5,
-          alpha: isHub ? 0.5 + Math.random() * 0.3 : 0.12 + Math.random() * 0.28,
+          alpha: isHub ? 0.6 + Math.random() * 0.3 : 0.18 + Math.random() * 0.32,
           phase: Math.random() * Math.PI * 2,
           isHub,
         });
@@ -79,11 +79,11 @@ const BrandPanel = () => {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < CONNECT_DIST) {
             const strength = 1 - dist / CONNECT_DIST;
-            const lineAlpha = strength * 0.09;
+            const lineAlpha = strength * 0.16;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.strokeStyle = `rgba(110,140,255,${lineAlpha})`;
+            ctx.strokeStyle = `rgba(66,165,245,${lineAlpha})`;
             ctx.lineWidth = strength * 0.8;
             ctx.stroke();
 
@@ -113,14 +113,14 @@ const BrandPanel = () => {
         const fade = Math.sin(pk.p * Math.PI);
 
         const grd = ctx.createRadialGradient(px, py, 0, px, py, 8);
-        grd.addColorStop(0, `rgba(100,170,255,${fade * 0.35})`);
-        grd.addColorStop(1, 'rgba(100,170,255,0)');
+        grd.addColorStop(0, `rgba(0,229,255,${fade * 0.55})`);
+        grd.addColorStop(1, 'rgba(0,229,255,0)');
         ctx.fillStyle = grd;
         ctx.fillRect(px - 8, py - 8, 16, 16);
 
         ctx.beginPath();
         ctx.arc(px, py, pk.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200,220,255,${fade * 0.9})`;
+        ctx.fillStyle = `rgba(255,255,255,${fade * 0.87})`;
         ctx.fill();
       }
       packets = alive;
@@ -131,8 +131,8 @@ const BrandPanel = () => {
 
         if (n.isHub) {
           const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 6);
-          grd.addColorStop(0, `rgba(50,108,229,${a * 0.25})`);
-          grd.addColorStop(1, 'rgba(50,108,229,0)');
+          grd.addColorStop(0, `rgba(171,71,188,${a * 0.35})`);
+          grd.addColorStop(1, 'rgba(171,71,188,0)');
           ctx.fillStyle = grd;
           ctx.fillRect(n.x - n.r * 6, n.y - n.r * 6, n.r * 12, n.r * 12);
         }
@@ -140,8 +140,8 @@ const BrandPanel = () => {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = n.isHub
-          ? `rgba(140,180,255,${a})`
-          : `rgba(110,140,255,${a * 0.7})`;
+          ? `rgba(206,147,216,${a})`
+          : `rgba(66,165,245,${a * 0.85})`;
         ctx.fill();
       }
 
@@ -159,14 +159,19 @@ const BrandPanel = () => {
   return (
     <Box
       sx={{
-        display: { xs: 'none', md: 'flex' },
-        flex: 1,
-        flexDirection: 'column',
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
         overflow: 'hidden',
-        background: 'linear-gradient(160deg, #020617 0%, #060d24 30%, #0a1230 60%, #0c1636 100%)',
+        background: `
+          radial-gradient(circle 720px at 50% 16%, rgba(66, 165, 245, 0.32), transparent 68%),
+          radial-gradient(circle 560px at 12% 68%, rgba(171, 71, 188, 0.24), transparent 70%),
+          radial-gradient(circle 420px at 88% 72%, rgba(0, 188, 212, 0.16), transparent 72%),
+          linear-gradient(180deg, #1E1E1E 0%, #141414 50%, #0D0D0D 100%)
+        `,
       }}
     >
       <Box
@@ -175,36 +180,7 @@ const BrandPanel = () => {
         sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       />
 
-      <Box className="login-brand-animate" sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <Box
-          component="img"
-          src="/logo.svg"
-          alt="KubeBlast"
-          sx={{ height: 120, width: 'auto', mb: 5 }}
-        />
-        <Typography
-          sx={{
-            color: 'rgba(255,255,255,0.30)',
-            fontWeight: 600,
-            fontSize: '0.68rem',
-            letterSpacing: '0.28em',
-            textTransform: 'uppercase',
-            mb: 1.2,
-          }}
-        >
-          Kubernetes Native
-        </Typography>
-        <Typography
-          sx={{
-            color: 'rgba(255,255,255,0.65)',
-            fontWeight: 300,
-            fontSize: '1.35rem',
-            letterSpacing: '0.12em',
-          }}
-        >
-          Load Testing Platform
-        </Typography>
-      </Box>
+      {children}
     </Box>
   );
 };
@@ -324,55 +300,46 @@ const Login = () => {
   const oidcEnabled = authenticationMethods.includes('oidc');
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex' }}>
-
-      <BrandPanel />
-
+    <LoginBackground>
       <Box
         sx={{
-          flex: { xs: 1, md: '0 0 560px' },
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           px: { xs: 3, sm: 5 },
           py: 5,
-          backgroundColor: '#0f172a',
           minHeight: '100vh',
           position: 'relative',
+          zIndex: 1,
           '& .MuiTextField-root': {
             '& .MuiOutlinedInput-root': {
-              color: '#e2e8f0',
-              '& fieldset': { borderColor: 'rgba(148,163,184,0.25)' },
-              '&:hover fieldset': { borderColor: 'rgba(148,163,184,0.45)' },
-              '&.Mui-focused fieldset': { borderColor: '#326CE5' },
+              color: 'rgba(255,255,255,0.87)',
+              backgroundColor: '#1E1E1E',
+              '& fieldset': { borderColor: 'rgba(255,255,255,0.23)' },
+              '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.40)' },
+              '&.Mui-focused': { boxShadow: '0 0 0 2px rgba(66,165,245,0.30)' },
+              '&.Mui-focused fieldset': { borderColor: '#90CAF9' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(148,163,184,0.7)' },
-            '& .MuiInputLabel-root.Mui-focused': { color: '#326CE5' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.60)' },
+            '& .MuiInputLabel-root.Mui-focused': { color: '#90CAF9' },
           },
           '& .MuiFormControl-root .MuiOutlinedInput-root': {
-            color: '#e2e8f0',
-            '& fieldset': { borderColor: 'rgba(148,163,184,0.25)' },
-            '&:hover fieldset': { borderColor: 'rgba(148,163,184,0.45)' },
-            '&.Mui-focused fieldset': { borderColor: '#326CE5' },
+            color: 'rgba(255,255,255,0.87)',
+            backgroundColor: '#1E1E1E',
+            '& fieldset': { borderColor: 'rgba(255,255,255,0.23)' },
+            '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.40)' },
+            '&.Mui-focused': { boxShadow: '0 0 0 2px rgba(66,165,245,0.30)' },
+            '&.Mui-focused fieldset': { borderColor: '#90CAF9' },
           },
-          '& .MuiFormControl-root .MuiInputLabel-root': { color: 'rgba(148,163,184,0.7)' },
-          '& .MuiSelect-icon': { color: 'rgba(148,163,184,0.7)' },
+          '& .MuiFormControl-root .MuiInputLabel-root': { color: 'rgba(255,255,255,0.60)' },
+          '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.60)' },
         }}
       >
         <Box className="login-form-animate" sx={{ width: '100%', maxWidth: 380 }}>
-
-          <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 4 }}>
-            <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 76 }} />
-          </Box>
-
-          <Box sx={{ mb: 4 }}>
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: 700, color: '#f1f5f9', mb: 0.5, letterSpacing: '-0.3px' }}
-            >
-              Welcome!
-            </Typography>
+          <Box sx={{ textAlign: 'center', mb: 5 }}>
+            <Box component="img" src="/logo.svg" alt="KubeBlast" sx={{ height: 76, filter: 'drop-shadow(0 0 18px rgba(66,165,245,0.35))' }} />
           </Box>
 
           <ErrorMessage message={error} />
@@ -412,7 +379,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <PersonIcon sx={{ color: 'rgba(148,163,184,0.5)', fontSize: 20 }} />
+                      <PersonIcon sx={{ color: 'rgba(255,255,255,0.60)', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                 },
@@ -434,7 +401,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon sx={{ color: 'rgba(148,163,184,0.5)', fontSize: 20 }} />
+                      <LockIcon sx={{ color: 'rgba(255,255,255,0.60)', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -444,7 +411,7 @@ const Login = () => {
                         edge="end"
                         size="small"
                         tabIndex={-1}
-                        sx={{ color: 'rgba(148,163,184,0.5)' }}
+                        sx={{ color: 'rgba(255,255,255,0.60)' }}
                       >
                         {showPassword
                           ? <VisibilityOff fontSize="small" />
@@ -466,19 +433,21 @@ const Login = () => {
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 letterSpacing: '0.01em',
-                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-                boxShadow: 'none',
+                backgroundColor: '#90CAF9',
+                color: 'rgba(0,0,0,0.87)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.45), 0 0 20px rgba(66,165,245,0.28)',
                 borderRadius: '10px',
                 textTransform: 'none',
                 transition: 'all 0.22s ease',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #2558cc 0%, #1a37a0 100%)',
+                  backgroundColor: '#42A5F5',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.45), 0 0 28px rgba(66,165,245,0.38)',
                 },
                 '&.Mui-disabled': { opacity: 0.7 },
               }}
             >
               {loading
-                ? <CircularProgress size={22} sx={{ color: 'rgba(255,255,255,0.85)' }} />
+                ? <CircularProgress size={22} sx={{ color: 'rgba(0,0,0,0.70)' }} />
                 : (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LoginIcon sx={{ fontSize: 20 }} />
@@ -490,10 +459,10 @@ const Login = () => {
 
             {oidcEnabled && (
               <>
-                <Divider sx={{ my: 3, borderColor: 'rgba(148,163,184,0.15)' }}>
+                <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }}>
                   <Typography
                     variant="caption"
-                    sx={{ color: 'rgba(148,163,184,0.5)', px: 1, fontSize: '0.72rem', letterSpacing: '0.08em' }}
+                    sx={{ color: 'rgba(255,255,255,0.60)', px: 1, fontSize: '0.72rem', letterSpacing: '0.08em' }}
                   >
                     OR
                   </Typography>
@@ -509,16 +478,16 @@ const Login = () => {
                     fontWeight: 600,
                     borderRadius: '10px',
                     textTransform: 'none',
-                    borderColor: 'rgba(148,163,184,0.25)',
-                    color: '#e2e8f0',
+                    borderColor: 'rgba(255,255,255,0.23)',
+                    color: 'rgba(255,255,255,0.87)',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      borderColor: '#326CE5',
-                      backgroundColor: 'rgba(50,108,229,0.05)',
+                      borderColor: '#90CAF9',
+                      backgroundColor: 'rgba(66,165,245,0.14)',
                     },
                   }}
                 >
-                  <SecurityRounded sx={{ mr: 1, fontSize: 20, color: '#326CE5' }} />
+                  <SecurityRounded sx={{ mr: 1, fontSize: 20, color: '#90CAF9' }} />
                   Continue with SSO
                 </Button>
               </>
@@ -527,15 +496,24 @@ const Login = () => {
         </Box>
 
         {(appVersion || edition) && (
-          <Typography sx={{
-            position: 'absolute', bottom: 20,
-            color: 'rgba(148,163,184,0.5)', fontSize: '0.8rem',
-          }}>
-            {appVersion}{appVersion && edition ? ' · ' : ''}{edition}
+          <Typography
+            aria-label="Application version and edition"
+            sx={{
+              position: 'fixed',
+              left: '50%',
+              bottom: { xs: 12, sm: 20 },
+              transform: 'translateX(-50%)',
+              zIndex: 2,
+              color: 'rgba(255,255,255,0.74)',
+              fontSize: '0.8rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {appVersion}{appVersion && edition ? ' ' : ''}{edition}
           </Typography>
         )}
       </Box>
-    </Box>
+    </LoginBackground>
   );
 };
 

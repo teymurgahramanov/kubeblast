@@ -333,17 +333,7 @@ const Profile = () => {
             type="submit"
             variant="contained"
             disabled={loading}
-            sx={{
-              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-              boxShadow: 'none',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              px: 2.2,
-              mt: 2,
-              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-            }}
+            sx={{ fontSize: '0.875rem', px: 2.2, mt: 2 }}
           >
             Update Profile
           </Button>
@@ -374,17 +364,7 @@ const Profile = () => {
             type="submit"
             variant="contained"
             disabled={loading}
-            sx={{
-              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-              boxShadow: 'none',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              px: 2.2,
-              mt: 2,
-              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-            }}
+            sx={{ fontSize: '0.875rem', px: 2.2, mt: 2 }}
           >
             Change Password
           </Button>
@@ -398,16 +378,7 @@ const Profile = () => {
               variant="contained"
               startIcon={<Add />}
               onClick={() => setPatDialogOpen(true)}
-              sx={{
-                background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-                boxShadow: 'none',
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                px: 2.2,
-                '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-              }}
+              sx={{ fontSize: '0.875rem', px: 2.2 }}
             >
               Create Token
             </Button>
@@ -549,16 +520,7 @@ const Profile = () => {
             variant="contained"
             onClick={handleCreatePat}
             disabled={loading || newPatName.length < 3}
-            sx={{
-              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-              boxShadow: 'none',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              px: 2.2,
-              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-            }}
+            sx={{ fontSize: '0.875rem', px: 2.2 }}
           >
             Create
           </Button>
@@ -603,16 +565,7 @@ const Profile = () => {
           <Button
             variant="contained"
             onClick={handleCloseTokenDialog}
-            sx={{
-              background: 'linear-gradient(135deg, #326CE5 0%, #1e40af 100%)',
-              boxShadow: 'none',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              px: 2.2,
-              '&:hover': { background: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)' },
-            }}
+            sx={{ fontSize: '0.875rem', px: 2.2 }}
           >
             Done
           </Button>

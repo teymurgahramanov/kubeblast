@@ -1,5 +1,6 @@
 
 import { Box, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Cancel } from '@mui/icons-material';
 
 const ErrorMessage = ({ message }) => {
@@ -10,8 +11,10 @@ const ErrorMessage = ({ message }) => {
       <Typography
         sx={{
           color: 'error.main',
-          p: 2, 
-          bgcolor: '#FEE2E2', 
+          p: 2,
+          bgcolor: (theme) => alpha(theme.palette.error.main, 0.12),
+          border: '1px solid',
+          borderColor: (theme) => alpha(theme.palette.error.main, 0.30),
           borderRadius: 1,
           display: 'flex',
           alignItems: 'center',
