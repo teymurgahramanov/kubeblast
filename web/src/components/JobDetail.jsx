@@ -6,7 +6,7 @@ import {
 import {
   ArrowBack, CheckCircle, Cancel, Visibility, Description,
   Autorenew, Download, PlayArrow, ListAlt, Stop,
-  Delete, AccessTime, Person, ShowChart, Save, Edit,
+  Delete, AccessTime, Person, ShowChart, Save, Edit, InfoOutlined,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
@@ -30,6 +30,12 @@ const JOB_DETAIL_TABS = [...BASE_TABS, METRICS_TAB, PLAN_TAB];
 
 /** Match API: plan PUT only when job is in one of these statuses. */
 const PLAN_EDIT_STATUSES = new Set(['ready', 'completed', 'failed']);
+
+const VERDICT_STYLES = {
+  passed: { label: 'Passed', color: '#047857', background: '#ECFDF5', border: '#86EFAC' },
+  failed: { label: 'Failed', color: '#B91C1C', background: '#FEF2F2', border: '#FCA5A5' },
+  not_evaluated: { label: 'Not evaluated', color: '#92400E', background: '#FFFBEB', border: '#FDE68A' },
+};
 
 const APP_STATS_CACHE_KEY = 'kubeblast_app_stats';
 
@@ -92,12 +98,21 @@ function writeCachedAppStats(data) {
   }
 }
 
+function formatErrorRate(errorRate) {
+  const rate = Number(errorRate);
+  if (!Number.isFinite(rate)) return '—';
+  return rate.toLocaleString(undefined, { style: 'percent', maximumFractionDigits: 2 });
+}
+
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const userRole = getUserRole();
 
   const [job, setJob]                       = useState(null);
+  const [jobVerdict, setJobVerdict]         = useState(null);
+  const [verdictLoading, setVerdictLoading] = useState(false);
+  const [verdictError, setVerdictError]     = useState('');
   const [error, setError]                   = useState('');
   const [activeTab, setActiveTab]           = useState(0);
   const [logs, setLogs]                     = useState('');
@@ -153,6 +168,34 @@ const JobDetail = () => {
     const id = setInterval(fetchJob, 5000);
     return () => clearInterval(id);
   }, [fetchJob]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!job?.id || job.status !== 'completed') {
+      setJobVerdict(null);
+      setVerdictLoading(false);
+      setVerdictError('');
+      return () => { active = false; };
+    }
+
+    setVerdictLoading(true);
+    setVerdictError('');
+    axiosInstance.get(`/jobs/${job.id}/status`)
+      .then((res) => {
+        if (active) setJobVerdict(res.data || null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setJobVerdict(null);
+        setVerdictError(err?.response?.data?.detail || err?.message || 'Failed to load result verdict');
+      })
+      .finally(() => {
+        if (active) setVerdictLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [job?.id, job?.status]);
 
   useEffect(() => {
     planLoadedForJobIdRef.current = null;
@@ -431,6 +474,7 @@ const JobDetail = () => {
   }, []);
 
   const statusColors  = useMemo(() => getStatusColor(job?.status), [job?.status]);
+  const verdictStyle  = VERDICT_STYLES[jobVerdict?.verdict] || VERDICT_STYLES.not_evaluated;
   const ownerVisible  = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const canModerate   = (userRole === 'admin' || userRole === 'moderator') && isPro;
   const isMetricsTab  = activeTab === 2;
@@ -558,7 +602,7 @@ const JobDetail = () => {
                   </Typography>
                 )}
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap', mb: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flexWrap: 'wrap', mb: job.status === 'completed' ? 1.5 : 2.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, color: 'var(--text-secondary)' }}>
                     <AccessTime sx={{ fontSize: 13 }} />
                     <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>{formatDate(job.created_at)}</Typography>
@@ -570,6 +614,67 @@ const JobDetail = () => {
                     </Box>
                   )}
                 </Box>
+
+                {job.status === 'completed' && (
+                  <Box
+                    role="status"
+                    aria-label="Job result verdict"
+                    sx={{
+                      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.2,
+                      mb: 2.5, px: 1.5, py: 1.2,
+                      borderRadius: '12px',
+                      bgcolor: 'var(--background-light)',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mr: 0.2 }}>
+                      Result verdict
+                    </Typography>
+                    {verdictLoading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                        <CircularProgress size={14} />
+                        <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Evaluating result…</Typography>
+                      </Box>
+                    ) : verdictError ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, color: '#B91C1C' }}>
+                        <InfoOutlined sx={{ fontSize: 16 }} />
+                        <Typography variant="caption" sx={{ color: 'inherit' }}>Unavailable: {verdictError}</Typography>
+                      </Box>
+                    ) : jobVerdict && (
+                      <>
+                        <Box sx={{
+                          display: 'inline-flex', alignItems: 'center', gap: 0.6,
+                          px: 1, py: 0.35, borderRadius: '999px',
+                          color: verdictStyle.color, bgcolor: verdictStyle.background,
+                          border: `1px solid ${verdictStyle.border}`,
+                        }}>
+                          {jobVerdict.verdict === 'passed'
+                            ? <CheckCircle sx={{ fontSize: 15 }} />
+                            : jobVerdict.verdict === 'failed'
+                              ? <Cancel sx={{ fontSize: 15 }} />
+                              : <InfoOutlined sx={{ fontSize: 15 }} />}
+                          <Typography variant="caption" sx={{ color: 'inherit', fontWeight: 800 }}>
+                            {verdictStyle.label}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                          {Number(jobVerdict.samples_total).toLocaleString()} total samples
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                          {Number(jobVerdict.samples_failed).toLocaleString()} failed
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                          {formatErrorRate(jobVerdict.error_rate)} error rate
+                        </Typography>
+                        {jobVerdict.reason && (
+                          <Typography variant="caption" sx={{ flexBasis: '100%', color: 'var(--text-secondary)' }}>
+                            {jobVerdict.reason}
+                          </Typography>
+                        )}
+                      </>
+                    )}
+                  </Box>
+                )}
 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
                   {job.status === 'pending' && canModerate && (

@@ -24,11 +24,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
           token: ${{ secrets.PAT }}
         
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -63,6 +66,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ env.IMAGE_NAME }}:${{ env.RELEASE_NAME }}, ${{ env.IMAGE_NAME }}:latest
 
       - name: Set up Helm
@@ -74,7 +78,11 @@ jobs:
         run: |
           mkdir -p packaged
           helm dependency update helm/
+          helm lint --strict helm/
+          helm template kubeblast helm/ --namespace kubeblast > /dev/null
+          helm template kubeblast helm/ --namespace kubeblast --set mongodb.enabled=false --set influxdb.enabled=false > /dev/null
           helm package helm/ --destination packaged
+          helm lint --strict packaged/kubeblast-${{ env.RELEASE_NAME }}.tgz
           REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)
           git clone -b gh-pages --depth 1 https://${{ env.HELM_REPO_OWNER }}:${{ env.HELM_REPO_TOKEN }}@github.com/${{ env.HELM_REPO_OWNER }}/${{ env.HELM_REPO_NAME }}.git helm-charts
           mv -f packaged/*.tgz helm-charts/

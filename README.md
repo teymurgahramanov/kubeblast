@@ -10,6 +10,11 @@
 Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platform, where running JMeter load tests is simple and efficient. It offers a simple *click-and-run* workflow, built-in RBAC with moderator approval, full flexibility, and a lightweight open-source footprint.
 
 ## ▶️ Quick start
+
+Prerequisites:
+- Kubernetes cluster with permission to create namespace-scoped resources, a `ClusterRole`, and a `ClusterRoleBinding`
+- A default StorageClass that supports `ReadWriteMany`, or an existing RWX claim configured with `pvc.existingClaim`
+
 1. Add Helm repository
    ```bash
    helm repo add teymurgahramanov https://teymurgahramanov.github.io/charts && helm repo update teymurgahramanov
@@ -18,9 +23,11 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
    ```
    helm upgrade --install kubeblast teymurgahramanov/kubeblast \
    --namespace kubeblast \
-   --create-namespace
+   --create-namespace \
+   --wait \
+   --timeout 10m
    ```
-3. Access UI on http://localhost:8080 using username `admin` and password `admin`. You can use [test.jmx](./test.jmx) for testing.
+3. Access UI on http://localhost:8080 using username `admin` and password `admin`. Change the default password before exposing Kubeblast beyond this local port-forward. You can use [test.jmx](./test.jmx) for testing.
    ```
    kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```
@@ -28,12 +35,6 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
 All parameters are configurable via environment variables.
 You can define them directly using Helm values or store in a Kubernetes Secret.
 See [`helm/values.yaml`](./helm/values.yaml) for the full list of supported environment variables with defaults and examples.
-
-### CSV parameter files
-
-A job can include one JMX plan and up to 20 CSV parameter files (100 MB combined). Kubeblast matches each JMeter `CSV Data Set Config` filename by basename and makes the uploaded file available to the JMeter engines. JMX plans are limited to 900 KB because the runtime plan is stored in a Kubernetes ConfigMap.
-
-Deployments behind an ingress must configure its request body limit to at least 110 MB; an NGINX Ingress example is included in `helm/values.yaml`. Distributed execution requires storage that supports read/write mounts from all selected nodes, such as a `ReadWriteMany` PVC.
 
 ## 👍 Get more
 Kubeblast scales from quick, single-click load tests to a collaborative platform with enterprise-grade capabilities. See the full feature list at [kubeblast.io](https://kubeblast.io).
