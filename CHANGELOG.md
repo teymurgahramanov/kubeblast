@@ -15,6 +15,7 @@
 ### Changed
 
 - Redesigned the Jobs page with capacity gauges, job cards, status filtering, sorting, search, and improved pagination.
+- Standardized Material UI styling across the login, jobs, job details, profile, and error states with a consistent light/dark palette; redesigned user administration with responsive controls, clearer account and access details, and improved add/edit submission feedback.
 - Job start, retry, and stop now use atomic lifecycle transitions and return HTTP `202` acknowledgements.
 - Log collection starts with the workload, retries while pods are unavailable, deduplicates captured lines, and performs a final capture before cleanup.
 - SSE clients and Nginx proxy settings now support chunk-safe UTF-8 parsing, heartbeats, disabled buffering, and long-lived streams.

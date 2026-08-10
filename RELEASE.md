@@ -11,6 +11,9 @@ When a job completes, the Job Details page displays its passed, failed, or not-e
 ### 🖥️ Refined jobs experience
 The Jobs page now provides capacity gauges, job cards, status filtering, sorting, search, and improved pagination. User administration includes last-login information, the login page shows only configured authentication methods, and the user menu includes a Help link.
 
+### 🎨 Consistent, refined interface
+Material UI styling now uses a unified light and dark palette across login, jobs, job details, profile, and error states. User administration has been redesigned with responsive controls, clearer account and access details, improved search, and submission feedback in the add and edit forms.
+
 ### 🧭 Better runtime diagnostics
 Job events now include Kubernetes workload events. Log collection retries while pods start, avoids duplicate lines, and captures final logs before completed or failed workloads are removed.
 

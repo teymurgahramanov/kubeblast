@@ -51,7 +51,8 @@ describe('Login authentication methods', () => {
     renderLogin();
 
     expect(await screen.findByRole('button', { name: 'Sign In' })).toBeInTheDocument();
-    expect(await screen.findByLabelText('Application version and edition')).toHaveTextContent('1.3.0 Community');
+    expect(await screen.findByLabelText('Kubeblast website, version and edition')).toHaveTextContent('kubeblast.io 1.3.0 Community');
+    expect(screen.getByRole('link', { name: 'kubeblast.io' })).toHaveAttribute('href', 'https://kubeblast.io');
     expect(screen.queryByText('Welcome!')).not.toBeInTheDocument();
     expect(screen.queryByText('Kubernetes Native')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Authentication Method')).not.toBeInTheDocument();

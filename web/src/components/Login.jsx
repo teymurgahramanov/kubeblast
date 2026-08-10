@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Typography, TextField, Button, FormControl,
   InputLabel, Select, MenuItem, Divider, InputAdornment,
-  IconButton, CircularProgress,
+  IconButton, CircularProgress, Link,
 } from '@mui/material';
 import {
   Login as LoginIcon,
@@ -495,23 +495,32 @@ const Login = () => {
           </Box>
         </Box>
 
-        {(appVersion || edition) && (
-          <Typography
-            aria-label="Application version and edition"
-            sx={{
-              position: 'fixed',
-              left: '50%',
-              bottom: { xs: 12, sm: 20 },
-              transform: 'translateX(-50%)',
-              zIndex: 2,
-              color: 'rgba(255,255,255,0.74)',
-              fontSize: '0.8rem',
-              whiteSpace: 'nowrap',
-            }}
+        <Typography
+          aria-label="Kubeblast website, version and edition"
+          sx={{
+            position: 'fixed',
+            left: '50%',
+            bottom: { xs: 12, sm: 20 },
+            transform: 'translateX(-50%)',
+            zIndex: 2,
+            color: 'rgba(255,255,255,0.74)',
+            fontSize: '0.8rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Link
+            href="https://kubeblast.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            color="inherit"
+            underline="hover"
+            sx={{ '&:hover': { color: '#90CAF9' } }}
           >
-            {appVersion}{appVersion && edition ? ' ' : ''}{edition}
-          </Typography>
-        )}
+            kubeblast.io
+          </Link>
+          {(appVersion || edition) && ' '}
+          {appVersion}{appVersion && edition ? ' ' : ''}{edition}
+        </Typography>
       </Box>
     </LoginBackground>
   );
