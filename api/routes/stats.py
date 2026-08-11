@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/stats/capacity")
-async def get_cluster_capacity(
+def get_cluster_capacity(
     current_user: Annotated[models.User, Depends(auth.check_role([]))]
 ):
     data = capacity.get_capacity()
