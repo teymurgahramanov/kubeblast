@@ -119,7 +119,18 @@ def get_jobs(
     if sort_by == "created_asc":
         sort_direction = 1
 
-    cursor = db.mongo.jobs.find(query).sort("created_at", sort_direction)
+    cursor = db.mongo.jobs.find(
+        query,
+        {
+            "name": 1,
+            "owner": 1,
+            "distributed": 1,
+            "description": 1,
+            "parameter_files": 1,
+            "status": 1,
+            "created_at": 1,
+        },
+    ).sort("created_at", sort_direction)
 
     if page_size:
         safe_page = max(page, 1)

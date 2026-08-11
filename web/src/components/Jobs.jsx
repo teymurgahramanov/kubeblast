@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, IconButton, Menu, MenuItem, Modal, Button, Tooltip,
@@ -140,6 +140,7 @@ const Jobs = () => {
   const navigate = useNavigate();
 
   const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -156,6 +157,7 @@ const Jobs = () => {
   const userRole = getUserRole();
   const [isPro, setIsPro] = useState(() => Boolean(getCachedAppStats()?.LICENSE_VALID));
   const [timezone, setTimezone] = useState(() => getCachedAppStats()?.TIMEZONE || 'UTC');
+  const jobsRequestIdRef = useRef(0);
 
   useEffect(() => {
     const fetchAppStats = async () => {
@@ -171,27 +173,50 @@ const Jobs = () => {
   }, []);
 
   const fetchJobs = useCallback(async () => {
+    const requestId = ++jobsRequestIdRef.current;
     const token = localStorage.getItem('access_token');
-    if (!token) { setError('Unauthorized: Please log in'); return; }
+    if (!token) {
+      setError('Unauthorized: Please log in');
+      setJobsLoading(false);
+      return;
+    }
+
+    setJobsLoading(true);
     try {
       const params = { page, page_size: pageSize, sort_by: sortBy === 'created_asc' ? 'created_asc' : 'created_desc' };
       if (statusFilter !== 'all') params.status = statusFilter;
       const response = await axiosInstance.get("/jobs", { headers: { Authorization: `Bearer ${token}` }, params });
+      if (requestId !== jobsRequestIdRef.current) return;
+
       setJobs(Array.isArray(response.data) ? response.data : []);
       const totalHeader = response.headers['x-total-count'] ?? response.headers['X-Total-Count'];
       const total = Number(totalHeader ?? 0);
       setTotalJobs(Number.isNaN(total) ? 0 : total);
       setError('');
     } catch (error) {
-      setError(error.response?.data?.detail || error.message);
+      if (requestId === jobsRequestIdRef.current) {
+        setError(error.response?.data?.detail || error.message);
+      }
+    } finally {
+      if (requestId === jobsRequestIdRef.current) setJobsLoading(false);
     }
   }, [page, pageSize, sortBy, statusFilter]);
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
-
   useEffect(() => {
-    const id = setInterval(() => { fetchJobs(); }, 5000);
-    return () => clearInterval(id);
+    let active = true;
+    let timeoutId = null;
+
+    const pollJobs = async () => {
+      await fetchJobs();
+      if (active) timeoutId = setTimeout(pollJobs, 5000);
+    };
+
+    pollJobs();
+    return () => {
+      active = false;
+      jobsRequestIdRef.current += 1;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [fetchJobs]);
 
   useEffect(() => {
@@ -672,7 +697,13 @@ const Jobs = () => {
 
         <ErrorMessage message={error} />
 
-        {jobs.length === 0 ? (
+        {jobsLoading && jobs.length === 0 ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: 2 }}>
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} variant="rounded" height={154} sx={{ borderRadius: '14px', transform: 'none' }} />
+            ))}
+          </Box>
+        ) : jobs.length === 0 ? (
           <EmptyState />
         ) : (
           <>
