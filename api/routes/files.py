@@ -9,7 +9,7 @@ from services import files_fs as files
 
 router = APIRouter(prefix="/api/v1")
 
-@router.get("/files/{job_id}")
+@router.get("/jobs/{job_id}/files")
 async def get_file(
     current_user: Annotated[models.User, Depends(auth.check_role([]))], 
     job_id: str, 

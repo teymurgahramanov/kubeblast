@@ -1,5 +1,54 @@
 # Changelog
 
+## [1.4.0]
+
+### Added
+
+- CSV parameter-file uploads: one JMX plan plus up to 20 `.csv` files with a 100 MB combined limit, available to standalone and distributed JMeter workloads.
+- `GET /api/v1/jobs/{job_id}/status`, returning execution status and an independent JMeter result verdict with sample totals, failures, and error rate; completed jobs surface these verdict details on the Job Details page.
+- Persisted Kubernetes workload events and deduplication by event occurrence.
+- Pending-approval events when a new or edited job requires review.
+- `MONGODB_URI` as a full connection-string override.
+- Authentication-method discovery, user last-login tracking, and a Help link in the user menu.
+- Helm settings for container security context, internal ports, custom pod labels, scheduling, resources, ingress, storage, and external databases.
+
+### Changed
+
+- Redesigned the Jobs page with capacity gauges, job cards, status filtering, sorting, search, and improved pagination.
+- Standardized Material UI styling across the login, jobs, job details, profile, and error states with a consistent light/dark palette; redesigned user administration with responsive controls, clearer account and access details, and improved add/edit submission feedback.
+- Job start, retry, and stop now use atomic lifecycle transitions and return HTTP `202` acknowledgements.
+- Log collection starts with the workload, retries while pods are unavailable, deduplicates captured lines, and performs a final capture before cleanup.
+- SSE clients and Nginx proxy settings now support chunk-safe UTF-8 parsing, heartbeats, disabled buffering, and long-lived streams.
+- Capacity calculations exclude unschedulable and NotReady nodes.
+- Access and refresh tokens are distinguished by token type; inactive or community-ineligible users cannot refresh or use tokens.
+- Advanced routes are registered only after successful signed-license validation.
+- The bundled database now uses the Bitnami MongoDB `19.1.22` Helm dependency.
+- The application image runs as non-root UID/GID `10001`, drops Linux capabilities, and is released for AMD64 and ARM64.
+- The private overlay is renamed from `pro` to `advanced` and protected modules are compiled with Nuitka during the Docker build.
+- The frontend build is migrated from Create React App to Vite and Vitest with updated runtime and UI dependencies.
+
+### Fixed
+
+- Prevented stale Kubernetes observations from reverting stopping or terminal jobs.
+- Prevented premature workload cleanup from discarding final pod logs.
+- Prevented duplicate log lines after reconnects while preserving split UTF-8 characters and arbitrary stdout.
+- Login failures no longer trigger the access-token refresh flow.
+- Invalid or concurrent lifecycle commands fail deterministically instead of scheduling duplicate work.
+- Invalid MongoDB job IDs, unsafe artifact filenames, and malformed JMX plans receive intentional validation errors.
+
+### Breaking changes
+
+- **Community login:** without a valid Advanced license, only users with the `admin` role may log in or refresh a session.
+- **Licensing:** `LICENSE_KEY` and `LICENSE_ID` are replaced by signed license content in `LICENSE_FILE`.
+- **API paths:** files, events, logs, metrics, lifecycle commands, and approval now use `/api/v1/jobs/{job_id}/...` routes.
+- **Refresh tokens:** `POST /api/v1/token/refresh` expects a JSON body containing `refresh_token` instead of a query parameter.
+- **Lifecycle responses:** start, retry, and stop return HTTP `202`; invalid or concurrent transitions return `409`, and retry accepts only completed or failed jobs.
+- **MongoDB:** the Bitnami chart uses a different values schema and generated storage names. Existing values and persistent data must be migrated explicitly.
+- **Container runtime:** the image runs as UID/GID `10001` and Nginx listens on container port `8080`; custom manifests and mounted volumes may require changes.
+- **Uploads:** JMX plans must use a `.jmx` filename, contain valid `jmeterTestPlan` XML, and be no larger than 900 KB.
+- **Frontend development:** Vite replaces Create React App, `VITE_API_BASE_URL` replaces `REACT_APP_API_BASE_URL`, and Node `^24.15.0` or `>=26.0.0` is required.
+- **Source builds:** the private submodule path changes from `pro` to `advanced`, and production Docker builds require the initialized Advanced submodule.
+
 ## [1.3.0]
 
 ### Added
@@ -14,7 +63,7 @@
 
 - Redesigned **login** page, refined **Job Details** and **Jobs** UI (@Yesveer)
 - **Report download**: packaged HTML report as `kb-{job-name}-report.zip` instead of opening report HTML in the browser; JTL result file named `kb-{job-name}-result.jtl`.
-- **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/logs/{job_id}` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
+- **Pod logs persisted in MongoDB**: a background reader tails the master pod into a **`job_logs`** collection; `GET /api/v1/jobs/{job_id}/logs` streams **SSE** with JSON payloads `{"job_id","ts","msg"}` (aligned with job **events**). **Retry** and **delete job** clear stored log lines; **retry** also drops **InfluxDB** series for the job when metrics are enabled.
 - **OIDC** (Advanced): authorization URL query parameters are properly URL-encoded; token and userinfo HTTP clients use explicit timeouts and form content type for the token exchange.
 - **OIDC callback** now passes **raw IdP claims** into login so user/role mapping runs once with full token claims (e.g. Keycloak realm roles); API response `username` / `role` are read from the persisted user after login.
 - **Startup**: admin user bootstrap is wrapped in **try/except** with error logging and **process exit** on failure; missing license env sets **`LICENSE_VALID`** to **false**; **`license_check`** failures are handled with a single warning path instead of only `ImportError`.
@@ -107,7 +156,7 @@
 ### Changed
 - Renamed some variables. Check [README.md](README.md).
 - Replaced Bitnami MongoDB Helm Chart with simple deployment.
-- Removed separate "pro" image.
+- Removed separate "advanced" image.
 - Optimized Job manifest.
 - Redesigned Jobs page.
 - Improved Job status sync.
