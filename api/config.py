@@ -11,7 +11,7 @@ load_dotenv()
 class Config:
 
     # General
-    APP_VERSION: str = "1.3.0"
+    APP_VERSION: str = "1.4.0"
     LICENSE_VALID: bool = False
     LICENSE_FILE: str | None = os.getenv("LICENSE_FILE")
 
