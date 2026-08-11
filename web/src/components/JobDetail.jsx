@@ -11,6 +11,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import { getUserRole } from '../utils/auth';
 import { readSSEStream } from '../utils/sse';
+import { getAppStats, getCachedAppStats } from '../utils/stats';
 import Editor from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-markup';
@@ -37,7 +38,6 @@ const VERDICT_STYLES = {
   not_evaluated: { label: 'Not evaluated', color: '#92400E', background: '#FFFBEB', border: '#FDE68A' },
 };
 
-const APP_STATS_CACHE_KEY = 'kubeblast_app_stats';
 
 /** Default XML text color (PCDATA / non-token spans); tag colors use inline styles on child spans. */
 const XML_BASE_COLOR = '#e6edf3';
@@ -73,30 +73,6 @@ function highlightPlanXml(code) {
   }
 }
 
-function readCachedAppStats() {
-  try {
-    const raw = sessionStorage.getItem(APP_STATS_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedAppStats(data) {
-  try {
-    sessionStorage.setItem(
-      APP_STATS_CACHE_KEY,
-      JSON.stringify({
-        INFLUXDB_ENABLED: Boolean(data?.INFLUXDB_ENABLED),
-        LICENSE_VALID: Boolean(data?.LICENSE_VALID),
-        TIMEZONE: data?.TIMEZONE || 'UTC',
-      }),
-    );
-  } catch {
-    /* ignore */
-  }
-}
 
 function formatErrorRate(errorRate) {
   const rate = Number(errorRate);
@@ -120,9 +96,9 @@ const JobDetail = () => {
   const [planText, setPlanText]             = useState('');
   const [logsStreaming, setLogsStreaming]   = useState(false);
   const [eventsStreaming, setEventsStreaming] = useState(false);
-  const [isPro, setIsPro]                   = useState(() => Boolean(readCachedAppStats()?.LICENSE_VALID));
-  const [influxdbEnabled, setInfluxdbEnabled] = useState(() => Boolean(readCachedAppStats()?.INFLUXDB_ENABLED));
-  const [timezone, setTimezone]             = useState(() => readCachedAppStats()?.TIMEZONE || 'UTC');
+  const [isPro, setIsPro]                   = useState(() => Boolean(getCachedAppStats()?.LICENSE_VALID));
+  const [influxdbEnabled, setInfluxdbEnabled] = useState(() => Boolean(getCachedAppStats()?.INFLUXDB_ENABLED));
+  const [timezone, setTimezone]             = useState(() => getCachedAppStats()?.TIMEZONE || 'UTC');
   const [confirmDelete, setConfirmDelete]   = useState(false);
   const [planSaving, setPlanSaving]         = useState(false);
   const [planEditingMode, setPlanEditingMode] = useState(false);
@@ -135,13 +111,12 @@ const JobDetail = () => {
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
-        const res = await axiosInstance.get('/stats/app');
-        writeCachedAppStats(res.data);
-        setIsPro(Boolean(res.data?.LICENSE_VALID));
-        setInfluxdbEnabled(Boolean(res.data?.INFLUXDB_ENABLED));
-        if (res.data?.TIMEZONE) setTimezone(res.data.TIMEZONE);
+        const stats = await getAppStats();
+        setIsPro(Boolean(stats?.LICENSE_VALID));
+        setInfluxdbEnabled(Boolean(stats?.INFLUXDB_ENABLED));
+        if (stats?.TIMEZONE) setTimezone(stats.TIMEZONE);
       } catch {
-        const c = readCachedAppStats();
+        const c = getCachedAppStats();
         if (c) {
           setIsPro(Boolean(c.LICENSE_VALID));
           setInfluxdbEnabled(Boolean(c.INFLUXDB_ENABLED));

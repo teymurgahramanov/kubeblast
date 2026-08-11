@@ -15,6 +15,7 @@
 ### Changed
 
 - Redesigned the Jobs page with capacity gauges, job cards, status filtering, sorting, search, and improved pagination.
+- Jobs and Job Details now share a five-minute application-settings cache to avoid duplicate `/stats/app` requests; repeat visits show the last successful cluster-capacity snapshot immediately while refreshing it in the background.
 - Standardized Material UI styling across the login, jobs, job details, profile, and error states with a consistent light/dark palette; redesigned user administration with responsive controls, clearer account and access details, and improved add/edit submission feedback.
 - Job start, retry, and stop now use atomic lifecycle transitions and return HTTP `202` acknowledgements.
 - Log collection starts with the workload, retries while pods are unavailable, deduplicates captured lines, and performs a final capture before cleanup.
@@ -34,6 +35,7 @@
 - Prevented duplicate log lines after reconnects while preserving split UTF-8 characters and arbitrary stdout.
 - Login failures no longer trigger the access-token refresh flow.
 - Invalid or concurrent lifecycle commands fail deterministically instead of scheduling duplicate work.
+- Capacity-stat MongoDB reads now run outside the FastAPI event loop, preventing slow capacity counts from delaying concurrent app and job requests; startup-created job indexes accelerate capacity counts, filtering, and pagination on larger installations.
 - Invalid MongoDB job IDs, unsafe artifact filenames, and malformed JMX plans receive intentional validation errors.
 
 ### Breaking changes
