@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
 from typing import Annotated
-from core import models, db
-from services import auth, capacity
+
 from config import config
+from core import db, models
+from fastapi import APIRouter, Depends
+from services import auth, capacity
 
 
 router = APIRouter(prefix="/api/v1")
@@ -26,10 +27,17 @@ async def get_cluster_capacity(
 
 @router.get("/stats/app")
 async def get_app_stats():
+    authentication_methods = ["local"]
+    if config.LICENSE_VALID and config.LDAP_ENABLED:
+        authentication_methods.append("ldap")
+    if config.LICENSE_VALID and config.OIDC_ENABLED:
+        authentication_methods.append("oidc")
+
     return {
         "APP_VERSION": config.APP_VERSION,
         "LICENSE_VALID": config.LICENSE_VALID,
         "EDITION": "Advanced" if config.LICENSE_VALID else "Community",
         "TIMEZONE": config.TIMEZONE,
         "INFLUXDB_ENABLED": config.INFLUXDB_ENABLED,
+        "AUTHENTICATION_METHODS": authentication_methods,
     }

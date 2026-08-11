@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+
 from config import config
 from core.log import logger
 
@@ -14,6 +15,54 @@ def _build_argument(name, value):
     val_el = ET.SubElement(prop, "stringProp", attrib={"name": "Argument.value"})
     val_el.text = value
     return prop
+
+
+def validate_jmx(jmx_content: str | bytes) -> None:
+    if not jmx_content:
+        raise ValueError("JMX plan is empty")
+    try:
+        root = ET.fromstring(jmx_content)
+    except ET.ParseError as e:
+        raise ValueError(f"JMX plan is not valid XML: {e}") from e
+    if root.tag != "jmeterTestPlan":
+        raise ValueError("JMX plan must have a jmeterTestPlan root element")
+
+
+def resolve_csv_parameter_files(jmx_content: str, job_id: str, filenames: list[str]) -> str:
+    """Point CSV Data Set Config entries at uploaded files with matching basenames."""
+    if not filenames:
+        return jmx_content
+
+    try:
+        root = ET.fromstring(jmx_content)
+    except ET.ParseError as e:
+        raise ValueError(f"JMX plan is not valid XML: {e}") from e
+
+    uploaded = set(filenames)
+    matched_files: set[str] = set()
+    replacements = 0
+    for data_set in root.iter("CSVDataSet"):
+        filename_prop = data_set.find("./stringProp[@name='filename']")
+        if filename_prop is None or not filename_prop.text:
+            continue
+        basename = filename_prop.text.replace("\\", "/").rsplit("/", 1)[-1]
+        if basename in uploaded:
+            filename_prop.text = f"/data/{job_id}/{basename}"
+            matched_files.add(basename)
+            replacements += 1
+
+    unreferenced_files = uploaded - matched_files
+    if unreferenced_files:
+        logger.warning(
+            f"Job {job_id}: uploaded CSV files not referenced by a CSV Data Set Config: "
+            f"{', '.join(sorted(unreferenced_files))}"
+        )
+
+    if not replacements:
+        return jmx_content
+
+    logger.info(f"Job {job_id}: resolved {replacements} CSV parameter file reference(s)")
+    return ET.tostring(root, encoding="unicode", xml_declaration=True)
 
 
 def inject_backend_listener(jmx_content: str, job_id: str) -> str:

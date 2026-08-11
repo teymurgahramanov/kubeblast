@@ -10,6 +10,11 @@
 Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platform, where running JMeter load tests is simple and efficient. It offers a simple *click-and-run* workflow, built-in RBAC with moderator approval, full flexibility, and a lightweight open-source footprint.
 
 ## ▶️ Quick start
+
+Prerequisites:
+- Kubernetes cluster with permission to create namespace-scoped resources, a `ClusterRole`, and a `ClusterRoleBinding`
+- A default StorageClass that supports `ReadWriteMany`, or an existing RWX claim configured with `pvc.existingClaim`
+
 1. Add Helm repository
    ```bash
    helm repo add teymurgahramanov https://teymurgahramanov.github.io/charts && helm repo update teymurgahramanov
@@ -18,9 +23,11 @@ Kubeblast turns your Kubernetes cluster into a collaborative Load Testing platfo
    ```
    helm upgrade --install kubeblast teymurgahramanov/kubeblast \
    --namespace kubeblast \
-   --create-namespace
+   --create-namespace \
+   --wait \
+   --timeout 10m
    ```
-3. Access UI on http://localhost:8080 using username `admin` and password `admin`. You can use [test.jmx](./test.jmx) for testing.
+3. Access UI on http://localhost:8080 using username `admin` and password `admin`. Change the default password before exposing Kubeblast beyond this local port-forward. You can use [test.jmx](./test.jmx) for testing.
    ```
    kubectl -n kubeblast port-forward svc/kubeblast 8080:80
    ```

@@ -156,6 +156,9 @@ def authenticate_user(username: str = None, plain_password: str = None, method: 
         case _:
             return False
 
+def is_login_allowed(user: models.User) -> bool:
+    return config.LICENSE_VALID or user.role == "admin"
+
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -173,13 +176,15 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     # Fall back to JWT authentication
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "access":
+            raise credentials_exception
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
     user = get_user(username)
-    if user is None:
+    if user is None or not is_login_allowed(user):
         raise credentials_exception
     return user
 
@@ -203,7 +208,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -300,6 +305,11 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not is_login_allowed(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Community mode allows admin login only",
+        )
     
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role}, 
@@ -307,5 +317,10 @@ def login(form_data=None, method="local", oidc_user_data=None) -> models.Token:
     )
     
     refresh_token = create_refresh_token(user.username)
+
+    db.mongo.users.update_one(
+        {"username": user.username},
+        {"$set": {"last_login": datetime.now(timezone.utc)}},
+    )
     
     return models.Token(access_token=access_token, token_type="bearer", refresh_token=refresh_token)

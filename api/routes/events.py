@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.get(
-    "/events/{job_id}",
+    "/jobs/{job_id}/events",
     response_class=StreamingResponse,
     responses={
         200: {
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/v1")
 
     ### Example `curl` Request:
     ```
-    curl -N -H "Authorization: Bearer <your_token>" http://localhost:8000/api/v1/events/<job_id>
+    curl -N -H "Authorization: Bearer <your_token>" http://localhost:8000/api/v1/jobs/<job_id>/events
     ```
     """,
 )

@@ -1,4 +1,6 @@
 node_modules
+web/dist/
+web/.env*.local
 *.tgz
 *.lock
 .venv
@@ -6,8 +8,10 @@ __pycache__
 .env
 openapi.json
 helm/Chart.lock
-dev-values.yaml
-k8s-job-buddy
-test-*.jmx
-TODO.md
+dev.values.yaml
+.test-data
 scripts/
+*.lic
+.zed/*
+.ruff_cache
+TODO.md

@@ -1,24 +1,30 @@
-# Kubeblast Helm chart values
-
-# Name override for the release
+# Optional release name overrides.
 nameOverride: ""
-
-# Full name override for the release
 fullnameOverride: ""
 
-# Pod security context configuration for Kubeblast pod.
-podSecurityContext: {}
+# Pod security context for the non-root Kubeblast runtime.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
 
-# Node selector for Kubeblast pod scheduling.
+# Container security context for Kubeblast.
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Scheduling constraints for the Kubeblast pod.
 nodeSelector: {}
-
-# Tolerations for Kubeblast pod scheduling
 tolerations: []
-
-# Affinity rules for Kubeblast pod scheduling
 affinity: {}
 
-# Resources configuration for Kubeblast container
+# Resource requests and limits for the Kubeblast.
 resources:
   requests:
     cpu: "50m"
@@ -27,14 +33,12 @@ resources:
     cpu: "100m"
     memory: "512Mi"
 
-# Environment variables for Kubeblast container.
+# Environment variables for Kubeblast.
 # Use envFromSecret to load environment variables from a secret.
 env: []
   # --- General ---
-  # - name: LICENSE_KEY
-  #   value: ""  # License key for enabling Pro features
-  # - name: LICENSE_ID
-  #   value: ""  # License ID for enabling Pro features
+  # - name: LICENSE_FILE
+  #   value: ""  # Full signed license file content; prefer loading it through envFromSecret
   # - name: LOG_LEVEL
   #   value: "INFO"  # Logging level (DEBUG, INFO, WARNING, ERROR)
   # - name: SECRET_KEY
@@ -71,6 +75,8 @@ env: []
   #   value: '{"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}'  # Resource requests/limits for the JMeter master job in distributed mode (JSON)
   #
   # --- MongoDB ---
+  # - name: MONGODB_URI
+  #   value: "mongodb+srv://user:password@cluster.example.com/kubeblast"  # Full URI override for external MongoDB; takes precedence over the fields below
   # - name: MONGODB_HOST
   #   value: "localhost"  # MongoDB host address
   # - name: MONGODB_PORT
@@ -140,19 +146,32 @@ env: []
   # - name: OIDC_AUTO_CREATE_USERS
   #   value: "true"  # Auto-create users on first OIDC login
 
-# Reference to the secret containing the environment variables.
+# Secret containing application environment variables such as LICENSE_FILE,
+# MONGODB_URI/MONGODB_PASS, or credential-bearing INFLUXDB_URL values.
 envFromSecret: ""
 
-# MongoDB configuration
-# If you want to use external MongoDB, set "enabled" to false and configure env variables.
+# Bundled MongoDB subchart. Disable when using an external MongoDB and provide
+# MONGODB_URI/MONGODB_NAME through env or envFromSecret.
 mongodb:
   enabled: true
-  instanceName: "kubeblast-mongodb"
-  username: "kubeblast"
-  password: "kubeblast"
-  database: "kubeblast"
-  imagePullPolicy: "IfNotPresent"
-  imagePullSecrets: []
+  architecture: "standalone"
+  useStatefulSet: true
+  auth:
+    enabled: true
+    rootPassword: ""
+    usernames:
+      - "kubeblast"
+    passwords:
+      - "kubeblast"
+    databases:
+      - "kubeblast"
+    existingSecret: ""
+  image:
+    # Multi-platform Bitnami MongoDB digest used by chart 19.1.22.
+    digest: "sha256:6b25f1600ac5576d7ee45c0c76bc28dbb28a61ded80ebf75baaa226a431fe57d"
+    pullPolicy: "IfNotPresent"
+    pullSecrets: []
+  resourcesPreset: "none"
   resources:
     requests:
       cpu: "100m"
@@ -163,19 +182,24 @@ mongodb:
   persistence:
     enabled: true
     size: "2Gi"
-    accessMode: "ReadWriteOnce"
-    storageClassName: ""
+    accessModes:
+      - "ReadWriteOnce"
+    storageClass: ""
     annotations: {}
     labels: {}
   extraVolumes: []
   extraVolumeMounts: []
 
-# InfluxDB configuration (JMeter real-time metrics)
-# Uses the official influxdata/influxdb Helm chart.
-# If disabled, real-time metrics features are not available.
-# If you want to use external InfluxDB, set "enabled" to false and configure env variables.
+# Bundled InfluxDB 1.x subchart for JMeter real-time metrics.
+# Disable when using an external InfluxDB and provide INFLUXDB_ENABLED=true,
+# INFLUXDB_URL, and INFLUXDB_DATABASE through env or envFromSecret.
 influxdb:
   enabled: true
+  image:
+    repository: "influxdb"
+    # Use Debian-based InfluxDB 1.8.10 because the subchart's Alpine image has no ARM64 manifest.
+    tag: "1.8.10@sha256:299ebda2c7e308dbef42e26ac9b8fd1d9b3bcb8a0aee80c6509aa0219c1d0290"
+    pullPolicy: "IfNotPresent"
   initScripts:
     enabled: true
     scripts:
@@ -196,48 +220,44 @@ influxdb:
       enabled: true
       flux-enabled: true
 
-# Storage PVC configuration
+# Shared data PVC mounted by the Kubeblast pod at /data.
+# Set existingClaim to reuse an existing PVC instead of creating one.
 pvc:
-  # If you want to use an existing PVC, set existingClaim to the PVC name
-  # When existingClaim is set, a new PVC will not be created
   existingClaim: ""
-  # PVC creation settings (used only if existingClaim is empty)
   storageClassName: ""
   size: "2Gi"
   accessMode: "ReadWriteMany"
   annotations: {}
   labels: {}
 
-# Additional annotations for Kubeblast pod
+# Additional pod metadata and mounts for the Kubeblast deployment.
 podAnnotations: {}
-
-# Additional labels for Kubeblast pod
 podLabels: {}
-
-# Extra volumes to add to the Kubeblast pod
 extraVolumes: []
-
-# Extra volume mounts to add to the Kubeblast container
 extraVolumeMounts: []
 
-# Kubeblast container image configuration
+# Kubeblast application image. Defaults to Chart.appVersion when tag is empty.
 image:
   repository: teymurgahramanov/kubeblast
   tag: ""
 imagePullSecrets: []
 imagePullPolicy: IfNotPresent
 
-# Kubeblast service configuration
+# Internal container ports for the non-root runtime.
+containerPort:
+  web: 8080
+  api: 8000
+
+# Service ports exposed inside the cluster.
 service:
   port:
-    web: 80    # Web interface port
-    api: 8000  # API port
+    web: 80
+    api: 8000
 
-# Kubeblast service account annotations
 serviceAccount:
   annotations: {}
 
-# Kubeblast Ingress configuration
+# Optional ingress for the web UI and API proxy.
 ingress:
   enabled: false
   annotations: {}

@@ -18,6 +18,22 @@ def create_event(job_id: str, msg: str, ts: datetime | None = None) -> None:
     db.mongo.events.insert_one(entry.model_dump())
 
 
+def create_kubernetes_event(job_id: str, event) -> None:
+    """Insert one Kubernetes Event once, including updates to its occurrence count."""
+    entry = models.JobLog(
+        job_id=job_id,
+        ts=event.ts,
+        msg=models.JobLog.coerce_msg(event.msg),
+    )
+    document = entry.model_dump()
+    document["kubernetes_event_id"] = event.source_id
+    db.mongo.events.update_one(
+        {"job_id": job_id, "kubernetes_event_id": event.source_id},
+        {"$setOnInsert": document},
+        upsert=True,
+    )
+
+
 def delete_events_for_job(job_id: str) -> None:
     db.mongo.events.delete_many({"job_id": job_id})
 

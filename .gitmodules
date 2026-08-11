@@ -1,4 +1,4 @@
-[submodule "pro"]
-	path = pro
-	url = https://github.com/teymurgahramanov/kubeblast-pro.git
-	branch = dev
+[submodule "advanced"]
+	path = advanced
+	url = https://github.com/teymurgahramanov/kubeblast-advanced.git
+	branch = main

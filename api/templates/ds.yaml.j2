@@ -59,6 +59,11 @@ spec:
               -Jserver_port=50000 \
               -Jserver.rmi.localport=50000 \
               -Djava.rmi.server.hostname=${POD_IP}
+        volumeMounts:
+        - name: data
+          mountPath: /data/{{ job_id }}
+          subPath: {{ job_id }}
+          readOnly: true
         {% if resources %}
         resources:
           {% for key, value in resources.items() %}
@@ -67,6 +72,10 @@ spec:
           {% endfor %}
         {% endif %}
       terminationGracePeriodSeconds: 30
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ storage_pvc_name }}
       {% if nodeSelector %}
       nodeSelector:
         {% for key, value in nodeSelector.items() %}

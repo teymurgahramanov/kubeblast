@@ -3,52 +3,48 @@ html, body, #root {
   margin: 0;
   padding: 0;
   font-family: 'Roboto', 'Segoe UI', sans-serif;
-  background-color: #f5f7fa;
-  color: #2d3748;
+  background-color: #F5F5F5;
+  color: rgba(0, 0, 0, 0.87);
 }
 
-/* Modern color palette */
 :root {
-  --primary-color: #326CE5;
-  --primary-dark: #2c5282;
-  --secondary-color: #38b2ac;
-  --background-light: #f5f7fa;
-  --background-dark: #1a202c;
-  --text-primary: #2d3748;
-  --text-secondary: #718096;
-  --success-color: #48bb78;
-  --warning-color: #ecc94b;
-  --danger-color: #e53e3e;
-  --border-color: #e2e8f0;
+  --primary-color: #1976D2;
+  --primary-dark: #1565C0;
+  --secondary-color: #9C27B0;
+  --background-light: #F5F5F5;
+  --background-dark: #EEEEEE;
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.60);
+  --success-color: #2E7D32;
+  --warning-color: #EF6C00;
+  --danger-color: #D32F2F;
+  --border-color: rgba(0, 0, 0, 0.12);
 }
 
-/* Dark theme overrides */
 [data-theme="dark"] {
-  --primary-color: #7aa2f7;
-  --primary-dark: #557bdc;
-  --secondary-color: #22d3ee;
-  --background-light: #0f172a;
-  --background-dark: #0b1220;
-  --text-primary: #e5e7eb;
-  --text-secondary: #94a3b8;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  --border-color: #334155;
+  --primary-color: #90CAF9;
+  --primary-dark: #42A5F5;
+  --secondary-color: #CE93D8;
+  --background-light: #1E1E1E;
+  --background-dark: #121212;
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --success-color: #66BB6A;
+  --warning-color: #FFA726;
+  --danger-color: #F44336;
+  --border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Base backgrounds in dark mode */
 html[data-theme="dark"] {
-  background-color: #0b1220;
+  background-color: var(--background-dark);
 }
 
 html[data-theme="dark"] body,
 html[data-theme="dark"] #root {
-  background-color: #0b1220;
-  color: #e5e7eb;
+  background-color: var(--background-dark);
+  color: var(--text-primary);
 }
 
-/* Login page styling */
 .login-container {
   display: flex;
   justify-content: center;
@@ -73,10 +69,9 @@ html[data-theme="dark"] #root {
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
 }
 
-/* Common components styling */
 .page-container {
   padding: 1.5rem 2rem;
-  padding-bottom: calc(1.5rem + 60px); /* Add extra bottom padding for fixed footer */
+  padding-bottom: calc(1.5rem + 60px);
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -92,11 +87,10 @@ html[data-theme="dark"] #root {
 }
 
 [data-theme="dark"] .card {
-  background: #0f172a;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: var(--background-light);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Data grid customization */
 .MuiDataGrid-root {
   border: none !important;
   background: white;
@@ -105,8 +99,8 @@ html[data-theme="dark"] #root {
 }
 
 [data-theme="dark"] .MuiDataGrid-root {
-  background: #0f172a;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: var(--background-light);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
 }
 
 .MuiDataGrid-cell {
@@ -118,7 +112,6 @@ html[data-theme="dark"] #root {
   border-bottom: 2px solid var(--border-color) !important;
 }
 
-/* Button styling */
 .button {
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
@@ -137,7 +130,6 @@ html[data-theme="dark"] #root {
   background-color: var(--primary-dark);
 }
 
-/* Status indicators */
 .status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
@@ -160,7 +152,6 @@ html[data-theme="dark"] #root {
   color: white;
 }
 
-/* Header styling */
 .app-header {
   border-bottom: 1px solid var(--border-color);
   background-color: white;
@@ -170,7 +161,7 @@ html[data-theme="dark"] #root {
 }
 
 [data-theme="dark"] .app-header {
-  background-color: #0f172a;
+  background-color: var(--background-light);
 }
 
 .app-header a {
@@ -182,7 +173,6 @@ html[data-theme="dark"] #root {
   color: var(--primary-dark);
 }
 
-/* Adjust DataGrid container height */
 .data-grid-container {
   height: calc(100vh - 280px);
   width: 100%;
@@ -191,7 +181,6 @@ html[data-theme="dark"] #root {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* User menu styling */
 .user-menu {
   display: flex;
   align-items: center;
@@ -212,7 +201,6 @@ html[data-theme="dark"] #root {
   font-size: 1rem;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .login-border {
     padding: 2rem;
@@ -232,7 +220,6 @@ html[data-theme="dark"] #root {
   }
 }
 
-/* Animation keyframes */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -242,7 +229,6 @@ html[data-theme="dark"] #root {
   animation: fadeIn 0.3s ease-in;
 }
 
-/* KubeBlast Login - Modern Split Layout Animations */
 @keyframes kbFloat {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   33%       { transform: translateY(-14px) rotate(1deg); }
@@ -254,10 +240,6 @@ html[data-theme="dark"] #root {
   to   { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes kbFadeInUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 
 @keyframes kbPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
@@ -276,9 +258,5 @@ html[data-theme="dark"] #root {
 
 .login-form-animate {
   animation: kbSlideInRight 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.login-brand-animate {
-  animation: kbFadeInUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
