@@ -5,6 +5,7 @@ import { Logout, People, Person, DarkMode, LightMode, Help } from '@mui/icons-ma
 import { ColorModeContext } from '../lib/theme';
 import { getUserRole, getUsername } from '../utils/auth';
 import axiosInstance from "../utils/axiosInstance";
+import { getAppStats, getCachedAppStats } from '../utils/stats';
 
 
 const Menuselect = () => {
@@ -12,15 +13,15 @@ const Menuselect = () => {
   const navigate = useNavigate();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const userRole = getUserRole();
-  const [isPro, setIsPro] = useState(false);
+  const [isPro, setIsPro] = useState(() => Boolean(getCachedAppStats()?.LICENSE_VALID));
   const username = getUsername();
   const firstLetter = username ? username.charAt(0).toUpperCase() : '';
 
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
-        const res = await axiosInstance.get('/stats/app');
-        setIsPro(Boolean(res.data?.LICENSE_VALID));
+        const stats = await getAppStats();
+        setIsPro(Boolean(stats?.LICENSE_VALID));
       } catch {
         setIsPro(false);
       }

@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from "../utils/axiosInstance";
 import { getUserRole } from "../utils/auth";
+import { cacheCapacity, getAppStats, getCachedAppStats, getCachedCapacity } from '../utils/stats';
 import AppHeader from './AppHeader';
 import AddJob from "./AddJob";
 import ErrorMessage from './ErrorMessage';
@@ -146,22 +147,22 @@ const Jobs = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [openAddJob, setOpenAddJob] = useState(false);
-  const [resources, setResources] = useState(null);
+  const [resources, setResources] = useState(() => getCachedCapacity());
   const [resourcesError, setResourcesError] = useState('');
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_desc');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const userRole = getUserRole();
-  const [isPro, setIsPro] = useState(false);
-  const [timezone, setTimezone] = useState('UTC');
+  const [isPro, setIsPro] = useState(() => Boolean(getCachedAppStats()?.LICENSE_VALID));
+  const [timezone, setTimezone] = useState(() => getCachedAppStats()?.TIMEZONE || 'UTC');
 
   useEffect(() => {
     const fetchAppStats = async () => {
       try {
-        const res = await axiosInstance.get('/stats/app');
-        setIsPro(Boolean(res.data?.LICENSE_VALID));
-        if (res.data?.TIMEZONE) setTimezone(res.data.TIMEZONE);
+        const stats = await getAppStats();
+        setIsPro(Boolean(stats?.LICENSE_VALID));
+        if (stats?.TIMEZONE) setTimezone(stats.TIMEZONE);
       } catch {
         setIsPro(false);
       }
@@ -198,6 +199,7 @@ const Jobs = () => {
     const fetchResources = async () => {
       try {
         const response = await axiosInstance.get('/stats/capacity');
+        cacheCapacity(response.data);
         setResources(response.data); setResourcesError('');
       } catch (err) {
         setResourcesError(err?.response?.data?.detail || err?.message || 'Failed to load cluster resources');

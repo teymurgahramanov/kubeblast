@@ -9,7 +9,7 @@ Upload one JMX plan together with up to 20 CSV parameter files, with a combined 
 When a job completes, the Job Details page displays its passed, failed, or not-evaluated verdict together with total samples, failed samples, error rate, and any evaluation reason.
 
 ### 🖥️ Refined jobs experience
-The Jobs page now provides capacity gauges, job cards, status filtering, sorting, search, and improved pagination. User administration includes last-login information, the login page shows only configured authentication methods, and the user menu includes a Help link.
+The Jobs page now provides capacity gauges, job cards, status filtering, sorting, search, and improved pagination. Repeat visits display the last successful capacity snapshot immediately and refresh it in the background, while Jobs, Job Details, and the user menu share cached application settings instead of issuing duplicate requests. User administration includes last-login information, the login page shows only configured authentication methods, and the user menu includes a Help link.
 
 ### 🎨 Consistent, refined interface
 Material UI styling now uses a unified light and dark palette across login, jobs, job details, profile, and error states. User administration has been redesigned with responsive controls, clearer account and access details, improved search, and submission feedback in the add and edit forms.
@@ -22,6 +22,7 @@ Job events now include Kubernetes workload events. Log collection retries while 
 - Job lifecycle transitions are atomic, preventing duplicate or conflicting start, retry, and stop operations.
 - Stopping a job remains in progress until Kubernetes confirms a terminal state.
 - Capacity calculations exclude cordoned and NotReady nodes.
+- Capacity database reads no longer block concurrent app and job API requests, and targeted MongoDB indexes improve counts, filtering, and pagination on larger installations.
 - SSE parsing and Nginx proxy settings preserve split JSON, UTF-8 characters, and long-running log and event streams.
 - Access tokens, refresh tokens, uploads, artifact paths, and invalid job IDs receive stricter validation.
 - The application image runs as a non-root user and is published for AMD64 and ARM64.

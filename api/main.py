@@ -21,6 +21,11 @@ def _sync_startup_initialize():
     from services import auth
 
     try:
+        db.ensure_indexes()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"MongoDB index initialization failed: {e}")
+
+    try:
         admin = auth.get_user("admin")
         if not admin:
             admin = models.UserInDB(
