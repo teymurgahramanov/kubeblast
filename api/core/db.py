@@ -26,3 +26,10 @@ def ensure_indexes():
     for fields, keys, name in indexes:
         if tuple(fields) not in existing:
             mongo.jobs.create_index(keys, name=name)
+
+    user_indexes = {
+        tuple(field for field, _direction in info["key"])
+        for info in mongo.users.index_information().values()
+    }
+    if ("username",) not in user_indexes:
+        mongo.users.create_index([("username", 1)], name="users_username")
