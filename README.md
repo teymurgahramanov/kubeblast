@@ -34,7 +34,7 @@ Prerequisites:
 ## ⚙️ Configuration
 All parameters are configurable via environment variables.
 You can define them directly using Helm values or store in a Kubernetes Secret.
-See [`helm/values.yaml`](./helm/values.yaml) for the full list of supported environment variables with defaults and examples.
+See [`helm/values.yaml`](./helm/values.yaml) for the full list of supported environment variables with defaults and examples. Enhanced documentation is available at [kubeblast.io/docs](https://kubeblast.io/docs).
 
 ## 👍 Get more
 Kubeblast scales from quick, single-click load tests to a collaborative platform with enterprise-grade capabilities. See the full feature list at [kubeblast.io](https://kubeblast.io).
